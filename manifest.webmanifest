@@ -1,0 +1,14 @@
+{
+  "name": "KLARA",
+  "short_name": "KLARA",
+  "description": "KLARA – Deine persönliche Begleiterin für Konsum · Lage · Auslöser · Reflexion · Auswertung",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f8fc",
+  "theme_color": "#0879bd",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

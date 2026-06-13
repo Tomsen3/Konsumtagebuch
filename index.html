@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0875bd">
+  <meta name="description" content="KLARA – Deine persönliche Begleiterin für Konsum, Lage, Auslöser, Reflexion und Auswertung">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="stylesheet" href="styles.css">
+  <title>KLARA</title>
+</head>
+<body>
+  <header class="app-header">
+    <button id="back-button" class="back-button" aria-label="Zurück" hidden>‹</button>
+    <div class="brand"><img src="logo.png" alt="Klinik für Psychiatrie und Psychosomatik Reutlingen"><div><span>PIA Intensiv</span><strong>KLARA</strong><small class="klara-sub">Konsum · Lage · Auslöser · Reflexion · Auswertung</small></div></div>
+    <button id="quick-add" class="primary add-button"><span>+</span> Neuer Eintrag</button>
+  </header>
+  <nav class="tabs" aria-label="Hauptnavigation">
+    <button data-view="start" class="active"><span class="nav-icon">⌂</span><span>Start</span></button>
+    <button data-view="today"><span class="nav-icon">●</span><span>Heute</span></button>
+    <button data-view="history"><span class="nav-icon">↗</span><span>Verlauf</span></button>
+    <button data-view="goals"><span class="nav-icon">✓</span><span>Ziel</span></button>
+    <button data-view="guide"><span class="nav-icon">?</span><span>Hilfe</span></button>
+    <button data-view="settings"><span class="nav-icon">⋯</span><span>Mehr</span></button>
+  </nav>
+  <main>
+    <section id="start" class="view active">
+      <div class="start-hero">
+        <div class="start-copy"><p id="start-greeting" class="start-greeting"></p><p class="eyebrow light">Ich bin <span class="klara-stamp">KLARA</span>, deine persönliche Begleiterin</p><h1>Ein kleiner Eintrag.<br>Mehr Klarheit für dich.</h1><p>Dieses Tagebuch hilft dir, Situationen, Auslöser und hilfreiche Strategien bewusster wahrzunehmen. Ohne Bewertung und in deinem eigenen Tempo.</p>
+          <div class="hero-actions"><button class="primary light-button open-entry">Beobachtung eintragen</button><button class="ghost-button open-guide">Kurz erklärt</button></div>
+          <div class="privacy-line"><span>✓</span> Alle Angaben bleiben ausschließlich auf diesem Gerät.</div>
+        </div>
+        <div class="start-mark"><img src="logo.png" alt="Klinik für Psychiatrie und Psychosomatik Reutlingen"><p>Beobachten statt bewerten</p></div>
+      </div>
+      <div class="motivation-grid">
+        <article><span>01</span><h2>Es muss nicht vollständig sein</h2><p>Notiere nur, was dir gerade wichtig erscheint.</p></article>
+        <article><span>02</span><h2>Jede Beobachtung hilft</h2><p>Auch ein Tag ohne Konsum kann eine hilfreiche Erkenntnis sein.</p></article>
+        <article><span>03</span><h2>Du bestimmst das Tempo</h2><p>Deine Einträge gehören dir und bilden eine gute Gesprächsgrundlage.</p></article>
+      </div>
+      <article class="prompt-card"><div><p class="eyebrow">Impuls für heute</p><h2>Was ist dir seit dem letzten Eintrag aufgefallen?</h2><p>Ein Gefühl, eine Situation oder etwas, das dir geholfen hat, reicht für den Anfang.</p></div><button class="primary open-entry">Jetzt festhalten</button></article>
+      <div class="start-links"><button class="open-guide">Gebrauchsanweisung ansehen</button><button data-jump="history">Bisherigen Verlauf öffnen</button></div>
+    </section>
+
+    <section id="today" class="view">
+      <div class="welcome"><div><p id="today-label" class="eyebrow light"></p><h1>Wie war dein Tag?</h1><p>Beobachte deinen Konsum ohne zu bewerten. Du entscheidest, was du einträgst.</p><div class="hero-actions"><button class="primary light-button open-entry">Jetzt dokumentieren</button><button class="ghost-button open-guide">So funktioniert es</button></div></div><div class="today-badge"><strong id="today-count">0</strong><span>Einträge heute</span></div></div>
+      <aside class="notice"><span>✓</span><p><strong>Privat auf diesem Gerät</strong><br>Ihre Angaben werden nicht an einen Server übertragen.</p></aside>
+      <div class="content-heading"><div><p class="eyebrow">Tagesübersicht</p><h2>Ihre Einträge</h2></div><button class="round-button open-entry" aria-label="Eintrag hinzufügen">+</button></div>
+      <div id="today-list" class="entry-list"></div>
+    </section>
+
+    <section id="history" class="view">
+      <div class="section-heading history-heading"><div><p class="eyebrow">Muster erkennen</p><h1>Mein Verlauf</h1></div><div id="history-range" class="range-switch" role="group" aria-label="Zeitraum"><button type="button" data-days="7">7 Tage</button><button type="button" data-days="30" class="active">30 Tage</button><button type="button" data-days="90">90 Tage</button><button type="button" data-days="3650">Gesamt</button></div></div>
+      <div class="stats-grid"><article class="stat"><span>Tage dokumentiert</span><strong id="stat-days">0</strong></article><article class="stat"><span>Einträge gesamt</span><strong id="stat-entries">0</strong></article><article class="stat"><span id="stat-se-label">Alkohol-SE</span><strong id="stat-se">0</strong></article></div>
+      <div id="substance-filter" class="substance-filter"></div>
+      <article class="panel chart-card timeline-card"><div class="panel-heading"><div><p class="eyebrow">Zeitlicher Überblick</p><h2>Einträge nach Tagen</h2></div><span id="timeline-period">30 Tage</span></div><div id="timeline-chart" class="chart" aria-label="Verlaufsdiagramm"></div></article>
+      <article class="panel chart-card"><div class="panel-heading"><h2>Dokumentierte Kategorien</h2><span>Häufigkeit</span></div><div id="category-chart" class="bars"></div></article>
+      <div class="content-heading"><div><p class="eyebrow">Dokumentation</p><h2>Alle Einträge</h2></div><div class="export-actions"><button id="print-history" class="btn-export secondary">🖨 Drucken</button><button id="export-overview" class="btn-export secondary">Übersicht</button><button id="export-detailed" class="btn-export">Bericht</button><button id="export-save" class="btn-export secondary">↓ PDF</button></div></div><div id="history-list" class="entry-list"></div>
+    </section>
+
+    <section id="goals" class="view">
+      <div class="section-heading"><div><p class="eyebrow">Rückblick & Ausblick</p><h1>Mein Wochenziel</h1><p>Wähle ein Ziel, das für diese Woche realistisch ist.</p></div></div>
+      <form id="goal-form" class="panel form-card">
+        <div class="form-section"><span>1</span><div><h2>Ziel wählen</h2><p>Du kannst dein Ziel jederzeit ändern.</p></div></div>
+        <label>Woche ab <input id="goal-week" type="date" required></label><label>Ziel<select id="goal-type"><option>Nichts verändern, weiter beobachten</option><option>Eine Zeit lang abstinent</option><option>Gar nicht mehr</option><option>Weniger konsumieren</option><option>Weniger schädlich konsumieren</option><option>Noch nicht entschieden</option></select></label>
+        <label>Substanz oder Verhalten <input id="goal-subject" type="text" placeholder="z. B. Alkohol, Cannabis, Gaming"></label>
+        <div class="form-section"><span>2</span><div><h2>Vorbereiten</h2><p>Risiken erkennen, Antwort bereithalten, Unterstützung holen.</p></div></div>
+        <label>Risikosituationen <textarea id="goal-risks" placeholder="Orte, Personen, Zeiten oder Gefühle"></textarea></label><label>Hilfreiche Strategien <textarea id="goal-strategies" placeholder="Was kann ich versuchen?"></textarea></label><label>Unterstützung <textarea id="goal-support" placeholder="Wen kann ich ansprechen?"></textarea></label>
+        <div class="form-section"><span>3</span><div><h2>Wochenbilanz</h2><p>Besprich deine Bilanz beim nächsten Termin.</p></div></div>
+        <label>Was hat funktioniert? <textarea id="goal-worked"></textarea></label><label>Was war schwierig? <textarea id="goal-difficult"></textarea></label><label>Vorsatz für nächste Woche <textarea id="goal-next"></textarea></label><button class="primary wide" type="submit">Wochenziel speichern</button>
+      </form>
+      <div id="goal-history" class="goal-history"></div>
+    </section>
+
+    <section id="guide" class="view">
+      <div class="section-heading"><div><p class="eyebrow">Gebrauchsanweisung</p><h1>So nutzt du das Tagebuch</h1><p>Das Tagebuch hilft dir, deinen Konsum bewusster wahrzunehmen und besser zu verstehen.</p></div></div>
+      <div class="guide-intro panel"><div class="guide-symbol">◎</div><div><h2>Beobachten statt bewerten</h2><p>Es gibt keine richtigen oder falschen Einträge. Du bestimmst selbst, was du dokumentierst und später besprichst.</p></div></div>
+      <article class="panel guide-steps">
+        <div class="panel-heading"><h2>So erstellst du einen Eintrag</h2><span>Schritt für Schritt</span></div>
+        <ol class="step-list">
+          <li><strong>„Neuer Eintrag" antippen</strong> – über den Button oben rechts oder auf der Startseite.</li>
+          <li><strong>Datum und Uhrzeit prüfen</strong> – die App trägt die aktuelle Zeit automatisch ein. Du kannst beides frei ändern, um Einträge auch nachträglich für vergangene Tage zu erfassen.</li>
+          <li><strong>Substanz oder Verhalten auswählen</strong> – wähle alles aus, was zutrifft. Für jede Auswahl öffnen sich eigene Felder.</li>
+          <li><strong>Felder ausfüllen</strong> – fülle nur aus, was dir gerade wichtig ist. Kein Feld muss vollständig sein.</li>
+          <li><strong>„Eintrag speichern" tippen</strong> – fertig. Der Eintrag erscheint sofort im Verlauf.</li>
+        </ol>
+        <p class="guide-note">Bereits gespeicherte Einträge lassen sich jederzeit bearbeiten: im Verlauf auf den Eintrag tippen, ändern und erneut speichern.</p>
+      </article>
+      <article class="panel guide-multi">
+        <div class="panel-heading"><h2>Mehreres auf einmal festhalten</h2><span>Wann ein Eintrag, wann zwei?</span></div>
+        <p><strong>Alles im selben Eintrag</strong> – wenn mehrere Substanzen oder Verhaltensweisen gleichzeitig oder im gleichen Kontext vorkamen (z. B. Alkohol und Cannabis am selben Abend). Die App zeigt dann für jede Substanz separate Felder – du kannst Situation und Auslöser für jede getrennt beschreiben.</p>
+        <p style="margin-top:10px"><strong>Separate Einträge</strong> – wenn Ereignisse zu verschiedenen Zeiten oder in unterschiedlichen Situationen stattgefunden haben. So bleibt der Verlauf zeitlich genau und lässt sich besser auswerten.</p>
+      </article>
+      <div class="guide-grid">
+        <article><span>1</span><h2>Konsum</h2><p>Was wurde konsumiert, wie viel und wann? Alkohol-SE berechnet die App automatisch. Bei anderen Substanzen reicht eine grobe Angabe.</p></article>
+        <article><span>2</span><h2>Situation</h2><p>Wo warst du? Mit wem? Was hast du gerade gemacht? Notiere Ort, Uhrzeit und soziales Umfeld – z. B. „allein zu Hause, Abend nach der Arbeit" oder „mit Freunden auf einer Party".</p></article>
+        <article><span>3</span><h2>Auslöser</h2><p>Was hat den Konsum oder das Verlangen ausgelöst? Das kann etwas Äußeres sein (ein Ort, eine Person, ein Streit) oder etwas Inneres (Langeweile, Anspannung, Traurigkeit, ein Gedanke). Beides ist wichtig.</p></article>
+        <article><span>4</span><h2>Strategie</h2><p>Was hast du versucht, bevor oder während des Konsums? Hat etwas geholfen – auch wenn du am Ende trotzdem konsumiert hast? Beispiele: Situation verlassen, jemanden angerufen, abgelenkt, tief geatmet.</p></article>
+        <article><span>5</span><h2>Auswertung</h2><p>Was fällt dir beim Zurückblicken auf? Wiederholen sich bestimmte Situationen, Uhrzeiten oder Gefühle? Diese Spalte ist besonders wertvoll für das Gespräch mit deiner Fachperson.</p></article>
+      </div>
+      <article class="panel tips"><div class="panel-heading"><h2>Hilfreiche Gewohnheiten</h2><span>Tipps</span></div><ul class="check-list"><li><strong>Möglichst zeitnah notieren.</strong> So musst du dich später weniger erinnern.</li><li><strong>Nicht alle Felder müssen ausgefüllt sein.</strong> Schreibe auf, was dir wichtig erscheint.</li><li><strong>Ehrlich zu dir selbst sein.</strong> Das Tagebuch ist für dich und deine Fachperson.</li><li><strong>Wochenbilanz besprechen.</strong> Nimm deine Beobachtungen zum nächsten Termin mit.</li></ul></article>
+      <article class="panel alcohol-info"><div><p class="eyebrow">Orientierung</p><h2>Eine Alkohol-Standardeinheit</h2></div><div id="se-unit-grid" class="unit-grid"></div></article>
+      <button class="primary wide open-entry">Eintrag erstellen</button>
+    </section>
+
+    <section id="settings" class="view">
+      <div class="section-heading"><div><p class="eyebrow">Daten & App</p><h1>Mehr</h1></div></div>
+      <article class="panel settings-panel profile-panel">
+        <h2>Meine Angaben</h2>
+        <p id="profile-greeting" class="profile-greeting"></p>
+        <p class="settings-hint">Optional – erscheinen in deinen Berichten.</p>
+        <div class="name-row">
+          <label>Vorname <small>optional</small><input id="profile-firstname" type="text" autocomplete="given-name" placeholder="z. B. Maria"></label>
+          <label>Nachname <small>optional</small><input id="profile-lastname" type="text" autocomplete="family-name" placeholder="z. B. Müller"></label>
+        </div>
+        <label>Therapeut:in / Bezugsperson <small>optional</small><input id="profile-therapist" type="text" placeholder="z. B. Dr. Müller"></label>
+        <label>Station / Einrichtung <small>optional</small><input id="profile-ward" type="text" placeholder="z. B. Station 3b"></label>
+        <button id="save-profile" class="primary">Speichern</button>
+      </article>
+      <article class="panel info-card"><span>⌂</span><div><h2>Deine Daten bleiben auf diesem Gerät</h2><p>Einträge und Ziele werden ausschließlich im lokalen Speicher dieses Browsers abgelegt. Es gibt kein Konto und keine Übertragung an einen Server.</p></div></article>
+      <article class="panel settings-panel"><h2>Daten sichern</h2><p>Beim Löschen von Browserdaten können Einträge verloren gehen. Exportieren Sie deshalb regelmäßig eine Sicherung.</p><p id="backup-status" class="status"></p><div class="action-grid"><button id="export-data">Sicherung exportieren</button><label class="file-button">Sicherung importieren<input id="import-data" type="file" accept="application/json"></label></div></article>
+      <article class="panel settings-panel"><h2>App verwalten</h2><div class="action-grid"><button id="check-update">Auf neue Version prüfen</button><button id="install-app" hidden>App installieren</button></div><p id="update-status" class="status" aria-live="polite">Installierte Version: <span id="app-version">1.3.3</span></p></article>
+      <article class="panel warning-card"><h2>Wichtiger Hinweis</h2><p>Diese App ist ein persönliches Beobachtungsinstrument. Sie ersetzt keine medizinische Beratung oder Behandlung. Besprechen Sie Fragen und auffällige Veränderungen mit Ihrer Fachperson.</p></article>
+      <button id="delete-data" class="danger-link">Alle lokalen Daten löschen</button>
+      <footer class="contact-footer">
+        <img src="logo.png" alt="Klinik für Psychiatrie und Psychosomatik Reutlingen">
+        <div class="contact-details">
+          <strong>PP.rt – Klinik für Psychiatrie und Psychosomatik</strong>
+          <address>Wörthstraße 52/1 · 72764 Reutlingen</address>
+          <div class="contact-links">
+            <a href="tel:+49712192000">Infozentrale: 07121 9200-0</a>
+            <a href="tel:+4971219200200">Aufnahmemanagement: 07121 9200-200</a>
+            <a href="mailto:info@pprt.de">info@pprt.de</a>
+            <span>www.pprt.de</span>
+          </div>
+          <small>© <span id="copyright-year">2026</span> PP.rt · Gemeinnützige Gesellschaft für Psychiatrie Reutlingen mbH</small>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <dialog id="entry-dialog"><form id="entry-form" method="dialog">
+    <div class="dialog-heading"><div><p class="eyebrow">Beobachten statt bewerten</p><h1 id="entry-title">Eintrag hinzufügen</h1></div><button type="button" id="close-dialog" class="icon-button" aria-label="Schließen">×</button></div><p class="form-hint">Fülle nur aus, was für dich gerade wichtig ist.</p><input id="entry-id" type="hidden">
+    <div class="form-row"><label>Datum <input id="entry-date" type="date" required></label><label>Uhrzeit <input id="entry-time" type="time"></label></div>
+    <fieldset><legend>Was wurde konsumiert?</legend><div class="check-grid"><label><input class="substance-check" type="checkbox" value="Alkohol"> Alkohol</label><label><input class="substance-check" type="checkbox" value="Cannabis"> Cannabis</label><label><input class="substance-check" type="checkbox" value="Stimulanzien"> Stimulanzien</label><label><input class="substance-check" type="checkbox" value="Medikamente / Benzodiazepine"> Medikamente / Benzodiazepine</label><label><input class="substance-check" type="checkbox" value="Opioide"> Opioide</label><label><input class="substance-check" type="checkbox" value="Glücksspiel / Medien"> Glücksspiel / Medien</label><label><input class="substance-check" type="checkbox" value="Sonstiges"> Sonstiges</label><label><input class="substance-check" type="checkbox" value="Verlangen / Craving"> Verlangen / Craving</label><label><input class="substance-check" type="checkbox" value="Kein Konsum"> Kein Konsum</label></div></fieldset>
+    <div id="substance-cards"></div>
+    <div class="dialog-actions"><button id="delete-entry" type="button" class="danger-link" hidden>Eintrag löschen</button><button class="primary" type="submit">Eintrag speichern</button></div>
+  </form></dialog>
+  <dialog id="disclaimer-dialog" class="disclaimer-dialog">
+    <div class="disclaimer-body">
+      <p class="disclaimer-brand">KLARA</p>
+      <h2>Wichtiger Hinweis</h2>
+      <p>KLARA ist ein persönliches Beobachtungsinstrument der <strong>PP.rt – Klinik für Psychiatrie und Psychosomatik Reutlingen</strong> und kein zugelassenes Medizinprodukt.</p>
+      <p>Die App <strong>ersetzt keine medizinische Beratung oder Behandlung</strong>. Bitte bespreche alle Beobachtungen, Fragen und auffälligen Veränderungen mit deiner Therapeutin oder deinem Therapeuten.</p>
+      <p>Alle Daten bleiben ausschließlich auf diesem Gerät gespeichert. Es erfolgt keine Übertragung an einen Server.</p>
+      <button id="disclaimer-ok" class="primary wide">Verstanden – ich starte KLARA</button>
+    </div>
+  </dialog>
+  <dialog id="confirm-dialog">
+    <div class="confirm-body">
+      <p id="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" type="button">Abbrechen</button>
+        <button id="confirm-ok" type="button" class="primary"></button>
+      </div>
+    </div>
+  </dialog>
+  <template id="empty-template"><article class="empty"><span>＋</span><h2>Noch keine Einträge</h2><p>Notieren Sie eine Beobachtung, sobald es für Sie passt.</p><button class="primary open-entry">Ersten Eintrag erstellen</button></article></template>
+  <script src="pdfgen.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
