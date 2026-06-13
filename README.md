@@ -19,7 +19,7 @@ Die lokalen Daten sowie exportierte Sicherungen und PDFs sind nicht zusaetzlich 
 
 ## Neue Version veroeffentlichen
 
-1. Versionsnummer in `app.js`, `sw.js` und `version.json` erhoehen.
+1. Versionsnummer in `app.js`, `sw.js`, `version.json` und der Anzeige in `index.html` erhoehen.
 2. Aenderungen nach `main` pushen.
 3. Nutzer koennen unter **Daten & App > Auf neue Version pruefen** aktualisieren.
 

@@ -1,30 +1,40 @@
-// Cache-Name wird aus version.json gelesen. v1.8.2
-// Beim Release version.json, app.js (VERSION) und diesen Kommentar aktualisieren.
-const ASSETS = ["./", "index.html", "styles.css", "app.js", "pdfgen.js", "manifest.webmanifest", "icon.svg", "logo.png", "apple-touch-icon.png"];
-
-let _cacheName;
-function cacheName() {
-  if (!_cacheName) {
-    _cacheName = fetch("version.json", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(({ version }) => `konsumtagebuch-app-v${version}`);
-  }
-  return _cacheName;
-}
+const VERSION = "1.8.3";
+const CACHE_NAME = `konsumtagebuch-app-v${VERSION}`;
+const ASSETS = [
+  "./",
+  "index.html",
+  "styles.css",
+  "app.js",
+  "pdfgen.js",
+  "manifest.webmanifest",
+  "icon.svg",
+  "logo.png",
+  "apple-touch-icon.png",
+  "version.json",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    cacheName().then((name) => caches.open(name).then((cache) => cache.addAll(ASSETS)))
+    caches.open(CACHE_NAME)
+      .then((cache) => Promise.all(ASSETS.map(async (asset) => {
+        const separator = asset.includes("?") ? "&" : "?";
+        const response = await fetch(`${asset}${separator}v=${VERSION}`, { cache: "reload" });
+        if (!response.ok) throw new Error(`Asset konnte nicht geladen werden: ${asset}`);
+        await cache.put(asset, response);
+      })))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    cacheName().then((name) =>
-      caches.keys()
-        .then((keys) => Promise.all(keys.filter((k) => k !== name).map((k) => caches.delete(k))))
-        .then(() => self.clients.claim())
-    )
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith("konsumtagebuch-app-") && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
@@ -34,19 +44,31 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  event.respondWith(
-    cacheName().then((name) =>
-      caches.match(event.request).then((cached) =>
-        cached || fetch(event.request).then((response) => {
-          if (
-            new URL(event.request.url).origin === self.location.origin &&
-            !event.request.url.includes("version.json")
-          ) {
-            caches.open(name).then((cache) => cache.put(event.request, response.clone()));
-          }
+
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put("./", response.clone()));
           return response;
         })
-      )
+        .catch(() => caches.match("./", { cacheName: CACHE_NAME }))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(event.request).then((cached) => {
+        const network = fetch(event.request).then((response) => {
+          if (response.ok) cache.put(event.request, response.clone());
+          return response;
+        }).catch(() => cached);
+        return cached || network;
+      })
     )
   );
 });

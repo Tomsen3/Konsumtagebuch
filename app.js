@@ -1,5 +1,5 @@
-// Beim Release hier und in version.json auf dieselbe Version setzen. sw.js liest version.json automatisch.
-const VERSION = "1.8.2";
+// Beim Release hier, in version.json und in sw.js auf dieselbe Version setzen.
+const VERSION = "1.8.3";
 const DATA_KEY       = "konsumtagebuch.data.v1";
 const GOALS_KEY      = "konsumtagebuch.goals.v1";
 const EXPORT_KEY     = "konsumtagebuch.lastExport";
@@ -834,6 +834,7 @@ async function checkUpdate() {
   status.textContent = "Version wird geprüft …";
   try {
     const response = await fetch(`version.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Versionsdatei nicht erreichbar");
     const latest = await response.json();
     if (latest.version === VERSION) {
       status.textContent = `Version ${VERSION} ist aktuell.`;
@@ -1457,7 +1458,11 @@ async function start() {
   loadGoal();
   renderBackupStatus();
   if ("serviceWorker" in navigator) {
-    try { await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }); } catch { /* App remains usable online. */ }
+    try {
+      navigator.serviceWorker.addEventListener("controllerchange", () => location.reload(), { once: true });
+      const registration = await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" });
+      await registration.update();
+    } catch { /* App remains usable online. */ }
   }
 }
 start();
