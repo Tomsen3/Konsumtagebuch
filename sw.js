@@ -1,6 +1,6 @@
-// Cache-Name wird aus version.json gelesen.
-// Beim Release nur version.json und app.js (VERSION) aktualisieren — sw.js bleibt unverändert.
-const ASSETS = ["./", "index.html", "styles.css", "app.js", "pdfgen.js", "manifest.webmanifest", "icon.svg", "logo.png"];
+// Cache-Name wird aus version.json gelesen. v1.7.1
+// Beim Release version.json, app.js (VERSION) und diesen Kommentar aktualisieren.
+const ASSETS = ["./", "index.html", "styles.css", "app.js", "pdfgen.js", "manifest.webmanifest", "icon.svg", "logo.png", "apple-touch-icon.png"];
 
 let _cacheName;
 function cacheName() {
