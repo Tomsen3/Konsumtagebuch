@@ -1,5 +1,5 @@
 // Beim Release hier und in version.json auf dieselbe Version setzen. sw.js liest version.json automatisch.
-const VERSION = "1.7.0";
+const VERSION = "1.7.1";
 const DATA_KEY       = "konsumtagebuch.data.v1";
 const GOALS_KEY      = "konsumtagebuch.goals.v1";
 const EXPORT_KEY     = "konsumtagebuch.lastExport";
