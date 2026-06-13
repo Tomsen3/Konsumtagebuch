@@ -1,5 +1,5 @@
 // Beim Release hier und in version.json auf dieselbe Version setzen. sw.js liest version.json automatisch.
-const VERSION = "1.7.1";
+const VERSION = "1.8.0";
 const DATA_KEY       = "konsumtagebuch.data.v1";
 const GOALS_KEY      = "konsumtagebuch.goals.v1";
 const EXPORT_KEY     = "konsumtagebuch.lastExport";
@@ -9,9 +9,9 @@ const DISCLAIMER_KEY = "konsumtagebuch.disclaimer.v1";
 // Single source of truth für Alkohol-Typen und SE-Berechnung.
 // Änderungen hier wirken sich automatisch auf Berechnung, Eintragsanzeige und Hilfetext aus.
 const ALCOHOL_TYPES = [
-  { id: "beer",    label: "Bier",                referenceMl: 500, guideLabel: "0,5 l" },
-  { id: "wine",    label: "Wein",                referenceMl: 200, guideLabel: "0,2 l" },
-  { id: "spirits", label: "Schnaps / Spirituosen", referenceMl: 60,  guideLabel: "3 × 0,02 l" },
+  { id: "beer",    label: "Bier",                referenceMl: 250, guideLabel: "ca. 0,25 l" },
+  { id: "wine",    label: "Wein",                referenceMl: 100, guideLabel: "ca. 0,1 l" },
+  { id: "spirits", label: "Schnaps / Spirituosen", referenceMl: 30,  guideLabel: "ca. 0,03 l" },
   { id: "custom",  label: "Sonstiges (eigene Angabe)", referenceMl: null, guideLabel: null },
 ];
 const $ = (selector) => document.querySelector(selector);
@@ -39,6 +39,7 @@ const state = {
   currentView: "start",
   swipeStart: null,
   substanceFilter: null, // null = alle Substanzen
+  entryMode: "quick",
 };
 
 // ── Profil (Name, Therapeut:in, Station) ─────────────────────────────────────
@@ -192,7 +193,11 @@ function renderEntries(target, entries) {
       : (entry.consumptionItems?.length
           ? entry.consumptionItems.map((i) => `${i.substance}: ${i.value}`).join(" · ")
           : entry.consumption || "");
-    const details = [alcoholStr, consumptionStr].filter(Boolean).join(" · ");
+    const scaleStr = [
+      entry.cravingLevel !== "" && entry.cravingLevel !== undefined ? `Suchtdruck ${entry.cravingLevel}/10` : "",
+      entry.strainLevel !== "" && entry.strainLevel !== undefined ? `Belastung ${entry.strainLevel}/10` : "",
+    ].filter(Boolean).join(" · ");
+    const details = [alcoholStr, consumptionStr, scaleStr].filter(Boolean).join(" · ");
     const allTexts = entry.substanceEntries?.length
       ? entry.substanceEntries.flatMap((e) => [e.situation, e.trigger, e.strategy].filter(Boolean))
       : [entry.situation, entry.trigger, entry.strategy].filter(Boolean);
@@ -203,10 +208,11 @@ function renderEntries(target, entries) {
     const categoryDisplay = sonstigesLabel
       ? rawCategory.replace("Sonstiges", `Sonstiges: ${sonstigesLabel}`)
       : rawCategory;
+    const needsReflection = !entry.substanceEntries?.some((e) => e.strategy || e.evaluation);
     return `
     <article class="entry card" data-id="${esc(entry.id)}" tabindex="0">
       <div class="entry-top">
-        <div><h3>${esc(categoryDisplay)}</h3><time>${esc(formatDate(entry.date))}${entry.time ? ` · ${esc(entry.time)} Uhr` : ""}</time></div>
+        <div><h3>${esc(categoryDisplay)}${needsReflection ? '<span class="entry-reflection-badge">Reflexion offen</span>' : ""}</h3><time>${esc(formatDate(entry.date))}${entry.time ? ` · ${esc(entry.time)} Uhr` : ""}</time></div>
         ${entry.units ? `<span class="tag">${esc(entry.units)} SE</span>` : ""}
       </div>
       ${details ? `<p class="entry-details">${esc(details)}</p>` : ""}
@@ -253,7 +259,28 @@ function renderHistory() {
   }
   renderTimeline(entries);
   renderCategories(entries);
+  renderTherapySummary(entries);
   renderEntries("#history-list", entries);
+}
+
+function renderTherapySummary(entries) {
+  const days = Number($("#history-range .active")?.dataset.days || 30);
+  const documented = new Set(entries.map((e) => e.date)).size;
+  const noConsumption = new Set(entries.filter((e) => (e.substances || []).includes("Kein Konsum")).map((e) => e.date)).size;
+  const cravingEntries = entries.filter((e) => (e.substances || []).includes("Verlangen / Craving") || (e.cravingLevel !== "" && e.cravingLevel !== undefined)).length;
+  const openReflection = entries.filter((e) => !e.substanceEntries?.some((s) => s.strategy || s.evaluation)).length;
+  const calendarDays = days >= 3650 ? null : days;
+  const undocumented = calendarDays === null ? null : Math.max(0, calendarDays - documented);
+  $("#summary-period").textContent = days >= 3650 ? "Gesamt" : `${days} Tage`;
+  $("#therapy-summary-grid").innerHTML = [
+    ["Dokumentierte Tage", documented],
+    ["Konsumfreie Tage", noConsumption],
+    ["Craving erfasst", cravingEntries],
+    ["Reflexion offen", openReflection],
+  ].map(([label, value]) => `<div class="summary-item"><strong>${value}</strong><span>${label}</span></div>`).join("");
+  $("#therapy-summary-note").textContent = undocumented === null
+    ? "Die Gesamtansicht zeigt nur dokumentierte Tage. Tage ohne Eintrag lassen sich hier nicht bewerten."
+    : `${undocumented} von ${calendarDays} Tagen haben keinen Eintrag. Kein Eintrag bedeutet nicht automatisch keinen Konsum.`;
 }
 
 function renderSubstanceFilter(allEntries) {
@@ -383,11 +410,33 @@ function renderCategories(entries) {
     : "<p>Noch keine Daten in diesem Zeitraum.</p>";
 }
 
+function setEntryMode(mode) {
+  state.entryMode = mode === "full" ? "full" : "quick";
+  $$("[data-entry-mode]").forEach((button) => button.classList.toggle("active", button.dataset.entryMode === state.entryMode));
+  $$(".reflection-field").forEach((field) => { field.hidden = state.entryMode !== "full"; });
+  $$(".reflection-prompt").forEach((hint) => { hint.hidden = state.entryMode === "full"; });
+}
+
+function setScale(input, value) {
+  input.value = value === "" || value === undefined ? "0" : String(value);
+  input.dataset.touched = value === "" || value === undefined ? "" : "1";
+}
+
+function updateScaleDisplays() {
+  [["#entry-craving", "#craving-output"], ["#entry-strain", "#strain-output"]].forEach(([inputSelector, outputSelector]) => {
+    const input = $(inputSelector);
+    $(outputSelector).textContent = input.dataset.touched ? `${input.value} von 10` : "nicht angegeben";
+  });
+}
+
 function openEntry(entry = null) {
   $("#entry-form").reset();
   $("#entry-id").value = entry?.id || "";
   $("#entry-date").value = entry?.date || localDate();
   $("#entry-time").value = entry?.time || new Date().toTimeString().slice(0, 5);
+  setScale($("#entry-craving"), entry?.cravingLevel);
+  setScale($("#entry-strain"), entry?.strainLevel);
+  updateScaleDisplays();
 
   const substances = entry?.substances?.length ? entry.substances
     : entry?.category ? [entry.category] : [];
@@ -420,6 +469,7 @@ function openEntry(entry = null) {
   }
 
   renderSubstanceCards(savedEntries);
+  setEntryMode(entry ? "full" : "quick");
   $("#entry-title").textContent = entry ? "Eintrag bearbeiten" : "Eintrag hinzufügen";
   $("#delete-entry").hidden = !entry;
   $("#entry-dialog").showModal();
@@ -431,6 +481,8 @@ function saveEntry(event) {
   const entry = { id };
   entry.date = $("#entry-date").value;
   entry.time = $("#entry-time").value;
+  entry.cravingLevel = $("#entry-craving").dataset.touched ? $("#entry-craving").value : "";
+  entry.strainLevel = $("#entry-strain").dataset.touched ? $("#entry-strain").value : "";
   entry.substances = $$(".substance-check:checked").map((cb) => cb.value);
   entry.category = entry.substances.join(", ") || "Nicht angegeben";
 
@@ -622,8 +674,9 @@ function renderSubstanceCards(savedEntries = []) {
     html += `
       <label>Situation <small>Wo? Mit wem? Was hast du gerade gemacht?</small><textarea class="sub-situation" placeholder="z. B. allein zu Hause, Freitagabend nach der Arbeit">${v("situation")}</textarea></label>
       <label>Auslöser <small>Äußerer Anlass oder inneres Gefühl / Gedanke</small><textarea class="sub-trigger" placeholder="z. B. Streit, Langeweile, Anspannung, Einladung von Freunden">${v("trigger")}</textarea></label>
-      <label>Strategie <small>Was habe ich versucht – auch wenn es nicht geklappt hat?</small><textarea class="sub-strategy" placeholder="z. B. kurz spazieren gegangen, jemanden angerufen, abgelenkt">${v("strategy")}</textarea></label>
-      <label>Auswertung <small>Muster, Erkenntnisse, was ich beim nächsten Mal anders machen könnte</small><textarea class="sub-evaluation" placeholder="z. B. passiert oft abends, wenn ich allein bin und gestresst war">${v("evaluation")}</textarea></label>`;
+      <p class="reflection-prompt">Strategie und Auswertung kannst du über „Reflexion ergänzen“ später nachtragen.</p>
+      <label class="reflection-field">Strategie <small>Was habe ich versucht – auch wenn es nicht geklappt hat?</small><textarea class="sub-strategy" placeholder="z. B. kurz spazieren gegangen, jemanden angerufen, abgelenkt">${v("strategy")}</textarea></label>
+      <label class="reflection-field">Auswertung <small>Muster, Erkenntnisse, was ich beim nächsten Mal anders machen könnte</small><textarea class="sub-evaluation" placeholder="z. B. passiert oft abends, wenn ich allein bin und gestresst war">${v("evaluation")}</textarea></label>`;
 
     card.innerHTML = html;
     container.appendChild(card);
@@ -645,6 +698,7 @@ function renderSubstanceCards(savedEntries = []) {
       updateAlcoholTotals();
     }
   });
+  setEntryMode(state.entryMode);
 }
 
 function updateSubstanceSelection(event) {
@@ -729,7 +783,7 @@ async function saveGoal(event) {
 }
 
 function exportData() {
-  const payload = { format: "konsumtagebuch-backup", version: 1, exportedAt: new Date().toISOString(), entries: state.entries, goals: state.goals };
+  const payload = { format: "konsumtagebuch-backup", version: 2, exportedAt: new Date().toISOString(), entries: state.entries, goals: state.goals, profile: loadProfile() };
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;
@@ -765,6 +819,8 @@ async function importData(event) {
     state.goals = payload.goals || {};
     write(DATA_KEY, state.entries);
     write(GOALS_KEY, state.goals);
+    if (payload.profile && typeof payload.profile === "object") localStorage.setItem(PROFILE_KEY, JSON.stringify(payload.profile));
+    applyProfile();
     renderToday();
     renderHistory();
     loadGoal();
@@ -874,6 +930,8 @@ function generateReportHTML(entries, detailed = false) {
       }
       return se.consumption ? [se.consumption] : [];
     });
+    if (entry.cravingLevel !== "" && entry.cravingLevel !== undefined) consLines.push(`Suchtdruck ${entry.cravingLevel}/10`);
+    if (entry.strainLevel !== "" && entry.strainLevel !== undefined) consLines.push(`Belastung ${entry.strainLevel}/10`);
     const consLine = consLines.join(" · ");
 
     // Detailblöcke (nur wenn detailed=true und Felder befüllt)
@@ -1196,7 +1254,8 @@ async function generateReportPDF(detailed = false) {
       se.substance==="Alkohol" ? !!entry.units
         : se.substance==="Glücksspiel / Medien" ? !!(se.gamblingHours||se.gamblingMinutes)
         : !!se.consumption
-    );
+    ) || (entry.cravingLevel !== "" && entry.cravingLevel !== undefined)
+      || (entry.strainLevel !== "" && entry.strainLevel !== undefined);
     if (hasConsLine) h += 12;
     if (detailed && entry.substanceEntries?.length) {
       for (const se of entry.substanceEntries) {
@@ -1242,7 +1301,7 @@ async function generateReportPDF(detailed = false) {
     cy += 13;
 
     // Konsum-Zeile
-    const cl = (entry.substanceEntries||[]).flatMap((se) => {
+    const clParts = (entry.substanceEntries||[]).flatMap((se) => {
       if (se.substance==="Alkohol") return entry.units ? [`${entry.units} SE Alkohol`] : [];
       if (se.substance==="Glücksspiel / Medien") {
         const dur = [
@@ -1252,7 +1311,10 @@ async function generateReportPDF(detailed = false) {
         return dur ? [dur] : [];
       }
       return se.consumption ? [se.consumption] : [];
-    }).join("  ·  ");
+    });
+    if (entry.cravingLevel !== "" && entry.cravingLevel !== undefined) clParts.push(`Suchtdruck ${entry.cravingLevel}/10`);
+    if (entry.strainLevel !== "" && entry.strainLevel !== undefined) clParts.push(`Belastung ${entry.strainLevel}/10`);
+    const cl = clParts.join("  ·  ");
     if (cl) { pg.text(cl, ML+8, cy, { size:7.5, color:"#5a7080" }); cy += 12; }
 
     // Detail-Blöcke (nur wenn detailed=true)
@@ -1295,6 +1357,16 @@ function bindEvents() {
   bindSwipeBack();
   $("#close-dialog").addEventListener("click", () => $("#entry-dialog").close());
   $("#entry-form").addEventListener("submit", saveEntry);
+  $$("[data-entry-mode]").forEach((button) => button.addEventListener("click", () => setEntryMode(button.dataset.entryMode)));
+  ["#entry-craving", "#entry-strain"].forEach((selector) => $(selector).addEventListener("input", (event) => {
+    event.currentTarget.dataset.touched = "1";
+    updateScaleDisplays();
+  }));
+  $("#clear-scales").addEventListener("click", () => {
+    setScale($("#entry-craving"), "");
+    setScale($("#entry-strain"), "");
+    updateScaleDisplays();
+  });
   $$(".substance-check").forEach((checkbox) => checkbox.addEventListener("change", updateSubstanceSelection));
   $("#delete-entry").addEventListener("click", deleteEntry);
   $("#goal-form").addEventListener("submit", saveGoal);
@@ -1318,8 +1390,12 @@ function bindEvents() {
     if (!await showConfirm("Wirklich alle Einträge und Wochenziele auf diesem Gerät löschen?", "Alles löschen")) return;
     localStorage.removeItem(DATA_KEY);
     localStorage.removeItem(GOALS_KEY);
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(EXPORT_KEY);
+    localStorage.removeItem(DISCLAIMER_KEY);
     state.entries = [];
     state.goals = {};
+    applyProfile();
     renderToday();
     renderHistory();
     loadGoal();

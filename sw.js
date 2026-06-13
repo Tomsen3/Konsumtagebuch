@@ -1,4 +1,4 @@
-// Cache-Name wird aus version.json gelesen. v1.7.1
+// Cache-Name wird aus version.json gelesen. v1.8.0
 // Beim Release version.json, app.js (VERSION) und diesen Kommentar aktualisieren.
 const ASSETS = ["./", "index.html", "styles.css", "app.js", "pdfgen.js", "manifest.webmanifest", "icon.svg", "logo.png", "apple-touch-icon.png"];
 
