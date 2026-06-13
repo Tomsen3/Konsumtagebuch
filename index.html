@@ -43,15 +43,15 @@
 
     <section id="today" class="view">
       <div class="welcome"><div><p id="today-label" class="eyebrow light"></p><h1>Wie war dein Tag?</h1><p>Beobachte deinen Konsum ohne zu bewerten. Du entscheidest, was du einträgst.</p><div class="hero-actions"><button class="primary light-button open-entry">Jetzt dokumentieren</button><button class="ghost-button open-guide">So funktioniert es</button></div></div><div class="today-badge"><strong id="today-count">0</strong><span>Einträge heute</span></div></div>
-      <aside class="notice"><span>✓</span><p><strong>Privat auf diesem Gerät</strong><br>Ihre Angaben werden nicht an einen Server übertragen.</p></aside>
-      <div class="content-heading"><div><p class="eyebrow">Tagesübersicht</p><h2>Ihre Einträge</h2></div><button class="round-button open-entry" aria-label="Eintrag hinzufügen">+</button></div>
+      <aside class="notice"><span>✓</span><p><strong>Lokal auf diesem Gerät</strong><br>Deine Angaben werden nicht an einen Server übertragen. Schütze dein Handy mit einer Displaysperre.</p></aside>
+      <div class="content-heading"><div><p class="eyebrow">Tagesübersicht</p><h2>Deine Einträge</h2></div><button class="round-button open-entry" aria-label="Eintrag hinzufügen">+</button></div>
       <div id="today-list" class="entry-list"></div>
     </section>
 
     <section id="history" class="view">
       <div class="section-heading history-heading"><div><p class="eyebrow">Muster erkennen</p><h1>Mein Verlauf</h1></div><div id="history-range" class="range-switch" role="group" aria-label="Zeitraum"><button type="button" data-days="7">7 Tage</button><button type="button" data-days="30" class="active">30 Tage</button><button type="button" data-days="90">90 Tage</button><button type="button" data-days="3650">Gesamt</button></div></div>
       <div class="stats-grid"><article class="stat"><span>Tage dokumentiert</span><strong id="stat-days">0</strong></article><article class="stat"><span>Einträge gesamt</span><strong id="stat-entries">0</strong></article><article class="stat"><span id="stat-se-label">Alkohol-SE</span><strong id="stat-se">0</strong></article></div>
-      <article class="panel therapy-summary"><div class="panel-heading"><div><p class="eyebrow">Für das Gespräch</p><h2>Gemeinsamer Wochenblick</h2></div><span id="summary-period">30 Tage</span></div><div id="therapy-summary-grid" class="summary-grid"></div><p id="therapy-summary-note" class="summary-note"></p></article>
+      <article class="panel therapy-summary"><div class="panel-heading"><div><p class="eyebrow">Für das Gespräch</p><h2>Gemeinsamer Überblick</h2></div><span id="summary-period">30 Tage</span></div><div id="therapy-summary-grid" class="summary-grid"></div><p id="therapy-summary-note" class="summary-note"></p></article>
       <div id="substance-filter" class="substance-filter"></div>
       <article class="panel chart-card timeline-card"><div class="panel-heading"><div><p class="eyebrow">Zeitlicher Überblick</p><h2>Einträge nach Tagen</h2></div><span id="timeline-period">30 Tage</span></div><div id="timeline-chart" class="chart" aria-label="Verlaufsdiagramm"></div></article>
       <article class="panel chart-card"><div class="panel-heading"><h2>Dokumentierte Kategorien</h2><span>Häufigkeit</span></div><div id="category-chart" class="bars"></div></article>
@@ -82,8 +82,8 @@
           <li><strong>Datum und Uhrzeit prüfen</strong> – die App trägt die aktuelle Zeit automatisch ein. Du kannst beides frei ändern, um Einträge auch nachträglich für vergangene Tage zu erfassen.</li>
           <li><strong>Substanz oder Verhalten auswählen</strong> – wähle alles aus, was zutrifft. Für jede Auswahl öffnen sich eigene Felder.</li>
           <li><strong>Schnell festhalten</strong> – Menge, Situation, Auslöser sowie Suchtdruck und Belastung reichen zunächst aus. Kein Feld muss vollständig sein.</li>
-          <li><strong>Später reflektieren</strong> – öffne einen gespeicherten Eintrag erneut, um Strategie und Auswertung beim passenden Zeitpunkt zu ergänzen.</li>
           <li><strong>„Eintrag speichern" tippen</strong> – fertig. Der Eintrag erscheint sofort im Verlauf.</li>
+          <li><strong>Später reflektieren</strong> – öffne den gespeicherten Eintrag erneut oder tippe direkt auf „Reflexion ergänzen", um Strategie und Auswertung nachzutragen.</li>
         </ol>
         <p class="guide-note">Bereits gespeicherte Einträge lassen sich jederzeit bearbeiten: im Verlauf auf den Eintrag tippen, ändern und erneut speichern.</p>
       </article>
@@ -91,6 +91,12 @@
         <div class="panel-heading"><h2>Mehreres auf einmal festhalten</h2><span>Wann ein Eintrag, wann zwei?</span></div>
         <p><strong>Alles im selben Eintrag</strong> – wenn mehrere Substanzen oder Verhaltensweisen gleichzeitig oder im gleichen Kontext vorkamen (z. B. Alkohol und Cannabis am selben Abend). Die App zeigt dann für jede Substanz separate Felder – du kannst Situation und Auslöser für jede getrennt beschreiben.</p>
         <p style="margin-top:10px"><strong>Separate Einträge</strong> – wenn Ereignisse zu verschiedenen Zeiten oder in unterschiedlichen Situationen stattgefunden haben. So bleibt der Verlauf zeitlich genau und lässt sich besser auswerten.</p>
+        <p style="margin-top:10px"><strong>Verlangen ohne Konsum</strong> kannst du mit „Verlangen / Craving" festhalten. Wähle „Kein Konsum", wenn du einen konsumfreien Tag oder Moment ausdrücklich dokumentieren möchtest.</p>
+      </article>
+      <article class="panel guide-multi">
+        <div class="panel-heading"><h2>Suchtdruck und Belastung einschätzen</h2><span>0 bis 10</span></div>
+        <p>Die beiden Skalen sind optional. <strong>0</strong> bedeutet kein Suchtdruck beziehungsweise keine Belastung, <strong>10</strong> bedeutet so stark wie vorstellbar. Entscheidend ist deine persönliche Einschätzung in diesem Moment.</p>
+        <p style="margin-top:10px">Wenn du keine Einschätzung angeben möchtest, lasse die Skala unberührt oder tippe auf <strong>„Einschätzungen zurücksetzen"</strong>.</p>
       </article>
       <div class="guide-grid">
         <article><span>1</span><h2>Konsum</h2><p>Was wurde konsumiert, wie viel und wann? Alkohol-SE berechnet die App automatisch. Bei anderen Substanzen reicht eine grobe Angabe.</p></article>
@@ -100,6 +106,17 @@
         <article><span>5</span><h2>Auswertung</h2><p>Was fällt dir beim Zurückblicken auf? Wiederholen sich bestimmte Situationen, Uhrzeiten oder Gefühle? Diese Spalte ist besonders wertvoll für das Gespräch mit deiner Fachperson.</p></article>
       </div>
       <article class="panel tips"><div class="panel-heading"><h2>Hilfreiche Gewohnheiten</h2><span>Tipps</span></div><ul class="check-list"><li><strong>Möglichst zeitnah notieren.</strong> So musst du dich später weniger erinnern.</li><li><strong>Nicht alle Felder müssen ausgefüllt sein.</strong> Schreibe auf, was dir wichtig erscheint.</li><li><strong>Ehrlich zu dir selbst sein.</strong> Das Tagebuch ist für dich und deine Fachperson.</li><li><strong>Wochenbilanz besprechen.</strong> Nimm deine Beobachtungen zum nächsten Termin mit.</li></ul></article>
+      <article class="panel guide-multi">
+        <div class="panel-heading"><h2>Den Verlauf gemeinsam ansehen</h2><span>Therapiegespräch</span></div>
+        <p>Wähle im Verlauf einen Zeitraum und bei Bedarf eine Substanz. Der gemeinsame Überblick hilft dabei, konsumfreie Tage, Suchtdruck und offene Reflexionen zu besprechen.</p>
+        <p style="margin-top:10px"><strong>Wichtig:</strong> Ein Tag ohne Eintrag bedeutet nicht automatisch einen Tag ohne Konsum. Auch viele Einträge bedeuten nicht automatisch mehr Konsum.</p>
+        <p style="margin-top:10px">Die Buttons „Übersicht", „Bericht" und „PDF" verwenden den aktuell gewählten Zeitraum und Substanzfilter. Prüfe diese Auswahl vor dem Teilen.</p>
+      </article>
+      <article class="panel guide-multi">
+        <div class="panel-heading"><h2>Daten auf dem Handy schützen</h2><span>Datenschutz</span></div>
+        <p>Die App überträgt keine Einträge an einen Server. Die lokalen Daten, Sicherungen und PDFs sind jedoch nicht zusätzlich verschlüsselt.</p>
+        <ul class="check-list guide-privacy-list"><li>Nutze eine Displaysperre und möglichst kein gemeinsam verwendetes Handy.</li><li>Bewahre exportierte Sicherungen und PDFs geschützt auf.</li><li>Erstelle regelmäßig eine Sicherung, weil Browserdaten oder die App versehentlich gelöscht werden können.</li><li>Beim Import einer Sicherung werden die aktuell gespeicherten Daten nach deiner Bestätigung ersetzt.</li></ul>
+      </article>
       <article class="panel alcohol-info"><div><p class="eyebrow">Orientierung</p><h2>Eine Alkohol-Standardeinheit</h2><p>Die Angaben sind Näherungswerte für etwa 10 g reinen Alkohol.</p></div><div id="se-unit-grid" class="unit-grid"></div></article>
       <article class="panel crisis-card"><p class="eyebrow">Akute Hilfe</p><h2>Nicht auf einen Eintrag warten</h2><p>Bei Überdosierung, schwerem Entzug, Bewusstlosigkeit oder akuter Selbst- oder Fremdgefährdung sofort Hilfe holen.</p><div class="crisis-actions"><a href="tel:112">Notruf 112</a><a href="tel:+49712192000">PP.rt Infozentrale</a></div></article>
       <button class="primary wide open-entry">Eintrag erstellen</button>
@@ -121,8 +138,8 @@
       </article>
       <article class="panel info-card"><span>⌂</span><div><h2>Lokale Speicherung auf diesem Gerät</h2><p>Es gibt kein Konto und keine Übertragung an einen Server. Die Einträge sind jedoch nicht zusätzlich verschlüsselt. Nutze deshalb eine Displaysperre und möglichst kein gemeinsam verwendetes Gerät.</p></div></article>
       <article class="panel settings-panel"><h2>Daten sichern</h2><p>Beim Löschen von Browserdaten oder Deinstallieren können Einträge verloren gehen. Sicherungen und PDFs enthalten sensible Gesundheitsdaten im Klartext. Bewahre sie geschützt auf.</p><p id="backup-status" class="status"></p><div class="action-grid"><button id="export-data">Sicherung exportieren</button><label class="file-button">Sicherung importieren<input id="import-data" type="file" accept="application/json"></label></div></article>
-      <article class="panel settings-panel"><h2>App verwalten</h2><div class="action-grid"><button id="check-update">Auf neue Version prüfen</button><button id="install-app" hidden>App installieren</button></div><p id="update-status" class="status" aria-live="polite">Installierte Version: <span id="app-version">1.8.0</span></p></article>
-      <article class="panel warning-card"><h2>Wichtiger Hinweis</h2><p>Diese App ist ein persönliches Beobachtungsinstrument. Sie ersetzt keine medizinische Beratung oder Behandlung. Besprechen Sie Fragen und auffällige Veränderungen mit Ihrer Fachperson.</p></article>
+      <article class="panel settings-panel"><h2>App verwalten</h2><div class="action-grid"><button id="check-update">Auf neue Version prüfen</button><button id="install-app" hidden>App installieren</button></div><p id="update-status" class="status" aria-live="polite">Installierte Version: <span id="app-version">1.8.1</span></p></article>
+      <article class="panel warning-card"><h2>Wichtiger Hinweis</h2><p>Diese App ist ein persönliches Beobachtungsinstrument. Sie ersetzt keine medizinische Beratung oder Behandlung. Besprich Fragen und auffällige Veränderungen mit deiner Fachperson.</p></article>
       <article class="panel crisis-card"><h2>Akute Hilfe</h2><p>Bei Überdosierung, schwerem Entzug, Bewusstlosigkeit oder akuter Selbst- oder Fremdgefährdung sofort Hilfe holen.</p><div class="crisis-actions"><a href="tel:112">Notruf 112</a><a href="tel:+49712192000">PP.rt Infozentrale</a></div></article>
       <button id="delete-data" class="danger-link">Alle lokalen Daten löschen</button>
       <footer class="contact-footer">
@@ -170,7 +187,7 @@
       </div>
     </div>
   </dialog>
-  <template id="empty-template"><article class="empty"><span>＋</span><h2>Noch keine Einträge</h2><p>Notieren Sie eine Beobachtung, sobald es für Sie passt.</p><button class="primary open-entry">Ersten Eintrag erstellen</button></article></template>
+  <template id="empty-template"><article class="empty"><span>＋</span><h2>Noch keine Einträge</h2><p>Notiere eine Beobachtung, sobald es für dich passt.</p><button class="primary open-entry">Ersten Eintrag erstellen</button></article></template>
   <script src="pdfgen.js" defer></script>
   <script src="app.js" defer></script>
 </body>

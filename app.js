@@ -1,5 +1,5 @@
 // Beim Release hier und in version.json auf dieselbe Version setzen. sw.js liest version.json automatisch.
-const VERSION = "1.8.0";
+const VERSION = "1.8.1";
 const DATA_KEY       = "konsumtagebuch.data.v1";
 const GOALS_KEY      = "konsumtagebuch.goals.v1";
 const EXPORT_KEY     = "konsumtagebuch.lastExport";
@@ -371,7 +371,7 @@ function renderTimeline(entries) {
 
   if (!activePoints) {
     $("#timeline-chart").innerHTML = `<div class="chart-empty">
-      <span>↗</span><div><strong>Noch kein Verlauf sichtbar</strong><p>Mit Ihren Einträgen entsteht hier nach und nach ein Überblick.</p></div>
+      <span>↗</span><div><strong>Noch kein Verlauf sichtbar</strong><p>Mit deinen Einträgen entsteht hier nach und nach ein Überblick.</p></div>
     </div>`;
     return;
   }
@@ -840,7 +840,7 @@ async function checkUpdate() {
       return;
     }
     status.textContent = `Version ${latest.version} ist verfügbar.`;
-    if (!await showConfirm(`Version ${latest.version} ist verfügbar. Ihre lokalen Daten bleiben erhalten.`, "Jetzt aktualisieren")) return;
+    if (!await showConfirm(`Version ${latest.version} ist verfügbar. Deine lokalen Daten bleiben erhalten.`, "Jetzt aktualisieren")) return;
     const registration = await navigator.serviceWorker?.getRegistration();
     if (!registration) { location.reload(); return; }
     navigator.serviceWorker.addEventListener("controllerchange", () => location.reload(), { once: true });
@@ -1031,7 +1031,7 @@ footer{margin-top:14pt;padding-top:6pt;border-top:.5pt solid #dce6ec;display:fle
 </style>
 <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),400))<\/script>
 </head><body>
-<div class="pdf-hint">📄 Druckdialog öffnet gleich – wählen Sie „Als PDF speichern" um die Datei zu speichern.</div>
+<div class="pdf-hint">📄 Der Druckdialog öffnet gleich – wähle „Als PDF speichern", um die Datei zu speichern.</div>
 <div class="rh">
   <div class="rt"><h1>KLARA</h1><p>${title}</p></div>
   <div class="rc"><strong>PP.rt</strong>Klinik für Psychiatrie und<br>Psychosomatik Reutlingen</div>
@@ -1387,7 +1387,7 @@ function bindEvents() {
   $("#import-data").addEventListener("change", importData);
   $("#check-update").addEventListener("click", checkUpdate);
   $("#delete-data").addEventListener("click", async () => {
-    if (!await showConfirm("Wirklich alle Einträge und Wochenziele auf diesem Gerät löschen?", "Alles löschen")) return;
+    if (!await showConfirm("Wirklich alle Einträge, Wochenziele, Profildaten und App-Einstellungen auf diesem Gerät löschen?", "Alles löschen")) return;
     localStorage.removeItem(DATA_KEY);
     localStorage.removeItem(GOALS_KEY);
     localStorage.removeItem(PROFILE_KEY);

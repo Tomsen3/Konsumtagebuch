@@ -140,6 +140,7 @@ input:focus,textarea:focus,select:focus{outline:3px solid rgba(8,121,189,.12);bo
 .step-list li::before{content:counter(steps);position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;background:var(--blue-soft);color:var(--blue-dark);font-size:.75rem;font-weight:900;display:grid;place-items:center;line-height:1}
 .guide-steps,.guide-multi{margin-bottom:14px}
 .guide-note{margin-top:14px;padding:8px 12px;background:var(--blue-soft);border-radius:8px;font-size:.85rem;color:var(--blue-dark);line-height:1.5}
+.guide-privacy-list{margin-top:14px}
 .alcohol-info{display:flex;justify-content:space-between;align-items:center;gap:20px;background:#f8fcfe}
 .unit-grid{display:flex;gap:7px}
 .unit-grid span{display:grid;min-width:95px;padding:12px;border:1px solid var(--line);border-radius:11px;text-align:center;background:white;color:var(--muted);font-size:.72rem}
