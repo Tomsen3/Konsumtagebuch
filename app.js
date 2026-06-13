@@ -786,17 +786,26 @@ async function checkUpdate() {
     status.textContent = `Version ${latest.version} ist verfügbar.`;
     if (!await showConfirm(`Version ${latest.version} ist verfügbar. Ihre lokalen Daten bleiben erhalten.`, "Jetzt aktualisieren")) return;
     const registration = await navigator.serviceWorker?.getRegistration();
-    if (!registration) {
-      location.reload();
-      return;
-    }
+    if (!registration) { location.reload(); return; }
     navigator.serviceWorker.addEventListener("controllerchange", () => location.reload(), { once: true });
-    const activate = () => registration.waiting?.postMessage({ type: "SKIP_WAITING" });
+    const tryActivate = () => {
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        return true;
+      }
+      return false;
+    };
+    // Neuer SW wartet bereits → sofort aktivieren
+    if (tryActivate()) return;
+    // Sonst auf Installation warten
     registration.addEventListener("updatefound", () => {
-      registration.installing?.addEventListener("statechange", activate);
+      registration.installing?.addEventListener("statechange", () => {
+        if (registration.installing?.state === "installed") tryActivate();
+      });
     });
     await registration.update();
-    activate();
+    // Fallback: nach update() nochmal prüfen
+    if (!tryActivate()) setTimeout(() => location.reload(), 2000);
   } catch { status.textContent = "Versionsprüfung nicht möglich. Die App bleibt offline nutzbar."; }
 }
 
@@ -1372,7 +1381,7 @@ async function start() {
   loadGoal();
   renderBackupStatus();
   if ("serviceWorker" in navigator) {
-    try { await navigator.serviceWorker.register("sw.js", { updateViaCache: "all" }); } catch { /* App remains usable online. */ }
+    try { await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }); } catch { /* App remains usable online. */ }
   }
 }
 start();
