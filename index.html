@@ -11,7 +11,6 @@
 </head>
 <body>
   <header class="app-header">
-    <button id="back-button" class="back-button" aria-label="Zurück" hidden>‹</button>
     <div class="brand"><img src="logo.png" alt="Klinik für Psychiatrie und Psychosomatik Reutlingen"><div><span>PIA Intensiv</span><strong>KLARA</strong><small class="klara-sub">Konsum · Lage · Auslöser · Reflexion · Auswertung</small></div></div>
     <button id="quick-add" class="primary add-button"><span>+</span> Neuer Eintrag</button>
   </header>
@@ -114,8 +113,8 @@
       </article>
       <article class="panel guide-multi">
         <div class="panel-heading"><h2>Daten auf dem Handy schützen</h2><span>Datenschutz</span></div>
-        <p>Die App überträgt keine Einträge an einen Server. Die lokalen Daten, Sicherungen und PDFs sind jedoch nicht zusätzlich verschlüsselt.</p>
-        <ul class="check-list guide-privacy-list"><li>Nutze eine Displaysperre und möglichst kein gemeinsam verwendetes Handy.</li><li>Bewahre exportierte Sicherungen und PDFs geschützt auf.</li><li>Erstelle regelmäßig eine Sicherung, weil Browserdaten oder die App versehentlich gelöscht werden können.</li><li>Beim Import einer Sicherung werden die aktuell gespeicherten Daten nach deiner Bestätigung ersetzt.</li></ul>
+        <p>Die App kann auf verschiedenen Geräten genutzt werden, überträgt aber aus Datenschutzgründen keine Einträge an einen Server und synchronisiert Geräte nicht automatisch. Die lokalen Daten, Sicherungen und PDFs sind nicht zusätzlich verschlüsselt.</p>
+        <ul class="check-list guide-privacy-list"><li>Nutze eine Displaysperre und möglichst kein gemeinsam verwendetes Handy.</li><li>Übertrage Daten auf ein anderes Gerät ausschließlich manuell über „Sicherung exportieren“ und „Sicherung importieren“.</li><li>Bewahre exportierte Sicherungen und PDFs geschützt auf.</li><li>Erstelle regelmäßig eine Sicherung, weil Browserdaten oder die App versehentlich gelöscht werden können.</li><li>Beim Import einer Sicherung werden die aktuell gespeicherten Daten nach deiner Bestätigung ersetzt.</li></ul>
       </article>
       <article class="panel alcohol-info"><div><p class="eyebrow">Orientierung</p><h2>Eine Alkohol-Standardeinheit</h2><p>Die Angaben sind Näherungswerte für etwa 10 g reinen Alkohol.</p></div><div id="se-unit-grid" class="unit-grid"></div></article>
       <article class="panel crisis-card"><p class="eyebrow">Akute Hilfe</p><h2>Nicht auf einen Eintrag warten</h2><p>Bei Überdosierung, schwerem Entzug, Bewusstlosigkeit oder akuter Selbst- oder Fremdgefährdung sofort Hilfe holen.</p><div class="crisis-actions"><a href="tel:112">Notruf 112</a><a href="tel:+49712192000">PP.rt Infozentrale</a></div></article>
@@ -136,9 +135,9 @@
         <label>Station / Einrichtung <small>optional</small><input id="profile-ward" type="text" placeholder="z. B. Station 3b"></label>
         <button id="save-profile" class="primary">Speichern</button>
       </article>
-      <article class="panel info-card"><span>⌂</span><div><h2>Lokale Speicherung auf diesem Gerät</h2><p>Es gibt kein Konto und keine Übertragung an einen Server. Die Einträge sind jedoch nicht zusätzlich verschlüsselt. Nutze deshalb eine Displaysperre und möglichst kein gemeinsam verwendetes Gerät.</p></div></article>
-      <article class="panel settings-panel"><h2>Daten sichern</h2><p>Beim Löschen von Browserdaten oder Deinstallieren können Einträge verloren gehen. Sicherungen und PDFs enthalten sensible Gesundheitsdaten im Klartext. Bewahre sie geschützt auf.</p><p id="backup-status" class="status"></p><div class="action-grid"><button id="export-data">Sicherung exportieren</button><label class="file-button">Sicherung importieren<input id="import-data" type="file" accept="application/json"></label></div></article>
-      <article class="panel settings-panel"><h2>App verwalten</h2><div class="action-grid"><button id="check-update">Auf neue Version prüfen</button><button id="install-app" hidden>App installieren</button></div><p id="update-status" class="status" aria-live="polite">Installierte Version: <span id="app-version">1.8.3</span></p></article>
+      <article class="panel info-card"><span>⌂</span><div><h2>Lokale Speicherung auf diesem Gerät</h2><p>Die App kann auf verschiedenen Geräten genutzt werden. Es gibt jedoch kein Konto, keine Übertragung an einen Server und keine automatische Synchronisierung. Die Einträge sind nicht zusätzlich verschlüsselt. Nutze deshalb eine Displaysperre und möglichst kein gemeinsam verwendetes Gerät.</p></div></article>
+      <article class="panel settings-panel"><h2>Daten sichern und übertragen</h2><p>Eine Übertragung auf ein anderes Gerät ist ausschließlich manuell über Export und Import einer Sicherung möglich. Beim Löschen von Browserdaten oder Deinstallieren können Einträge verloren gehen. Sicherungen und PDFs enthalten sensible Gesundheitsdaten im Klartext. Bewahre sie geschützt auf.</p><p id="backup-status" class="status"></p><div class="action-grid"><button id="export-data">Sicherung exportieren</button><label class="file-button">Sicherung importieren<input id="import-data" type="file" accept="application/json"></label></div></article>
+      <article class="panel settings-panel"><h2>App verwalten</h2><div class="action-grid"><button id="check-update">Auf neue Version prüfen</button><button id="install-app" hidden>App installieren</button></div><p id="update-status" class="status" aria-live="polite">Installierte Version: <span id="app-version">1.8.5</span></p></article>
       <article class="panel warning-card"><h2>Wichtiger Hinweis</h2><p>Diese App ist ein persönliches Beobachtungsinstrument. Sie ersetzt keine medizinische Beratung oder Behandlung. Besprich Fragen und auffällige Veränderungen mit deiner Fachperson.</p></article>
       <article class="panel crisis-card"><h2>Akute Hilfe</h2><p>Bei Überdosierung, schwerem Entzug, Bewusstlosigkeit oder akuter Selbst- oder Fremdgefährdung sofort Hilfe holen.</p><div class="crisis-actions"><a href="tel:112">Notruf 112</a><a href="tel:+49712192000">PP.rt Infozentrale</a></div></article>
       <button id="delete-data" class="danger-link">Alle lokalen Daten löschen</button>
@@ -174,7 +173,7 @@
       <h2>Wichtiger Hinweis</h2>
       <p>KLARA ist ein persönliches Beobachtungsinstrument der <strong>PP.rt – Klinik für Psychiatrie und Psychosomatik Reutlingen</strong> und kein zugelassenes Medizinprodukt.</p>
       <p>Die App <strong>ersetzt keine medizinische Beratung oder Behandlung</strong>. Bitte bespreche alle Beobachtungen, Fragen und auffälligen Veränderungen mit deiner Therapeutin oder deinem Therapeuten.</p>
-      <p>Alle Daten werden lokal in diesem Browser gespeichert und nicht an einen Server übertragen. Sie sind nicht zusätzlich verschlüsselt. Bitte nutze eine Displaysperre und möglichst kein gemeinsam verwendetes Gerät.</p>
+      <p>Alle Daten werden lokal in diesem Browser gespeichert und nicht an einen Server übertragen. Die App kann auf verschiedenen Geräten genutzt werden, synchronisiert diese aber aus Datenschutzgründen nicht automatisch. Eine Übertragung ist ausschließlich manuell über Export und Import einer Sicherung möglich. Sicherungen sind nicht zusätzlich verschlüsselt. Bitte nutze eine Displaysperre und bewahre exportierte Dateien geschützt auf.</p>
       <button id="disclaimer-ok" class="primary wide">Verstanden – ich starte KLARA</button>
     </div>
   </dialog>

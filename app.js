@@ -1,5 +1,5 @@
 // Beim Release hier, in version.json und in sw.js auf dieselbe Version setzen.
-const VERSION = "1.8.3";
+const VERSION = "1.8.5";
 const DATA_KEY       = "konsumtagebuch.data.v1";
 const GOALS_KEY      = "konsumtagebuch.goals.v1";
 const EXPORT_KEY     = "konsumtagebuch.lastExport";
@@ -104,17 +104,12 @@ function mondayOf(date = new Date()) {
   return localDate(d);
 }
 
-function updateBackButton() {
-  $("#back-button").hidden = state.viewHistory.length < 2;
-}
-
 function showView(id) {
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === id));
   $$(".tabs button").forEach((button) => button.classList.toggle("active", button.dataset.view === id));
   if (id === "history") renderHistory();
   if (id === "goals") loadGoal();
   state.currentView = id;
-  updateBackButton();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -1353,7 +1348,6 @@ function bindEvents() {
   $$("[data-jump]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.jump)));
   $$(".open-guide").forEach((button) => button.addEventListener("click", () => switchView("guide")));
   $("#quick-add").addEventListener("click", () => openEntry());
-  $("#back-button").addEventListener("click", goBack);
   window.addEventListener("popstate", handlePopState);
   bindSwipeBack();
   $("#close-dialog").addEventListener("click", () => $("#entry-dialog").close());
@@ -1453,7 +1447,6 @@ async function start() {
   bindEvents();
   showDisclaimer();
   history.replaceState({ view: "start" }, "");
-  updateBackButton();
   renderToday();
   loadGoal();
   renderBackupStatus();

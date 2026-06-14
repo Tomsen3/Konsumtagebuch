@@ -8,6 +8,7 @@ Eine offlinefaehige, statische Progressive Web App fuer die persoenliche Patient
 - Es gibt kein Benutzerkonto, keine Datenbank, kein Tracking und keine externen Bibliotheken.
 - Die Content Security Policy erlaubt Netzwerkverbindungen nur zur eigenen Herkunft.
 - Eine JSON-Sicherung inklusive Profildaten kann lokal exportiert und wieder importiert werden.
+- Die App kann auf mehreren Endgeraeten genutzt werden, synchronisiert diese aber aus Datenschutzgruenden nicht automatisch. Daten koennen nur manuell per Export und Import einer Sicherung uebertragen werden.
 
 Die lokalen Daten sowie exportierte Sicherungen und PDFs sind nicht zusaetzlich verschluesselt. Das Geraet sollte mit einer Displaysperre geschuetzt und nicht gemeinsam verwendet werden. Das Loeschen von Browserdaten oder das Deinstallieren der App kann lokale Eintraege entfernen. Deshalb sollte regelmaessig eine geschuetzt aufbewahrte Sicherung exportiert werden.
 

@@ -1,4 +1,4 @@
-const VERSION = "1.8.3";
+const VERSION = "1.8.5";
 const CACHE_NAME = `konsumtagebuch-app-v${VERSION}`;
 const ASSETS = [
   "./",
