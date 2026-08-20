@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-20T18:12:26Z",
+  "title": "Design System: KLARA",
+  "extensions": {
+    "colorMeta": {
+      "clinical-blue": { "role": "primary", "displayName": "Clinical Blue", "canonical": "#0879bd", "tonalRamp": ["#032f49", "#065889", "#087dc4", "#14a1f5", "#4fb8f8", "#8ad0fa", "#bae3fc", "#e7f5fe"] },
+      "clinical-cyan": { "role": "secondary", "displayName": "Clinical Cyan", "canonical": "#21b5ca", "tonalRamp": ["#0b3b42", "#146e7b", "#1d9daf", "#2dc7dd", "#61d5e5", "#96e3ee", "#c2eff5", "#e9f9fb"] },
+      "reassurance-green": { "role": "positive", "displayName": "Reassurance Green", "canonical": "#168263", "tonalRamp": ["#0b4132", "#157a5d", "#1eae85", "#2edcaa", "#62e4bf", "#96edd4", "#c2f5e6", "#e9fbf6"] },
+      "quiet-alert-red": { "role": "destructive", "displayName": "Quiet Alert Red", "canonical": "#df0038", "tonalRamp": ["#4d0013", "#8f0024", "#cc0033", "#ff0a48", "#ff4776", "#ff85a3", "#ffb8ca", "#ffe5ec"] },
+      "crisis-rose": { "role": "crisis", "displayName": "Crisis Rose", "canonical": "#962b46", "tonalRamp": ["#3b111c", "#6f2034", "#9f2d4a", "#c84163", "#d6708a", "#e4a0b1", "#efc8d1", "#f9ebef"] },
+      "muted-slate": { "role": "neutral", "displayName": "Muted Slate", "canonical": "#687988", "tonalRamp": ["#21272b", "#3e4851", "#586774", "#748695", "#97a4af", "#bac2ca", "#d7dce0", "#f1f2f4"] }
+    },
+    "typographyMeta": {
+      "hero-display": { "displayName": "Hero Display", "purpose": "Start/Today gradient hero headline only." },
+      "display": { "displayName": "Display", "purpose": "Standard page h1." },
+      "title": { "displayName": "Title", "purpose": "Section and panel h2 headings." },
+      "body": { "displayName": "Body", "purpose": "Paragraph copy." },
+      "label": { "displayName": "Label", "purpose": "Eyebrow kickers and small uppercase badges." }
+    },
+    "shadows": [
+      { "name": "ambient-panel", "value": "0 12px 32px rgba(20,65,96,.07)", "purpose": "Default panel/card shadow at rest." },
+      { "name": "ambient-list-rest", "value": "0 5px 15px rgba(20,65,96,.04)", "purpose": "Entry/list item shadow before interaction." },
+      { "name": "hero-heavy", "value": "0 20px 45px rgba(7,93,146,.2)", "purpose": "The gradient hero card's singular heavier shadow." },
+      { "name": "primary-button-glow", "value": "0 8px 20px rgba(8,121,189,.18)", "purpose": "Soft colored glow under the primary button." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": ".15s ease", "purpose": "Default transition for buttons, entry cards, filter chips." },
+      { "name": "list-item-lift", "value": "translateY(-2px)", "purpose": "Hover lift on clickable entry/goal-history cards." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "760px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single most important action per screen (log an entry, save a form).",
+      "html": "<button class=\"ds-btn-primary\">Jetzt dokumentieren</button>",
+      "css": ".ds-btn-primary { border: 1px solid #0879bd; border-radius: 11px; padding: 11px 16px; background: #0879bd; color: #fff; font: inherit; font-weight: 750; box-shadow: 0 8px 20px rgba(8,121,189,.18); cursor: pointer; transition: .15s ease; } .ds-btn-primary:hover { background: #075d92; } .ds-btn-primary:focus-visible { outline: 3px solid rgba(8,121,189,.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default button style for any action that isn't the primary one.",
+      "html": "<button class=\"ds-btn-secondary\">Abbrechen</button>",
+      "css": ".ds-btn-secondary { border: 1px solid #e0eaf1; border-radius: 11px; padding: 11px 16px; background: #fff; color: #172534; font: inherit; font-weight: 750; cursor: pointer; transition: .15s ease; } .ds-btn-secondary:hover { border-color: #bdd8e7; } .ds-btn-secondary:focus-visible { outline: 3px solid rgba(8,121,189,.2); outline-offset: 2px; }"
+    },
+    {
+      "name": "Tag",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Read-only category label shown on a logged entry.",
+      "html": "<span class=\"ds-tag\">Alkohol</span>",
+      "css": ".ds-tag { display: inline-block; padding: 5px 9px; border-radius: 999px; background: #e8f5fc; color: #075d92; font-size: .7rem; font-weight: 850; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Toggleable substance filter; active state fills with the substance's assigned accent color via --chip-color.",
+      "html": "<button class=\"ds-filter-chip ds-filter-chip--active\" style=\"--chip-color:#0879bd\">Alkohol</button>",
+      "css": ".ds-filter-chip { padding: 5px 12px; border: 1px solid #e0eaf1; border-radius: 999px; background: #fff; color: #687988; font-size: .74rem; font-weight: 700; cursor: pointer; transition: .12s ease; } .ds-filter-chip:hover { border-color: var(--chip-color, #0879bd); color: var(--chip-color, #0879bd); } .ds-filter-chip--active { border-color: var(--chip-color, #0879bd); background: var(--chip-color, #0879bd); color: #fff; }"
+    },
+    {
+      "name": "Panel / Card",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The default container for any grouped content.",
+      "html": "<div class=\"ds-panel\"><p class=\"ds-eyebrow\">Muster erkennen</p><h2>Deine Einträge</h2></div>",
+      "css": ".ds-panel { padding: 24px; border: 1px solid #e0eaf1; border-radius: 18px; background: #fff; box-shadow: 0 12px 32px rgba(20,65,96,.07); } .ds-eyebrow { margin: 0 0 6px; color: #0879bd; font-size: .7rem; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; } .ds-panel h2 { margin: 0; font-size: 1.08rem; letter-spacing: -.025em; }"
+    },
+    {
+      "name": "Entry Card",
+      "kind": "card",
+      "refersTo": "entry",
+      "description": "A single logged entry in a list; lifts and deepens its shadow on hover.",
+      "html": "<div class=\"ds-entry\"><h3>Abendspaziergang</h3><time>Heute, 19:30</time></div>",
+      "css": ".ds-entry { padding: 17px 19px; border: 1px solid #e0eaf1; border-radius: 16px; background: #fff; box-shadow: 0 5px 15px rgba(20,65,96,.04); cursor: pointer; transition: .15s ease; } .ds-entry:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(20,65,96,.07); border-color: #bdd8e7; } .ds-entry h3 { margin: 0 0 4px; font-size: 1rem; } .ds-entry time { color: #687988; font-size: .84rem; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "range-switch",
+      "description": "Mutually-exclusive choice control (date range, entry mode) — a white pill slides under the active option inside a light gray track.",
+      "html": "<div class=\"ds-segmented\" role=\"group\"><button class=\"ds-segmented__btn ds-segmented__btn--active\">30 Tage</button><button class=\"ds-segmented__btn\">90 Tage</button></div>",
+      "css": ".ds-segmented { display: flex; gap: 3px; padding: 4px; border: 1px solid #d7e5ed; border-radius: 13px; background: #eaf3f8; } .ds-segmented__btn { padding: 7px 12px; border: 0; border-radius: 9px; background: transparent; color: #637786; font-size: .74rem; font-weight: 750; cursor: pointer; } .ds-segmented__btn:hover { color: #075d92; background: rgba(255,255,255,.55); } .ds-segmented__btn--active { color: #075d92; background: #fff; box-shadow: 0 2px 8px rgba(20,65,96,.1); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard form field with a soft blue focus ring.",
+      "html": "<label class=\"ds-field\">Notiz<input type=\"text\" class=\"ds-input\" placeholder=\"Was ist dir aufgefallen?\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: #526576; font-size: .78rem; font-weight: 750; } .ds-input { width: 100%; min-height: 44px; border: 1px solid #d7e3eb; border-radius: 11px; padding: 11px 12px; background: #fbfdff; color: #172534; font: inherit; } .ds-input:focus { outline: 3px solid rgba(8,121,189,.12); border-color: #0879bd; }"
+    },
+    {
+      "name": "Crisis Card",
+      "kind": "custom",
+      "refersTo": "crisis-button",
+      "description": "Always-visible emergency-help card; deliberately its own color family, never the destructive red.",
+      "html": "<div class=\"ds-crisis\"><h2>Nicht auf einen Eintrag warten</h2><p>Bei akuter Selbst- oder Fremdgefährdung sofort Hilfe holen.</p><a class=\"ds-crisis__action\" href=\"tel:112\">Notruf 112</a></div>",
+      "css": ".ds-crisis { padding: 24px; border: 1px solid #efc8d2; border-radius: 18px; background: #fff8fa; } .ds-crisis h2 { margin: 0 0 8px; color: #962b46; font-size: 1.08rem; } .ds-crisis p { margin: 0 0 12px; color: #684852; font-size: .84rem; } .ds-crisis__action { display: inline-block; padding: 10px 14px; border-radius: 11px; background: #962b46; color: #fff; font-size: .8rem; font-weight: 800; text-decoration: none; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Der stille Begleiter",
+    "overview": "KLARA sits with the user without ever raising its voice. The interface's job is to disappear into the moment of writing something down — a calm blue-and-white surface, generous rounding, soft diffuse shadows, one typeface at every weight it needs and no more. Nothing in the system scores, counts up dramatically, or celebrates; the one place color gets expressive is the gradient hero card that opens Start and Today, and even there it stays a gentle wash rather than a splash. The system deliberately avoids two failure modes at once: it must never read as a cold, sterile clinic interface, and it must never read as a playful habit-tracker with streaks and rewards — both would misrepresent what the product is for. Structure carries the seriousness (fixed five-part entry format, an always-visible crisis exit); color and shape carry the warmth.",
+    "keyCharacteristics": [
+      "Calm clinical-blue palette on an off-white paper ground, never stark white-on-white",
+      "Soft, ambient shadows and consistently rounded corners (nothing sharp-edged)",
+      "One typeface (Inter), differentiated only by weight, size, and letter-spacing",
+      "A single gradient \"hero\" surface as the system's one moment of visual richness",
+      "A deliberately separate, muted rose family reserved only for crisis/emergency content"
+    ],
+    "rules": [
+      { "name": "The Cyan-Is-Not-Clickable Rule", "body": "Cyan never appears on a button or any interactive control — it marks information, blue marks action.", "section": "colors" },
+      { "name": "The Two Reds Rule", "body": "Quiet Alert Red is reserved for a single destructive micro-interaction and must never flag or color-code a logged entry. Crisis Rose is its own separate family used only for the emergency-help card, so a life-safety signal never blends with an ordinary UI warning.", "section": "colors" },
+      { "name": "The One Typeface Rule", "body": "Inter is the only typeface in the system, at every weight from 400 to 900. A second typeface would read as decoration the product's tone doesn't want.", "section": "typography" },
+      { "name": "The No Hard Shadow Rule", "body": "Every shadow uses a wide blur radius and low opacity (≤0.2 alpha). A tight, dark, cut-out shadow never appears.", "section": "elevation" },
+      { "name": "The Segmented Pill Rule", "body": "Any control offering a small set of mutually exclusive choices uses the same light-track/white-pill pattern; it must not be reinvented elsewhere.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do use Clinical Blue for every interactive element and Clinical Cyan only for data/decoration — keep the Cyan-Is-Not-Clickable Rule intact.",
+      "Do keep every new shape rounded (8px minimum radius) with soft, wide, low-opacity shadows.",
+      "Do treat the gradient hero as a singular, non-repeatable surface — one per view at most.",
+      "Do keep Crisis Rose visually and structurally separate from Quiet Alert Red."
+    ],
+    "donts": [
+      "Don't use red, or any color, to flag, score, or visually shame a logged consumption entry — this is a durable product principle, not a stylistic preference.",
+      "Don't add gamification elements — streaks, badges, confetti, celebratory progress bars.",
+      "Don't let the interface drift toward a sterile, cold, stark-white \"hospital\" look.",
+      "Don't introduce a second display/personality typeface."
+    ]
+  }
+}
