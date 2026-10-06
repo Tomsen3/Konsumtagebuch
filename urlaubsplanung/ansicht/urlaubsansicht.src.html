@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Urlaubsansicht Kreativtherapie</title>
+<!--
+  Urlaubsansicht – liest Urlaubswuensche_Kreativtherapie.xlsx und zeigt Kalender, Ampel und Konflikte.
+  Läuft komplett lokal im Browser: kein Server, keine Internetverbindung, es werden keine Daten verschickt.
+  Die Excel-Datei wird nur gelesen, nie verändert.
+
+  QUELLTEXT: ansicht/urlaubsansicht.src.html  →  mit baue_ansicht.py zu Urlaubsansicht.html zusammenbauen
+  (dabei wird die Bibliothek SheetJS zum Lesen von Excel-Dateien eingebettet).
+-->
+<style>
+:root{
+  --navy:#1F3864; --navy-2:#2F5496; --ink:#1d2433; --muted:#5b6475; --line:#dde2ea; --bg:#f4f6fa; --card:#fff;
+  --we:#eef0f4; --hol:#e4e0ef;
+  --l1:#d9efdc; --l1-ink:#1e6b2e;
+  --l2:#ffe58f; --l2-ink:#7a5600;
+  --l3:#f7a8a8; --l3-ink:#8a1010;
+  --l4:#b00020; --l4-ink:#fff;
+  --cw-week:34px; --cw-day:22px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+button,select,input{font:inherit}
+header.top{background:var(--navy);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+header.top h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
+header.top .file{font-size:12.5px;opacity:.85;flex:1;min-width:200px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--navy-2)}
+.btn.primary{background:#fff;color:var(--navy);font-weight:600;border-color:#fff}
+header.top .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
+header.top .btn.primary{background:#fff;color:var(--navy)}
+main{padding:16px 20px 40px;max-width:100%}
+.hidden{display:none!important}
+
+/* Startbildschirm */
+.drop{max-width:720px;margin:40px auto;background:var(--card);border:2px dashed #b9c3d6;border-radius:16px;padding:36px;text-align:center}
+.drop.over{border-color:var(--navy-2);background:#eef3ff}
+.drop h2{margin:0 0 6px;color:var(--navy)}
+.drop p{color:var(--muted);margin:6px 0}
+.drop .btn{margin-top:14px}
+.drop ol{text-align:left;display:inline-block;color:var(--muted);margin:18px 0 0}
+
+/* Kennzahlen */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:700;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.click{cursor:pointer}
+.kpi.click:hover{border-color:var(--navy-2)}
+.kpi .row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600}
+.lv1{background:var(--l1);color:var(--l1-ink)} .lv2{background:var(--l2);color:var(--l2-ink)}
+.lv3{background:var(--l3);color:var(--l3-ink)} .lv4{background:var(--l4);color:var(--l4-ink)}
+
+/* Filter */
+.filters{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-start;margin-bottom:14px}
+.fgroup{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fgroup > label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none}
+.chip .dot{width:10px;height:10px;border-radius:50%}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 12px;cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff}
+.filters input[type=search]{border:1px solid var(--line);border-radius:8px;padding:5px 10px;width:180px}
+.filters select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff}
+.reset{font-size:12.5px;color:var(--navy-2);background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
+.tab{border:0;background:none;padding:9px 14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-weight:600}
+.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
+.tab .count{margin-left:6px}
+
+/* Legende */
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.legend b{color:var(--ink);font-weight:600}
+
+/* Kalender */
+.calwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 150px)}
+table.cal{border-collapse:separate;border-spacing:0;font-size:12px}
+table.cal th,table.cal td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;text-align:center;height:26px}
+table.cal thead th{position:sticky;background:#f8f9fc;z-index:2;font-weight:600;color:var(--muted)}
+table.cal thead tr.m th{top:0;height:24px;color:var(--navy);font-size:12px;text-align:left;padding-left:6px}
+table.cal thead tr.c th{top:24px;font-size:10.5px;line-height:1.1}
+table.cal .lh{position:sticky;left:0;z-index:3;background:#fff;text-align:left;padding:0 10px;min-width:230px;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.cal thead .lh{z-index:4;background:#f8f9fc}
+table.cal td.c{min-width:var(--cw);max-width:var(--cw);width:var(--cw);cursor:pointer;font-weight:600;font-size:11px}
+table.cal td.we{background:var(--we)} table.cal td.hol{background:var(--hol)}
+table.cal th.we{background:#e8ebf1} table.cal th.hol{background:#ddd7ec}
+table.cal th.today,table.cal td.today{box-shadow:inset 2px 0 0 #ED7D31, inset -2px 0 0 #ED7D31}
+table.cal th.mstart,table.cal td.mstart{border-left:2px solid #9aa7c2}
+table.cal tr.sec td{background:#eef2fa;color:var(--navy);font-weight:700;text-align:left;padding:6px 10px;position:sticky;left:0}
+table.cal tr.sec td span{position:sticky;left:10px}
+table.cal tr.sub td{background:#fafbfd;color:var(--muted);font-weight:600;text-align:left;padding:3px 10px;font-size:11.5px}
+.lh .nm{font-weight:600;color:var(--ink)}
+.lh .meta{color:var(--muted);font-size:11px;margin-left:6px}
+.lh .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+td.p{color:#fff}
+td.r2{box-shadow:inset 0 0 0 3px var(--l2)} td.r3{box-shadow:inset 0 0 0 3px #e45757} td.r4{box-shadow:inset 0 0 0 3px var(--l4)}
+td.u.lv1{background:var(--l1);color:var(--l1-ink)} td.u.lv2{background:var(--l2);color:var(--l2-ink)}
+td.u.lv3{background:var(--l3);color:var(--l3-ink)} td.u.lv4{background:var(--l4);color:#fff}
+td.u.lv0{color:#aab}
+td.sel{outline:2px solid var(--navy);outline-offset:-2px}
+
+/* Konflikte */
+.conf-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.conf-head .note{color:var(--muted);font-size:13px}
+.lvsec h3{margin:18px 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+.card{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;break-inside:avoid}
+.card.lv2b{border-left-color:#f2c200} .card.lv3b{border-left-color:#e45757} .card.lv4b{border-left-color:var(--l4)}
+.card .t{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.card .unit{font-weight:700;font-size:15px}
+.card .unit small{font-weight:600;color:var(--muted);font-size:12px;margin-right:4px}
+.card .when{color:var(--ink)}
+.card .size{color:var(--muted)}
+.card table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+.card th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);padding:4px 6px}
+.card td{padding:5px 6px;border-bottom:1px solid #f0f2f6;vertical-align:top}
+.card .ask{margin-top:8px;font-size:13px;background:#f6f8fc;border-radius:8px;padding:6px 10px}
+.flex{font-size:11.5px;border-radius:6px;padding:1px 7px;font-weight:600;white-space:nowrap}
+.flex.ja{background:#d9efdc;color:#1e6b2e} .flex.etwas{background:#fff1c2;color:#7a5600}
+.flex.nein{background:#f3d0d0;color:#8a1010} .flex.leer{background:#eceef3;color:#5b6475}
+.empty{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted)}
+
+/* Tabellen */
+table.list{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
+table.list th{background:#f8f9fc;text-align:left;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px}
+table.list td{padding:7px 10px;border-bottom:1px solid #eef0f4;vertical-align:top}
+table.list td.num{text-align:right;font-variant-numeric:tabular-nums}
+.wchip{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;font-size:12px;white-space:nowrap}
+.wchip.c3{border-color:#e45757;background:#fdeeee} .wchip.c4{border-color:var(--l4);background:#fbe3e6} .wchip.c2{border-color:#f2c200;background:#fff8dc}
+.neg{color:#b00020;font-weight:700}
+.warnlist li{margin:4px 0}
+h2.sec{font-size:15px;color:var(--navy);margin:22px 0 8px}
+
+/* Detail-Panel */
+aside.detail{position:fixed;top:0;right:0;height:100vh;width:min(420px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(20,30,60,.12);padding:16px 18px;overflow:auto;z-index:50;transform:translateX(105%);transition:transform .18s}
+aside.detail.open{transform:none}
+aside.detail h3{margin:0 0 4px;color:var(--navy)}
+aside.detail .x{position:absolute;top:10px;right:12px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
+aside.detail ul{padding-left:18px}
+.banner{background:#fff6d6;border:1px solid #f0d78a;color:#6b5000;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+
+@media (max-width:700px){
+  main{padding:12px}
+  table.cal .lh{min-width:150px;max-width:150px}
+  .filters input[type=search]{width:140px}
+}
+@media print{
+  header.top .btn, .filters, .tabs, aside.detail, .conf-head .btn{display:none!important}
+  body{background:#fff}
+  header.top{background:#fff;color:#000;border-bottom:2px solid #000}
+  .calwrap{max-height:none;overflow:visible;border:0}
+  .card{border-color:#999}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Urlaubsansicht Kreativtherapie</h1>
+  <div class="file" id="fileinfo">Keine Datei geladen</div>
+  <button class="btn primary" id="btnLoad">Excel-Datei laden</button>
+  <button class="btn hidden" id="btnReload" title="Dieselbe Datei erneut einlesen (nach neuen Einträgen)">Neu laden</button>
+  <button class="btn hidden" id="btnPrint">Drucken</button>
+  <input type="file" id="fileInput" accept=".xlsx" class="hidden">
+</header>
+
+<main>
+  <section class="drop" id="drop">
+    <h2>Excel-Datei mit den Urlaubswünschen öffnen</h2>
+    <p>Datei <b>Urlaubswuensche_Kreativtherapie.xlsx</b> hier hineinziehen oder auswählen.</p>
+    <p>Alles bleibt auf diesem Rechner. Die Excel-Datei wird nur gelesen, nicht verändert.</p>
+    <button class="btn primary" id="btnLoad2" style="background:var(--navy);color:#fff;border-color:var(--navy)">Excel-Datei auswählen</button>
+    <div id="lastFile"></div>
+    <ol>
+      <li>Liegt die Datei in Teams/SharePoint: über den synchronisierten OneDrive-Ordner im Explorer auswählen oder vorher herunterladen.</li>
+      <li>Nach neuen Einträgen in Excel: speichern, dann hier auf »Neu laden«.</li>
+    </ol>
+  </section>
+
+  <section id="app" class="hidden">
+    <div id="banner"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="filters" id="filters">
+      <div class="fgroup"><label>Fachrichtung</label><div class="chips" id="fFach"></div></div>
+      <div class="fgroup"><label>Station</label><div class="chips" id="fStat"></div></div>
+      <div class="fgroup"><label>Person</label><input type="search" id="fQ" placeholder="Name suchen …"></div>
+      <div class="fgroup"><label>Zeitraum</label>
+        <div style="display:flex;gap:6px;align-items:center"><select id="fM0"></select><span>bis</span><select id="fM1"></select></div>
+      </div>
+      <div class="fgroup"><label>Ansicht</label>
+        <div class="seg" id="fView"><button data-v="w">Wochen</button><button data-v="d">Tage</button></div>
+      </div>
+      <div class="fgroup"><label>&nbsp;</label>
+        <label style="font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:400"><input type="checkbox" id="fOnly"> nur Personen mit Wünschen</label>
+        <button class="reset" id="fReset">Filter zurücksetzen</button>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab" data-t="cal">Kalender</button>
+      <button class="tab" data-t="conf">Konflikte <span class="count" id="confCount"></span></button>
+      <button class="tab" data-t="pers">Personen</button>
+      <button class="tab" data-t="rules">Regeln &amp; Hinweise <span class="count" id="warnCount"></span></button>
+    </nav>
+
+    <section id="t-cal"></section>
+    <section id="t-conf" class="hidden"></section>
+    <section id="t-pers" class="hidden"></section>
+    <section id="t-rules" class="hidden"></section>
+  </section>
+</main>
+
+<aside class="detail" id="detail"><button class="x" id="detailX" aria-label="Schließen">×</button><div id="detailBody"></div></aside>
+
+<script>/*__SHEETJS__*/</script>
+<script>
+"use strict";
+/* ===================== Layout der Excel-Datei =====================
+   Muss zu erzeuge_urlaubsplaner.py passen. Spalten als Buchstaben, Zeilen wie in Excel (ab 1). */
+const LAYOUT = {
+  tage: 366,
+  wuensche: { sheet: "Wünsche", firstRow: 6, cols: { name: "A", von: "B", bis: "C", flex: "D", bem: "E", atoss: "J" } },
+  team: { sheet: "Team", firstRow: 5, cols: { name: "A", fach: "B", st: ["C", "D", "E", "F"], anspruch: "G" } },
+  einst: {
+    sheet: "Einstellungen", start: "B3", firstRow: 7,
+    fach: { name: "A", g: "B", h: "C", d: "D" },
+    stat: { name: "H", g: "I", h: "J", d: "K" },
+    feier: { datum: "N", name: "O" }
+  }
+};
+/* Standardregel für Stationen, wenn in Einstellungen nichts eingetragen ist */
+const STANDARD = {
+  gelbAb: 2,                       // ab 2 Abwesenden gelb (1 weg = kein Warnsignal)
+  hellrotWennNochDa: 2,            // hellrot, wenn nur noch 2 anwesend sind …
+  hellrotAbGroesse: 4,             // … aber nur bei Stationen ab 4 Therapeut:innen
+  dunkelrot: "alle"                // dunkelrot, wenn alle weg sind
+};
+const FACH_FARBEN = ["#4E79A7","#B07AA1","#76B7B2","#9C755F","#F28E2B","#59A1A0","#D37295","#8E8CD8","#6A9FCB","#A08C7D"];
+const LV_NAME = ["", "unkritisch", "Gelb", "Hellrot", "Dunkelrot"];
+const MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+const MON_L = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const FLEX_ORDER = { ja: 0, etwas: 1, "": 2, nein: 3 };
+
+/* ===================== Hilfsfunktionen ===================== */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ser2date = (s) => new Date(Math.round((s - 25569) * 86400000));
+const date2ser = (y, m, d) => Math.round(Date.UTC(y, m - 1, d) / 86400000) + 25569;
+const wday = (s) => ser2date(s).getUTCDay();
+const fmt = (s) => { const d = ser2date(s); return String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0") + "."; };
+const fmtY = (s) => fmt(s) + ser2date(s).getUTCFullYear();
+const fmtW = (s) => WD[wday(s)] + " " + fmt(s);
+const range = (a, b) => (a === b ? fmtW(a) + ser2date(a).getUTCFullYear() : fmtW(a) + " – " + fmtW(b) + ser2date(b).getUTCFullYear());
+const monthKey = (s) => { const d = ser2date(s); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
+function isoWeek(s) { const th = s - ((wday(s) + 6) % 7) + 3; const y = ser2date(th).getUTCFullYear(); return Math.floor((th - date2ser(y, 1, 1)) / 7) + 1; }
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+function cell(ws, addr) { const c = ws[addr]; return c ? c.v : null; }
+function str(v) { return v == null ? "" : String(v).trim(); }
+function num(v) { if (v == null || v === "") return null; const n = Number(v); return Number.isFinite(n) ? Math.round(n) : null; }
+function toSer(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return Math.floor(v);
+  if (v instanceof Date) return date2ser(v.getFullYear(), v.getMonth() + 1, v.getDate());
+  const m = String(v).trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; return date2ser(y, +m[2], +m[1]); }
+  return null;
+}
+function lastRow(ws) { return ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]).e.r + 1 : 0; }
+
+/* ===================== Einlesen & Berechnen ===================== */
+function build(wb) {
+  const L = LAYOUT, warn = [];
+  const E = wb.Sheets[L.einst.sheet], T = wb.Sheets[L.team.sheet], W = wb.Sheets[L.wuensche.sheet];
+  const missing = [[E, L.einst.sheet], [T, L.team.sheet], [W, L.wuensche.sheet]].filter((x) => !x[0]).map((x) => "»" + x[1] + "«");
+  if (missing.length) throw new Error("In der Datei fehlen die Blätter " + missing.join(", ") + ". Ist das die richtige Excel-Datei?");
+
+  // Einstellungen
+  const fachs = [], stats = [], fachIdx = new Map(), statIdx = new Map(), holidays = new Map();
+  for (let r = L.einst.firstRow, n = lastRow(E); r <= n; r++) {
+    const f = L.einst.fach, s = L.einst.stat, h = L.einst.feier;
+    const fn = str(cell(E, f.name + r));
+    if (fn && !fachIdx.has(fn)) { fachIdx.set(fn, fachs.length); fachs.push({ type: "fach", name: fn, custom: { g: num(cell(E, f.g + r)), h: num(cell(E, f.h + r)), d: num(cell(E, f.d + r)) } }); }
+    const sn = str(cell(E, s.name + r));
+    if (sn && !statIdx.has(sn)) { statIdx.set(sn, stats.length); stats.push({ type: "stat", name: sn, custom: { g: num(cell(E, s.g + r)), h: num(cell(E, s.h + r)), d: num(cell(E, s.d + r)) } }); }
+    const hd = toSer(cell(E, h.datum + r));
+    if (hd) holidays.set(hd, str(cell(E, h.name + r)) || "Feiertag");
+  }
+
+  // Team
+  const persons = [], pIdx = new Map();
+  for (let r = L.team.firstRow, n = lastRow(T); r <= n; r++) {
+    const c = L.team.cols, name = str(cell(T, c.name + r));
+    if (!name) continue;
+    if (pIdx.has(name)) { warn.push({ k: "team", t: `»${name}« steht mehrfach im Blatt Team (Zeile ${r}). Nur der erste Eintrag zählt.` }); continue; }
+    const fach = str(cell(T, c.fach + r));
+    let fi = fachIdx.has(fach) ? fachIdx.get(fach) : -1;
+    if (!fach) warn.push({ k: "team", t: `${name}: keine Fachrichtung eingetragen (Team, Zeile ${r}).` });
+    else if (fi < 0) { warn.push({ k: "team", t: `${name}: Fachrichtung »${fach}« fehlt im Blatt Einstellungen – wurde ergänzt.` }); fi = fachs.length; fachIdx.set(fach, fi); fachs.push({ type: "fach", name: fach, custom: { g: null, h: null, d: null } }); }
+    const st = [];
+    for (const sc of c.st) {
+      const s = str(cell(T, sc + r));
+      if (!s || st.includes(s)) continue;
+      if (!statIdx.has(s)) { warn.push({ k: "team", t: `${name}: Station »${s}« fehlt im Blatt Einstellungen – wurde mit Standardregel ergänzt.` }); statIdx.set(s, stats.length); stats.push({ type: "stat", name: s, custom: { g: null, h: null, d: null } }); }
+      st.push(s);
+    }
+    if (!st.length) warn.push({ k: "team", t: `${name}: keine Station eingetragen.` });
+    pIdx.set(name, persons.length);
+    persons.push({ name, fach, fi, st, anspruch: num(cell(T, c.anspruch + r)), wishes: [] });
+  }
+
+  // Wünsche
+  const wishes = [];
+  let minVon = null;
+  for (let r = L.wuensche.firstRow, n = lastRow(W); r <= n; r++) {
+    const c = L.wuensche.cols, name = str(cell(W, c.name + r));
+    const von = toSer(cell(W, c.von + r)), bis = toSer(cell(W, c.bis + r));
+    if (!name && !von && !bis) continue;
+    if (!name) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r}: Name fehlt.` }); continue; }
+    if (!pIdx.has(name)) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r}: »${name}« steht nicht im Blatt Team – nicht berücksichtigt.` }); continue; }
+    if (!von || !bis) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r} (${name}): Von oder Bis fehlt bzw. ist kein Datum.` }); continue; }
+    if (bis < von) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r} (${name}): Bis liegt vor Von.` }); continue; }
+    const flex = str(cell(W, c.flex + r)).toLowerCase();
+    const w = { p: pIdx.get(name), von, bis, flex: ["ja", "etwas", "nein"].includes(flex) ? flex : "", bem: str(cell(W, c.bem + r)), atoss: toSer(cell(W, c.atoss + r)), row: r };
+    wishes.push(w); persons[w.p].wishes.push(w);
+    if (minVon == null || von < minVon) minVon = von;
+  }
+
+  // Zeitraum
+  let start = toSer(cell(E, L.einst.start));
+  if (!start) {
+    const y = minVon ? ser2date(minVon).getUTCFullYear() : new Date().getFullYear();
+    start = date2ser(y, 1, 1);
+    warn.push({ k: "einst", t: `Kein Startdatum in Einstellungen (B3) – verwendet wird 01.01.${y}.` });
+  }
+  const N = L.tage, ser = new Int32Array(N), work = new Uint8Array(N), hol = new Array(N);
+  for (let i = 0; i < N; i++) { ser[i] = start + i; const w = wday(ser[i]); hol[i] = holidays.get(ser[i]) || ""; work[i] = w !== 0 && w !== 6 && !hol[i] ? 1 : 0; }
+  const workdays = (a, b) => { let n = 0; for (let s = a; s <= b; s++) { const w = wday(s); if (w && w !== 6 && !holidays.has(s)) n++; } return n; };
+
+  // Abwesenheit je Person
+  for (const p of persons) {
+    p.abs = new Uint8Array(N);
+    p.wishes.sort((a, b) => a.von - b.von);
+    let prev = null;
+    for (const w of p.wishes) {
+      w.wd = workdays(w.von, w.bis);
+      if (prev && w.von <= prev.bis) warn.push({ k: "wunsch", t: `${p.name}: Wünsche überschneiden sich (${fmt(prev.von)}–${fmt(prev.bis)} und ${fmt(w.von)}–${fmt(w.bis)}).` });
+      if (w.von < start || w.bis > start + N - 1) warn.push({ k: "wunsch", t: `${p.name}: Wunsch ${fmtY(w.von)}–${fmtY(w.bis)} liegt ganz oder teilweise außerhalb des Planungszeitraums.` });
+      for (let s = Math.max(w.von, start); s <= Math.min(w.bis, start + N - 1); s++) p.abs[s - start] = 1;
+      if (!prev || w.bis > prev.bis) prev = w;
+    }
+    p.total = p.wishes.reduce((a, w) => a + w.wd, 0);
+    if (p.anspruch != null && p.total > p.anspruch) warn.push({ k: "wunsch", t: `${p.name}: ${p.total} Arbeitstage gewünscht, Anspruch ${p.anspruch}.` });
+  }
+
+  // Einheiten (Stationen + Fachteams) mit Schwellen
+  const units = [];
+  for (const s of stats) {
+    s.members = persons.map((p, i) => (p.st.includes(s.name) ? i : -1)).filter((i) => i >= 0);
+    const n = s.members.length, c = s.custom;
+    s.th = {
+      g: c.g ?? STANDARD.gelbAb,
+      h: c.h ?? (n >= STANDARD.hellrotAbGroesse ? n - STANDARD.hellrotWennNochDa : null),
+      d: c.d ?? (n > 0 ? n : null)
+    };
+    s.src = { g: c.g != null, h: c.h != null, d: c.d != null };
+    units.push(s);
+  }
+  for (const f of fachs) {
+    f.members = persons.map((p, i) => (p.fi === fachIdx.get(f.name) ? i : -1)).filter((i) => i >= 0);
+    f.th = { g: f.custom.g, h: f.custom.h, d: f.custom.d };
+    f.src = { g: true, h: true, d: true };
+    units.push(f);
+  }
+  const level = (a, th) => (a <= 0 ? 0 : th.d != null && a >= th.d ? 4 : th.h != null && a >= th.h ? 3 : th.g != null && a >= th.g ? 2 : 1);
+  for (const [ui, u] of units.entries()) {
+    u.ui = ui; u.n = u.members.length;
+    u.cnt = new Uint8Array(N); u.lv = new Uint8Array(N);
+    for (let i = 0; i < N; i++) {
+      let a = 0; for (const m of u.members) a += persons[m].abs[i];
+      u.cnt[i] = a; u.lv[i] = work[i] ? level(a, u.th) : 0;
+    }
+  }
+  persons.forEach((p, pi) => {
+    p.units = units.filter((u) => u.members.includes(pi)).map((u) => u.ui);
+    p.lv = new Uint8Array(N);
+    for (let i = 0; i < N; i++) if (p.abs[i]) { let m = 0; for (const ui of p.units) m = Math.max(m, units[ui].lv[i]); p.lv[i] = m; }
+  });
+
+  // Konflikte: zusammenhängende Arbeitstage mit Stufe >= Gelb je Einheit
+  const conflicts = [];
+  for (const u of units) {
+    let cur = null;
+    const flush = () => {
+      if (!cur) return;
+      const d = cur.days;
+      cur.maxLv = Math.max(...d.map((i) => u.lv[i]));
+      cur.peak = Math.max(...d.map((i) => u.cnt[i]));
+      let a = -1, b = -1;
+      for (let k = 0; k < d.length; k++) { if (u.cnt[d[k]] === cur.peak) { if (a < 0) a = k; b = k; } else if (a >= 0) break; }
+      cur.peakFrom = ser[d[a]]; cur.peakTo = ser[d[b]];
+      cur.from = ser[d[0]]; cur.to = ser[d[d.length - 1]]; cur.wd = d.length;
+      cur.people = u.members.filter((m) => d.some((i) => persons[m].abs[i])).map((m) => {
+        const p = persons[m], hit = d.filter((i) => p.abs[i]);
+        const ws = p.wishes.filter((w) => w.von <= cur.to && w.bis >= cur.from);
+        const flex = ws.map((w) => w.flex).sort((x, y) => FLEX_ORDER[x] - FLEX_ORDER[y])[0] ?? "";
+        return { p: m, from: ser[hit[0]], to: ser[hit[hit.length - 1]], days: hit.length, wishes: ws, flex };
+      }).sort((x, y) => FLEX_ORDER[x.flex] - FLEX_ORDER[y.flex] || x.from - y.from);
+      conflicts.push(cur); cur = null;
+    };
+    for (let i = 0; i < N; i++) {
+      if (!work[i]) continue;
+      if (u.lv[i] >= 2) { if (!cur) cur = { u: u.ui, days: [] }; cur.days.push(i); } else flush();
+    }
+    flush();
+  }
+  conflicts.sort((a, b) => b.maxLv - a.maxLv || a.from - b.from);
+  // Wunsch → höchste Konfliktstufe (für Markierung in der Personenliste)
+  for (const w of wishes) { let m = 0; const p = persons[w.p]; for (let s = Math.max(w.von, start); s <= Math.min(w.bis, start + N - 1); s++) m = Math.max(m, p.lv[s - start]); w.lv = m; }
+
+  const example = persons.some((p) => /^beispiel/i.test(p.name));
+  return { persons, units, fachs, stats, wishes, conflicts, warn, N, start, ser, work, hol, fachIdx, example };
+}
+
+/* ===================== Zustand ===================== */
+let M = null, fileHandle = null, lastFile = null;
+const S = Object.assign({ fach: [], stat: [], q: "", m0: null, m1: null, view: "w", only: false, tab: "cal", gelb: true }, lsGet("urlaubsansicht.state", {}));
+const save = () => lsSet("urlaubsansicht.state", { fach: S.fach, stat: S.stat, view: S.view, only: S.only, tab: S.tab, gelb: S.gelb });
+
+function visible() {
+  const q = S.q.trim().toLowerCase();
+  const ps = M.persons.map((p, i) => i).filter((i) => {
+    const p = M.persons[i];
+    if (S.fach.length && !S.fach.includes(p.fach)) return false;
+    if (S.stat.length && !p.st.some((s) => S.stat.includes(s))) return false;
+    if (q && !p.name.toLowerCase().includes(q)) return false;
+    if (S.only && !p.wishes.length) return false;
+    return true;
+  });
+  const pset = new Set(ps);
+  const unitsVis = M.units.filter((u) => {
+    if (u.type === "stat") return S.stat.length ? S.stat.includes(u.name) : u.members.some((m) => pset.has(m)) || (!q && !S.fach.length && !S.only);
+    return S.fach.length ? S.fach.includes(u.name) : u.members.some((m) => pset.has(m)) || (!q && !S.stat.length && !S.only);
+  });
+  // Tagesbereich aus Monatsfilter
+  let i0 = 0, i1 = M.N - 1;
+  if (S.m0 != null) while (i0 < M.N - 1 && monthKey(M.ser[i0]) < S.m0) i0++;
+  if (S.m1 != null) while (i1 > 0 && monthKey(M.ser[i1]) > S.m1) i1--;
+  return { ps, pset, units: unitsVis, uset: new Set(unitsVis.map((u) => u.ui)), i0, i1, q };
+}
+
+/* ===================== Datei laden ===================== */
+const IDB = {
+  open() { return new Promise((res, rej) => { const r = indexedDB.open("urlaubsansicht", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async put(v) { try { const db = await this.open(); db.transaction("h", "readwrite").objectStore("h").put(v, "file"); } catch (e) {} },
+  async get() { try { const db = await this.open(); return await new Promise((res) => { const r = db.transaction("h").objectStore("h").get("file"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch (e) { return null; } }
+};
+async function pickFile() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [h] = await window.showOpenFilePicker({ types: [{ description: "Excel-Datei", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] } }] });
+      fileHandle = h; IDB.put(h); await loadFile(await h.getFile()); return;
+    } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  $("fileInput").click();
+}
+async function reload() {
+  if (fileHandle) {
+    try {
+      if (fileHandle.queryPermission && (await fileHandle.queryPermission({ mode: "read" })) !== "granted") await fileHandle.requestPermission({ mode: "read" });
+      await loadFile(await fileHandle.getFile()); return;
+    } catch (e) { /* weiter mit Auswahl */ }
+  }
+  pickFile();
+}
+async function loadFile(file) {
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array", cellFormula: false, cellHTML: false, cellText: false });
+    M = build(wb);
+    lastFile = file;
+    const d = new Date(file.lastModified);
+    $("fileinfo").textContent = `${file.name} · gespeichert ${d.toLocaleDateString("de-DE")} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · eingelesen ${new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+    $("drop").classList.add("hidden"); $("app").classList.remove("hidden");
+    $("btnReload").classList.remove("hidden"); $("btnPrint").classList.remove("hidden");
+    $("btnLoad").textContent = "Andere Datei";
+    setupFilters(); render();
+  } catch (e) {
+    alert("Die Datei konnte nicht gelesen werden.\n\n" + (e && e.message ? e.message : e));
+  }
+}
+
+/* ===================== Filter ===================== */
+function setupFilters() {
+  S.fach = S.fach.filter((f) => M.fachIdx.has(f));
+  S.stat = S.stat.filter((s) => M.stats.some((x) => x.name === s));
+  $("fFach").innerHTML = M.fachs.map((f, i) => `<span class="chip${S.fach.includes(f.name) ? " on" : ""}" data-f="${esc(f.name)}"><span class="dot" style="background:${FACH_FARBEN[i % 10]}"></span>${esc(f.name)}</span>`).join("");
+  $("fStat").innerHTML = M.stats.map((s) => `<span class="chip${S.stat.includes(s.name) ? " on" : ""}" data-s="${esc(s.name)}">${esc(s.name)}</span>`).join("");
+  const months = []; for (let i = 0; i < M.N; i++) { const k = monthKey(M.ser[i]); if (!months.includes(k)) months.push(k); }
+  const opt = (k) => `<option value="${k}">${MON_L[k % 12]} ${Math.floor(k / 12)}</option>`;
+  $("fM0").innerHTML = months.map(opt).join(""); $("fM1").innerHTML = months.map(opt).join("");
+  if (S.m0 == null || !months.includes(S.m0)) S.m0 = months[0];
+  if (S.m1 == null || !months.includes(S.m1)) S.m1 = months[Math.min(11, months.length - 1)];
+  $("fM0").value = S.m0; $("fM1").value = S.m1;
+  $("fQ").value = S.q; $("fOnly").checked = S.only;
+  syncSeg();
+}
+function syncSeg() {
+  document.querySelectorAll("#fView button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.view));
+  document.querySelectorAll("#tabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.t === S.tab));
+  ["cal", "conf", "pers", "rules"].forEach((t) => $("t-" + t).classList.toggle("hidden", t !== S.tab));
+}
+
+/* ===================== Darstellung ===================== */
+const fachColor = (fi) => (fi >= 0 ? FACH_FARBEN[fi % 10] : "#9aa3b5");
+const unitLabel = (u) => (u.type === "stat" ? "Station" : "Fachteam");
+/* "Station 1A" nicht als "Station Station 1A" anzeigen */
+const unitTitle = (u) => (u.name.toLowerCase().startsWith(unitLabel(u).toLowerCase()) ? u.name : unitLabel(u) + " " + u.name);
+const thText = (u) => {
+  const t = u.th, parts = [];
+  if (t.g != null) parts.push(`G ${t.g}`); if (t.h != null) parts.push(`H ${t.h}`); if (t.d != null) parts.push(`D ${t.d}`);
+  return parts.length ? parts.join(" · ") : "ohne Ampel";
+};
+const flexBadge = (f) => `<span class="flex ${f || "leer"}">${f ? "verschiebbar: " + f : "verschiebbar: k. A."}</span>`;
+
+function render() {
+  if (!M) return;
+  const V = visible();
+  syncSeg();
+  renderBanner(); renderKpis(V);
+  if (S.tab === "cal") renderCal(V);
+  if (S.tab === "conf") renderConf(V);
+  if (S.tab === "pers") renderPers(V);
+  if (S.tab === "rules") renderRules(V);
+  const cs = confVisible(V);
+  $("confCount").innerHTML = cs.length ? `<span class="pill ${cs.some((c) => c.maxLv === 4) ? "lv4" : cs.some((c) => c.maxLv === 3) ? "lv3" : "lv2"}">${cs.length}</span>` : "";
+  $("warnCount").innerHTML = M.warn.length ? `<span class="pill lv2">${M.warn.length}</span>` : "";
+}
+function renderBanner() {
+  $("banner").innerHTML = M.example ? `<div class="banner">Die Datei enthält noch <b>Beispieldaten</b> (Namen mit »Beispiel«). Vor dem Start im Excel löschen – siehe Blatt Anleitung.</div>` : "";
+}
+function confVisible(V) {
+  const a = M.ser[V.i0], b = M.ser[V.i1];
+  return M.conflicts.filter((c) => V.uset.has(c.u) && c.to >= a && c.from <= b && (S.gelb || c.maxLv >= 3) &&
+    (!V.q || c.people.some((x) => M.persons[x.p].name.toLowerCase().includes(V.q))));
+}
+function renderKpis(V) {
+  const ws = M.wishes.filter((w) => V.pset.has(w.p));
+  const withW = V.ps.filter((i) => M.persons[i].wishes.length).length;
+  const cs = confVisible(Object.assign({}, V)); const all = M.conflicts.filter((c) => V.uset.has(c.u) && c.to >= M.ser[V.i0] && c.from <= M.ser[V.i1]);
+  const n = (l) => all.filter((c) => c.maxLv === l).length;
+  $("kpis").innerHTML = `
+    <div class="kpi"><div class="v">${ws.length}</div><div class="l">Urlaubswünsche · ${ws.reduce((a, w) => a + w.wd, 0)} Arbeitstage</div></div>
+    <div class="kpi"><div class="v">${withW} / ${V.ps.length}</div><div class="l">Personen haben Wünsche eingetragen</div></div>
+    <div class="kpi click" data-go="conf"><div class="row"><span class="pill lv4">${n(4)} dunkelrot</span><span class="pill lv3">${n(3)} hellrot</span><span class="pill lv2">${n(2)} gelb</span></div><div class="l" style="margin-top:6px">Engpässe im gewählten Zeitraum → Liste</div></div>
+    <div class="kpi click" data-go="rules"><div class="v">${M.warn.length}</div><div class="l">Hinweise zu den Daten</div></div>`;
+}
+
+function columns(V) {
+  const cols = [];
+  if (S.view === "d") {
+    for (let i = V.i0; i <= V.i1; i++) cols.push({ a: i, b: i, day: true });
+  } else {
+    const mon0 = -((wday(M.ser[0]) + 6) % 7);
+    for (let a = mon0; a < M.N; a += 7) {
+      const lo = Math.max(a, V.i0, 0), hi = Math.min(a + 6, V.i1, M.N - 1);
+      if (lo > hi) continue;
+      cols.push({ a: lo, b: hi, day: false, mon: M.start + a });
+    }
+  }
+  return cols;
+}
+function renderCal(V) {
+  const cols = columns(V), day = S.view === "d";
+  const todayS = date2ser(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+  const colCls = cols.map((c) => {
+    let k = "";
+    if (day) { if (M.hol[c.a]) k += " hol"; else if (!M.work[c.a]) k += " we"; if (ser2date(M.ser[c.a]).getUTCDate() === 1) k += " mstart"; }
+    if (M.ser[c.a] <= todayS && todayS <= M.ser[c.b]) k += " today";
+    return k;
+  });
+  // Monatszeile
+  let mrow = `<th class="lh">${day ? "Tag" : "Kalenderwoche"}</th>`, cur = null, span = 0, ms = "";
+  const mk = (c) => monthKey(day ? M.ser[c.a] : c.mon + 3);
+  cols.forEach((c, j) => { const k = mk(c); if (k !== cur) { if (span) mrow += `<th colspan="${span}" class="${ms}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`; cur = k; span = 0; ms = j ? "mstart" : ""; } span++; });
+  if (span) mrow += `<th colspan="${span}" class="${ms}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`;
+  const crow = `<th class="lh"></th>` + cols.map((c, j) => day
+    ? `<th class="${colCls[j]}" title="${esc(M.hol[c.a] || "")}">${ser2date(M.ser[c.a]).getUTCDate()}<br><span style="font-weight:400">${WD[wday(M.ser[c.a])]}</span></th>`
+    : `<th class="${colCls[j]}" title="Woche ab ${fmtY(c.mon)}">${isoWeek(c.mon)}<br><span style="font-weight:400;font-size:9.5px">${fmt(c.mon).slice(0, 5)}</span></th>`).join("");
+  const ncol = cols.length + 1;
+  let body = "";
+
+  const unitRow = (u) => {
+    let h = `<tr><td class="lh" title="${esc(unitTitle(u) + " – " + u.n + " Personen – Ampel " + thText(u))}"><span class="nm">${esc(u.name)}</span><span class="meta">${u.n} Pers. · ${thText(u)}</span></td>`;
+    cols.forEach((c, j) => {
+      let cnt = 0, lv = 0;
+      for (let i = c.a; i <= c.b; i++) { if (M.work[i] || day) cnt = Math.max(cnt, u.cnt[i]); lv = Math.max(lv, u.lv[i]); }
+      const cls = day && !M.work[c.a] ? colCls[j] : colCls[j].replace(/ (we|hol)/g, "");
+      h += `<td class="c u lv${lv}${cls}" data-k="u:${u.ui}:${c.a}:${c.b}">${cnt || ""}</td>`;
+    });
+    return h + "</tr>";
+  };
+  const st = V.units.filter((u) => u.type === "stat"), fa = V.units.filter((u) => u.type === "fach");
+  if (st.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Station · Zahl = gleichzeitig weg</span></td></tr>`; st.forEach((u) => (body += unitRow(u))); }
+  if (fa.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Fachteam · Zahl = gleichzeitig weg</span></td></tr>`; fa.forEach((u) => (body += unitRow(u))); }
+  if (V.ps.length) {
+    body += `<tr class="sec"><td colspan="${ncol}"><span>Personen · ${day ? "farbig = Urlaubswunsch" : "Zahl = Arbeitstage Urlaub in der Woche"} · roter Rahmen = Engpass</span></td></tr>`;
+    let lastF = null;
+    const sorted = V.ps.slice().sort((a, b) => (M.persons[a].fi < 0 ? 99 : M.persons[a].fi) - (M.persons[b].fi < 0 ? 99 : M.persons[b].fi) || a - b);
+    for (const pi of sorted) {
+      const p = M.persons[pi];
+      if (p.fach !== lastF) { body += `<tr class="sub"><td class="lh" style="position:sticky;left:0">${esc(p.fach || "ohne Fachrichtung")}</td><td colspan="${cols.length}"></td></tr>`; lastF = p.fach; }
+      const col = fachColor(p.fi);
+      body += `<tr><td class="lh" title="${esc(p.name + " – " + p.fach + " – " + p.st.join(", "))}"><span class="dot" style="background:${col}"></span><span class="nm">${esc(p.name)}</span><span class="meta">${esc(p.st.join(", "))}</span></td>`;
+      cols.forEach((c, j) => {
+        let n = 0, any = 0, lv = 0;
+        for (let i = c.a; i <= c.b; i++) { if (p.abs[i]) { any = 1; if (M.work[i]) n++; lv = Math.max(lv, p.lv[i]); } }
+        const show = day ? any : n > 0;
+        const ring = lv >= 2 ? " r" + lv : "";
+        body += show
+          ? `<td class="c p${ring}${colCls[j].replace(/ (we|hol)/g, "")}" style="background:${col}" data-k="p:${pi}:${c.a}:${c.b}">${day ? "" : n}</td>`
+          : `<td class="c${colCls[j]}" data-k="p:${pi}:${c.a}:${c.b}"></td>`;
+      });
+      body += "</tr>";
+    }
+  }
+  if (!V.ps.length && !V.units.length) body = `<tr><td class="lh">Keine Treffer für diesen Filter.</td></tr>`;
+
+  const legendF = M.fachs.map((f, i) => `<span><span class="sw" style="background:${FACH_FARBEN[i % 10]}"></span>${esc(f.name)}</span>`).join("");
+  $("t-cal").innerHTML = `
+    <div class="legend"><b>Ampel:</b>
+      <span><span class="sw" style="background:var(--l1)"></span>weg, unkritisch</span>
+      <span><span class="sw" style="background:var(--l2)"></span>gelb</span>
+      <span><span class="sw" style="background:var(--l3)"></span>hellrot</span>
+      <span><span class="sw" style="background:var(--l4)"></span>dunkelrot</span>
+      <span>· G/H/D = ab so vielen Abwesenden gelb/hellrot/dunkelrot</span>
+    </div>
+    <div class="legend"><b>Fachrichtung:</b> ${legendF} <span>· grau = Wochenende · lila = Feiertag · orange = heute · Klick auf ein Feld = Details</span></div>
+    <div class="calwrap"><table class="cal" style="--cw:${day ? "var(--cw-day)" : "var(--cw-week)"}"><thead><tr class="m">${mrow}</tr><tr class="c">${crow}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function personLine(x, withWish = true) {
+  const p = M.persons[x.p];
+  const wish = x.wishes.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}${w.bem ? " · " + esc(w.bem) : ""}`).join("<br>");
+  return `<tr><td><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${fachColor(p.fi)};margin-right:6px"></span><b>${esc(p.name)}</b><div style="color:var(--muted);font-size:12px">${esc(p.fach)}</div></td>
+    <td>${fmt(x.from)}–${fmt(x.to)}<div style="color:var(--muted);font-size:12px">${x.days} Arbeitstag${x.days === 1 ? "" : "e"} im Engpass</div></td>
+    ${withWish ? `<td>${wish}</td>` : ""}<td>${flexBadge(x.flex)}</td></tr>`;
+}
+function confCard(c) {
+  const u = M.units[c.u];
+  const present = u.n - c.peak;
+  const peakTxt = c.peakFrom === c.peakTo ? fmtW(c.peakFrom) : `${fmtW(c.peakFrom)} – ${fmtW(c.peakTo)}`;
+  const ask = c.people.filter((x) => x.flex === "ja" || x.flex === "etwas").map((x) => esc(M.persons[x.p].name));
+  const askTxt = ask.length ? `<b>Zuerst ansprechen:</b> ${ask.join(", ")} (als verschiebbar angegeben)` : `<b>Keiner hat »verschiebbar« angegeben</b> – Absprache mit allen Beteiligten bzw. Entscheidung durch die Leitung.`;
+  return `<div class="card lv${c.maxLv}b">
+    <div class="t"><span class="pill lv${c.maxLv}">${LV_NAME[c.maxLv]}</span>
+      <span class="unit">${esc(unitTitle(u))}</span>
+      <span class="when">${range(c.from, c.to)} · ${c.wd} Arbeitstag${c.wd === 1 ? "" : "e"}</span></div>
+    <div class="size" style="margin-top:4px">Am stärksten: <b style="color:var(--ink)">${c.peak} von ${u.n} weg</b>, noch ${present} da · ${peakTxt} · Ampel ${thText(u)}</div>
+    <table><thead><tr><th>Wer ist weg</th><th>Im Engpass</th><th>Eingetragener Wunsch</th><th>Flexibilität</th></tr></thead><tbody>${c.people.map((x) => personLine(x)).join("")}</tbody></table>
+    <div class="ask">${askTxt}</div></div>`;
+}
+function renderConf(V) {
+  const cs = confVisible(V);
+  let h = `<div class="conf-head"><div class="note">Jede Karte = ein zusammenhängender Zeitraum (nur Arbeitstage), in dem eine Station oder ein Fachteam mindestens »gelb« ist. Sortiert nach Schwere, dann Datum.</div>
+    <div style="display:flex;gap:8px;align-items:center"><label style="font-size:13px"><input type="checkbox" id="cGelb" ${S.gelb ? "checked" : ""}> gelbe anzeigen</label>
+    <button class="btn" id="cCopy">Liste kopieren</button><button class="btn" onclick="window.print()">Drucken</button></div></div>`;
+  if (!cs.length) h += `<div class="empty">Keine Engpässe im gewählten Zeitraum und Filter. 🎉</div>`;
+  for (const l of [4, 3, 2]) {
+    const g = cs.filter((c) => c.maxLv === l);
+    if (!g.length) continue;
+    h += `<div class="lvsec"><h3><span class="pill lv${l}">${LV_NAME[l]}</span> ${g.length} Engpass${g.length === 1 ? "" : "stellen"}</h3>${g.map(confCard).join("")}</div>`;
+  }
+  $("t-conf").innerHTML = h;
+  $("cGelb").onchange = (e) => { S.gelb = e.target.checked; save(); render(); };
+  $("cCopy").onclick = () => copyText(cs.map((c) => {
+    const u = M.units[c.u];
+    return `[${LV_NAME[c.maxLv]}] ${unitTitle(u)}: ${range(c.from, c.to)} (${c.wd} AT) – max. ${c.peak} von ${u.n} weg\n` +
+      c.people.map((x) => `   • ${M.persons[x.p].name}: ${fmt(x.from)}–${fmt(x.to)}, verschiebbar: ${x.flex || "k. A."}`).join("\n");
+  }).join("\n\n") || "Keine Engpässe.");
+}
+function copyText(t) {
+  const done = () => alert("Liste in die Zwischenablage kopiert – z. B. in eine E-Mail einfügen.");
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, () => fallback());
+  else fallback();
+  function fallback() { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { prompt("Bitte kopieren:", t); } ta.remove(); }
+}
+function renderPers(V) {
+  const rows = V.ps.slice().sort((a, b) => (M.persons[a].fi - M.persons[b].fi) || M.persons[a].name.localeCompare(M.persons[b].name, "de")).map((pi) => {
+    const p = M.persons[pi], rest = p.anspruch != null ? p.anspruch - p.total : null;
+    const chips = p.wishes.map((w) => `<span class="wchip${w.lv >= 2 ? " c" + w.lv : ""}" title="${esc((w.bem ? w.bem + " · " : "") + "verschiebbar: " + (w.flex || "k. A.") + (w.atoss ? " · in ATOSS übertragen " + fmtY(w.atoss) : ""))}">${fmt(w.von)}–${fmt(w.bis)} · ${w.wd} AT${w.atoss ? " ✓" : ""}</span>`).join("") || `<span style="color:var(--muted)">noch keine Wünsche</span>`;
+    return `<tr><td><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${fachColor(p.fi)};margin-right:6px"></span><b>${esc(p.name)}</b></td><td>${esc(p.fach)}</td><td>${esc(p.st.join(", "))}</td>
+      <td>${chips}</td><td class="num">${p.wishes.length}</td><td class="num">${p.total}</td><td class="num">${p.anspruch ?? ""}</td><td class="num ${rest != null && rest < 0 ? "neg" : ""}">${rest ?? ""}</td></tr>`;
+  }).join("");
+  $("t-pers").innerHTML = `<div class="legend">Wunsch-Kästchen mit farbigem Rand = liegt in einem Engpass (gelb/hellrot/dunkelrot) · ✓ = in ATOSS übertragen · AT = Arbeitstage</div>
+    <table class="list"><thead><tr><th>Name</th><th>Fachrichtung</th><th>Stationen</th><th>Wünsche</th><th>Anzahl</th><th>Arbeitstage</th><th>Anspruch</th><th>Rest</th></tr></thead><tbody>${rows || `<tr><td colspan="8">Keine Treffer.</td></tr>`}</tbody></table>`;
+}
+function renderRules(V) {
+  const row = (u) => {
+    const t = u.th, s = u.src, v = (x, own) => (x == null ? "–" : x + (u.type === "stat" && !own ? ' <span style="color:var(--muted);font-size:11px">(Standard)</span>' : ""));
+    return `<tr><td><b>${esc(u.name)}</b></td><td>${unitLabel(u)}</td><td class="num">${u.n}</td><td>${v(t.g, s.g)}</td><td>${v(t.h, s.h)}</td><td>${v(t.d, s.d)}</td></tr>`;
+  };
+  $("t-rules").innerHTML = `
+    <h2 class="sec">So rechnet die Ampel</h2>
+    <p>Gezählt wird pro Arbeitstag, wie viele Mitglieder einer Station bzw. eines Fachteams einen Urlaubswunsch haben. Die Zahlen in der Tabelle bedeuten: <b>ab so vielen gleichzeitig Abwesenden</b> gilt die Farbe. Die höchste erreichte Stufe zählt. Eine Person mit mehreren Stationen zählt auf jeder ihrer Stationen.</p>
+    <p><b>Standardregel für Stationen</b> (wenn in Excel → Einstellungen nichts eingetragen ist): 1 weg = unkritisch · <span class="pill lv2">Gelb</span> ab ${STANDARD.gelbAb} weg · <span class="pill lv3">Hellrot</span>, wenn nur noch ${STANDARD.hellrotWennNochDa} da sind (nur bei Stationen ab ${STANDARD.hellrotAbGroesse} Therapeut:innen) · <span class="pill lv4">Dunkelrot</span>, wenn alle weg sind. Fachteams haben nur eine Ampel, wenn Werte eingetragen sind.</p>
+    <table class="list"><thead><tr><th>Name</th><th>Art</th><th>Personen</th><th>Gelb ab</th><th>Hellrot ab</th><th>Dunkelrot ab</th></tr></thead><tbody>${M.units.map(row).join("")}</tbody></table>
+    <h2 class="sec">Hinweise zu den Daten (${M.warn.length})</h2>
+    ${M.warn.length ? `<ul class="warnlist">${M.warn.map((w) => `<li>${esc(w.t)}</li>`).join("")}</ul>` : `<p>Keine – die Daten sind vollständig.</p>`}
+    <h2 class="sec">Planungszeitraum</h2><p>${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} · Feiertage: ${[...new Set(M.hol.filter(Boolean))].length ? M.hol.map((h, i) => (h ? `${fmt(M.ser[i])} ${esc(h)}` : "")).filter(Boolean).join(" · ") : "keine eingetragen"}</p>`;
+}
+
+/* ===================== Detail-Panel ===================== */
+function showDetail(k) {
+  const [t, idx, a, b] = k.split(":"); const i0 = +a, i1 = +b;
+  const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
+  let h = "";
+  if (t === "u") {
+    const u = M.units[+idx];
+    let lv = 0, cnt = 0; for (let i = i0; i <= i1; i++) { lv = Math.max(lv, u.lv[i]); if (M.work[i]) cnt = Math.max(cnt, u.cnt[i]); }
+    const who = u.members.filter((m) => { for (let i = i0; i <= i1; i++) if (M.persons[m].abs[i]) return true; return false; });
+    h = `<h3>${esc(unitTitle(u))}</h3><div style="color:var(--muted)">${when}</div>
+      <p>${lv ? `<span class="pill lv${lv}">${LV_NAME[lv]}</span> ` : ""}höchstens <b>${cnt} von ${u.n}</b> gleichzeitig weg · Ampel ${thText(u)}</p>
+      <b>Weg in diesem Zeitraum:</b>${who.length ? `<ul>${who.map((m) => { const p = M.persons[m]; const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]); return `<li><b>${esc(p.name)}</b> (${esc(p.fach)})<br>${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)} ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}`).join("<br>")}</li>`; }).join("")}</ul>` : "<p>niemand</p>"}
+      <b>Anwesend:</b><p>${u.members.filter((m) => !who.includes(m)).map((m) => esc(M.persons[m].name)).join(", ") || "niemand"}</p>`;
+  } else {
+    const p = M.persons[+idx];
+    const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]);
+    h = `<h3>${esc(p.name)}</h3><div style="color:var(--muted)">${esc(p.fach)} · ${esc(p.st.join(", "))}</div><p style="color:var(--muted)">${when}</p>
+      <b>Wünsche in diesem Zeitraum:</b>${ws.length ? `<ul>${ws.map((w) => `<li>${fmt(w.von)}–${fmtY(w.bis)} · ${w.wd} AT ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}</li>`).join("")}</ul>` : "<p>keine</p>"}
+      <b>Lage in den eigenen Bereichen:</b><ul>${p.units.map((ui) => { const u = M.units[ui]; let lv = 0, c = 0; for (let i = i0; i <= i1; i++) { lv = Math.max(lv, u.lv[i]); if (M.work[i]) c = Math.max(c, u.cnt[i]); } return `<li>${esc(unitTitle(u))}: max. ${c} von ${u.n} weg ${lv >= 1 ? `<span class="pill lv${lv}">${LV_NAME[lv]}</span>` : ""}</li>`; }).join("")}</ul>
+      <p>Alle Wünsche: ${p.wishes.map((w) => `${fmt(w.von)}–${fmt(w.bis)}`).join(", ") || "–"} · gesamt ${p.total} AT${p.anspruch != null ? ` von ${p.anspruch}` : ""}</p>`;
+  }
+  $("detailBody").innerHTML = h; $("detail").classList.add("open");
+}
+
+/* ===================== Ereignisse ===================== */
+$("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = reload; $("btnPrint").onclick = () => window.print();
+$("fileInput").onchange = (e) => { const f = e.target.files[0]; if (f) { fileHandle = null; loadFile(f); } e.target.value = ""; };
+const drop = $("drop");
+["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+document.addEventListener("drop", async (e) => {
+  const it = e.dataTransfer.items && e.dataTransfer.items[0];
+  if (it && it.getAsFileSystemHandle) { try { const h = await it.getAsFileSystemHandle(); if (h && h.kind === "file") { fileHandle = h; IDB.put(h); loadFile(await h.getFile()); return; } } catch (er) {} }
+  const f = e.dataTransfer.files[0]; if (f) { fileHandle = null; loadFile(f); }
+});
+$("fFach").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return; const f = c.dataset.f; S.fach = S.fach.includes(f) ? S.fach.filter((x) => x !== f) : S.fach.concat(f); c.classList.toggle("on"); save(); render(); };
+$("fStat").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return; const s = c.dataset.s; S.stat = S.stat.includes(s) ? S.stat.filter((x) => x !== s) : S.stat.concat(s); c.classList.toggle("on"); save(); render(); };
+$("fQ").oninput = (e) => { S.q = e.target.value; render(); };
+$("fOnly").onchange = (e) => { S.only = e.target.checked; save(); render(); };
+$("fM0").onchange = (e) => { S.m0 = +e.target.value; if (S.m1 < S.m0) { S.m1 = S.m0; $("fM1").value = S.m1; } render(); };
+$("fM1").onchange = (e) => { S.m1 = +e.target.value; if (S.m0 > S.m1) { S.m0 = S.m1; $("fM0").value = S.m0; } render(); };
+$("fView").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.view = b.dataset.v; save(); render(); };
+$("fReset").onclick = () => { S.fach = []; S.stat = []; S.q = ""; S.only = false; S.m0 = null; S.m1 = null; setupFilters(); save(); render(); };
+$("tabs").onclick = (e) => { const b = e.target.closest(".tab"); if (!b) return; S.tab = b.dataset.t; save(); render(); };
+$("kpis").onclick = (e) => { const k = e.target.closest("[data-go]"); if (!k) return; S.tab = k.dataset.go; save(); render(); };
+$("t-cal").onclick = (e) => { const td = e.target.closest("td[data-k]"); if (!td) return; document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); showDetail(td.dataset.k); };
+$("detailX").onclick = () => $("detail").classList.remove("open");
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
+
+// Zuletzt geöffnete Datei anbieten (nur Edge/Chrome)
+(async () => {
+  const h = await IDB.get();
+  if (h && h.name) {
+    fileHandle = h;
+    $("lastFile").innerHTML = `<p style="margin-top:14px">Zuletzt geöffnet: <b>${esc(h.name)}</b> <button class="btn" id="btnLast">wieder laden</button></p>`;
+    $("btnLast").onclick = reload;
+  }
+})();
+</script>
+</body>
+</html>
