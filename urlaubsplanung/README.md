@@ -1,6 +1,6 @@
 # Urlaubswünsche Kreativtherapie – Jahresplanung
 
-Werkzeug für ca. 35 Therapeut:innen aus vier Fachrichtungen (Ergo-, Musik-, Bewegungs- und Physiotherapie),
+Werkzeug für ca. 35 Therapeut:innen aus fünf Fachrichtungen (Ergo-, Musik-, Bewegungs-, Physio- und Theatertherapie),
 die auf mehreren Stationen arbeiten. Alle tragen ihre **Urlaubswünsche** für das Jahr ein, mehrere pro Person.
 Eine Ansicht zeigt per Ampel, wo es **im Fachteam** oder **auf einer Station** eng wird, und listet die
 Konflikte mit Namen, Zeitraum und Umfang auf, als Grundlage für Absprachen und für die Leitung.
@@ -90,6 +90,20 @@ ansprechen sollte (die als „verschiebbar: ja/etwas“ markierten Personen).
   ausführen, Eingaben aus der alten Datei herüberkopieren. Die Ansicht liest automatisch alle befüllten Zeilen.
 - **Neues Jahr:** Excel-Datei kopieren, Startdatum (Einstellungen B3) ändern, alte Wünsche leeren, Feiertage aktualisieren.
 - **Voraussetzungen für die Skripte:** Python 3 mit `openpyxl` und `python-dateutil`.
+
+## Echte Arbeitsdatei mit Namen erzeugen
+
+Die Datei `Urlaubswuensche_Kreativtherapie.xlsx` im Repository ist eine **Vorlage mit erfundenen Beispieldaten**.
+Die echte Arbeitsdatei mit den Namen des Teams wird lokal erzeugt und **nicht** ins Repository gelegt:
+
+```
+python3 erzeuge_urlaubsplaner.py --namen team_namen.txt --aus Urlaubswuensche_2027.xlsx
+```
+
+`team_namen.txt` enthält eine Person pro Zeile (z. B. `Nachname, Vorname`). Die Datei enthält dann keine
+Beispieldaten, und die Ampel-Werte der Fachteams sind leer, damit die Leitung sie selbst festlegt.
+Fachrichtungen und Stationen trägt die verantwortliche Person danach im Blatt »Team« ein.
+`team_namen*.txt` und `Urlaubswuensche_20*.xlsx` stehen in `.gitignore`.
 
 ## Datenschutz
 

@@ -2,13 +2,19 @@
 
 Die grafische Auswertung (Ampel, Filter, Engpässe) macht Urlaubsansicht.html, die diese Datei nur liest.
 
-Aufruf:  python3 erzeuge_urlaubsplaner.py [Startdatum JJJJ-MM-TT]
-Ohne Argument beginnt der Planungszeitraum am 01.01.2027.
+Aufruf:
+  python3 erzeuge_urlaubsplaner.py                         → Vorlage mit Beispieldaten (Start 01.01.2027)
+  python3 erzeuge_urlaubsplaner.py --start 2028-01-01      → anderes Planungsjahr
+  python3 erzeuge_urlaubsplaner.py --namen team_namen.txt --aus Urlaubswuensche_2027.xlsx
+        → echte Arbeitsdatei: Namen (eine Zeile pro Person) ins Blatt Team, ohne Beispieldaten
+
+Echte Namen sind personenbezogene Daten: Namensliste und erzeugte Arbeitsdatei NICHT ins Repository legen
+(team_namen*.txt und Urlaubswuensche_20*.xlsx stehen in .gitignore).
 
 WICHTIG: Urlaubsansicht.html findet die Daten über Blattnamen und feste Zeilen/Spalten (siehe Konstanten unten
 und README.md). Wer hier das Layout ändert, muss die Konstanten LAYOUT in Urlaubsansicht.html mit anpassen.
 """
-import sys
+import argparse
 from datetime import date, timedelta
 
 from dateutil.easter import easter
@@ -19,7 +25,16 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter as col
 from openpyxl.worksheet.datavalidation import DataValidation
 
-START = date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 else date(2027, 1, 1)
+ap = argparse.ArgumentParser(description="Erzeugt die Excel-Eingabedatei für die Urlaubswünsche.")
+ap.add_argument("--start", default="2027-01-01", help="Startdatum des Planungszeitraums (JJJJ-MM-TT)")
+ap.add_argument("--namen", help="Textdatei mit den Namen des Teams, eine Person pro Zeile (ohne Beispieldaten)")
+ap.add_argument("--aus", default="Urlaubswuensche_Kreativtherapie.xlsx", help="Name der erzeugten Datei")
+ARGS = ap.parse_args()
+START = date.fromisoformat(ARGS.start)
+NAMEN = None
+if ARGS.namen:
+    with open(ARGS.namen, encoding="utf-8") as fh:
+        NAMEN = [z.strip() for z in fh if z.strip() and not z.lstrip().startswith("#")]
 TAGE = 366
 
 # Kapazitäten
@@ -192,7 +207,7 @@ cells(ww, f"A{U0}:E{U1}", f_input, fill_input)
 cells(ww, f"F{U0}:I{U1}", f_calc, fill_calc)
 cells(ww, f"J{U0}:J{U1}", f_input, fill_input)
 y = START.year
-beispiel_w = [
+beispiel_w = [] if NAMEN else [
     ("Beispiel Anna", date(y, 7, 5), date(y, 7, 23), "etwas", "mit Ben getauscht"),
     ("Beispiel Anna", date(y, 10, 25), date(y, 10, 29), "ja", ""),
     ("Beispiel Anna", date(y, 12, 27), date(y, 12, 31), "nein", ""),
@@ -265,7 +280,7 @@ head(wt, 4, ["Name", "Fachrichtung"] + [f"Station {i + 1}" for i in range(N_ST_P
      1, [22, 20] + [14] * N_ST_PRO_PERS + [11, 26, 9, 11, 8], height=34)
 cells(wt, f"A{P0}:{col(COL_ANSPRUCH + 1)}{P1}", f_input, fill_input)
 cells(wt, f"{col(COL_ANSPRUCH + 2)}{P0}:{col(COL_ANSPRUCH + 4)}{P1}", f_calc, fill_calc)
-beispiel_team = [
+beispiel_team = [(n, None, [], None) for n in NAMEN] if NAMEN else [
     ("Beispiel Anna", "Ergotherapie", ["Station 1", "Station 2"], 30),
     ("Beispiel Ben", "Ergotherapie", ["Station 3", "StäB"], 30),
     ("Beispiel Clara", "Ergotherapie", ["TK Depression", "TK Sucht", "Station 1"], 24),
@@ -282,8 +297,9 @@ for i, (n, fr, sts, ans) in enumerate(beispiel_team):
     for j, s in enumerate(sts):
         wt.cell(r, 3 + j, s)
     wt.cell(r, COL_ANSPRUCH, ans)
-    for cc in range(1, COL_ANSPRUCH + 2):
-        wt.cell(r, cc).fill = fill_ex
+    if not NAMEN:
+        for cc in range(1, COL_ANSPRUCH + 2):
+            wt.cell(r, cc).fill = fill_ex
 ca, cn, cd, cr = (col(COL_ANSPRUCH + k) for k in (0, 2, 3, 4))
 for r in range(P0, P1 + 1):
     wt[f"{cn}{r}"] = f'=IF($A{r}="","",COUNTIF({W}$A${U0}:$A${U1},$A{r}))'
@@ -329,8 +345,10 @@ we["B5"] = "Fachteam: leer = keine Ampel"
 we["I5"] = "Station: leer = Standardregel"
 for c in ("B5", "I5"):
     we[c].font = Font(name=FONT, size=8, bold=True, color=NAVY)
-fach = [("Ergotherapie", 2, None, 3), ("Musiktherapie", None, None, 2), ("Bewegungstherapie", None, None, 2),
-        ("Physiotherapie", None, None, None)]
+FACHRICHTUNGEN = ["Ergotherapie", "Musiktherapie", "Bewegungstherapie", "Physiotherapie", "Theatertherapie"]
+# Beispielwerte nur in der Vorlage; in der echten Arbeitsdatei legt die Leitung die Ampel-Werte selbst fest
+BEISPIEL_AMPEL = {"Ergotherapie": (2, None, 3), "Musiktherapie": (None, None, 2), "Bewegungstherapie": (None, None, 2)}
+fach = [(f, *((None, None, None) if NAMEN else BEISPIEL_AMPEL.get(f, (None, None, None)))) for f in FACHRICHTUNGEN]
 for i in range(N_FACH):
     r = E0 + i
     if i < len(fach):
@@ -396,6 +414,6 @@ wb.active = wb.worksheets.index(ww)
 for ws in wb.worksheets:
     ws.sheet_view.tabSelected = ws is ww
 
-out = "Urlaubswuensche_Kreativtherapie.xlsx"
+out = ARGS.aus
 wb.save(out)
 print("gespeichert:", out)
