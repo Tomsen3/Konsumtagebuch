@@ -1,6 +1,6 @@
 # Urlaubswünsche Kreativtherapie – Jahresplanung
 
-Werkzeug für ca. 35 Therapeut:innen aus verschiedenen Fachrichtungen (Ergo-, Musik-, Bewegungstherapie u. a.),
+Werkzeug für ca. 35 Therapeut:innen aus vier Fachrichtungen (Ergo-, Musik-, Bewegungs- und Physiotherapie),
 die auf mehreren Stationen arbeiten. Alle tragen ihre **Urlaubswünsche** für das Jahr ein, mehrere pro Person.
 Eine Ansicht zeigt per Ampel, wo es **im Fachteam** oder **auf einer Station** eng wird, und listet die
 Konflikte mit Namen, Zeitraum und Umfang auf, als Grundlage für Absprachen und für die Leitung.
@@ -72,7 +72,7 @@ ansprechen sollte (die als „verschiebbar: ja/etwas“ markierten Personen).
 | Mehrere Wünsche pro Person | Eine Zeile je Urlaubsblock, Wunsch-Nr. automatisch | Jahresplanung besteht aus mehreren Blöcken |
 | Status (genehmigt o. ä.) | Entfällt; nur »Verschiebbar?« (ja/etwas/nein) und »In ATOSS übertragen am« | Genehmigt wird im ATOSS. Die Flexibilitätsangabe hilft der Absprache |
 | Alle Wünsche zählen | Ja, auch bereits übertragene | Engpässe sollen vollständig sichtbar sein |
-| Feiertage | Bundesweite vorbelegt, Landesfeiertage manuell | Bundesland nicht festgelegt |
+| Feiertage | Gesetzliche Feiertage Baden-Württemberg vorbelegt (inkl. Heilige Drei Könige, Fronleichnam, Allerheiligen), Schließtage manuell | Klinik liegt in Baden-Württemberg; Heiligabend/Silvester sind keine gesetzlichen Feiertage |
 | Bibliothek zum Lesen von Excel | SheetJS 0.18.5 (Community-Version), eingebettet | Funktioniert ohne Internet. Bekannte Schwachstellen betreffen nur absichtlich manipulierte Dateien, hier liest man nur die eigene Teamdatei |
 
 ## Technische Hinweise

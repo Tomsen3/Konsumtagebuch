@@ -140,7 +140,7 @@ zeilen = [
     ("p", "•  Stichtag für die Wünsche im Team bekannt geben (z. B. 30.11.), danach übertragen."),
     ("h", "Einrichtung (einmalig, durch die verantwortliche Person)"),
     ("p", "1.  »Einstellungen«: Startdatum (B3), Fachrichtungen und Stationen mit ihren Ampel-Werten (ab wie vielen Abwesenden gelb/hellrot/dunkelrot), "
-          "Feiertage. Bundesweite Feiertage sind vorbelegt – Landesfeiertage und Schließtage ergänzen. Ampel-Werte leer: "
+          "Feiertage. Die Feiertage für Baden-Württemberg sind vorbelegt – Schließtage bei Bedarf ergänzen. Ampel-Werte leer: "
           "Station = Standardregel, Fachteam = keine Ampel."),
     ("p", "2.  »Team«: alle Therapeut:innen mit Fachrichtung, bis zu 4 Stationen und (optional) Urlaubsanspruch. "
           "Jeder Name nur einmal."),
@@ -204,6 +204,7 @@ beispiel_w = [
     ("Beispiel Eva", date(y, 10, 11), date(y, 10, 22), "etwas", ""),
     ("Beispiel Finn", date(y, 7, 19), date(y, 7, 30), "ja", "Station 1 wäre dann zu dünn – klären"),
     ("Beispiel Gül", date(y, 8, 16), date(y, 9, 3), "nein", ""),
+    ("Beispiel Hana", date(y, 5, 24), date(y, 6, 4), "ja", "Pfingstferien"),
 ]
 for i, rowv in enumerate(beispiel_w):
     for j, v in enumerate(rowv):
@@ -272,6 +273,7 @@ beispiel_team = [
     ("Beispiel Eva", "Musiktherapie", ["Station 2", "TK Depression"], 30),
     ("Beispiel Finn", "Bewegungstherapie", ["Station 1", "TK Sucht"], 30),
     ("Beispiel Gül", "Bewegungstherapie", ["Station 2", "Station 3", "TK Depression"], 28),
+    ("Beispiel Hana", "Physiotherapie", ["Station 4", "Station 5", "TK 55+"], 30),
 ]
 for i, (n, fr, sts, ans) in enumerate(beispiel_team):
     r = P0 + i
@@ -328,7 +330,7 @@ we["I5"] = "Station: leer = Standardregel"
 for c in ("B5", "I5"):
     we[c].font = Font(name=FONT, size=8, bold=True, color=NAVY)
 fach = [("Ergotherapie", 2, None, 3), ("Musiktherapie", None, None, 2), ("Bewegungstherapie", None, None, 2),
-        ("Kunsttherapie", None, None, None)]
+        ("Physiotherapie", None, None, None)]
 for i in range(N_FACH):
     r = E0 + i
     if i < len(fach):
@@ -352,9 +354,9 @@ for r in range(E0, E0 + max(N_FACH, N_STAT)):
         we.cell(r, cc).alignment = center
 o = easter(START.year)
 feiertage = [
-    (date(y, 1, 1), "Neujahr"), (o - timedelta(days=2), "Karfreitag"), (o + timedelta(days=1), "Ostermontag"),
+    (date(y, 1, 1), "Neujahr"), (date(y, 1, 6), "Heilige Drei Könige"), (o - timedelta(days=2), "Karfreitag"), (o + timedelta(days=1), "Ostermontag"),
     (date(y, 5, 1), "Tag der Arbeit"), (o + timedelta(days=39), "Christi Himmelfahrt"),
-    (o + timedelta(days=50), "Pfingstmontag"), (date(y, 10, 3), "Tag der Deutschen Einheit"),
+    (o + timedelta(days=50), "Pfingstmontag"), (o + timedelta(days=60), "Fronleichnam"), (date(y, 10, 3), "Tag der Deutschen Einheit"), (date(y, 11, 1), "Allerheiligen"),
     (date(y, 12, 25), "1. Weihnachtstag"), (date(y, 12, 26), "2. Weihnachtstag"),
 ]
 for i, (d, n) in enumerate(feiertage):
@@ -363,7 +365,7 @@ for i, (d, n) in enumerate(feiertage):
 cells(we, f"N{E0}:O{E0 + N_FEIER - 1}", f_input, fill_input)
 for r in range(E0, E0 + N_FEIER):
     we.cell(r, 14).number_format = "DD.MM.YYYY"
-we["N5"] = "Bundesweite Feiertage vorbelegt – Landesfeiertage ergänzen!"
+we["N5"] = "Feiertage Baden-Württemberg vorbelegt – Schließtage ggf. ergänzen"
 we["N5"].font = Font(name=FONT, size=8, bold=True, color="C00000")
 we["B6"].comment = Comment("Ab wie vielen gleichzeitig Abwesenden aus dieser Fachrichtung soll die Ampel gelb / "
                            "hellrot / dunkelrot zeigen? Leer = Stufe wird nicht verwendet.", "Urlaubsplanung")
