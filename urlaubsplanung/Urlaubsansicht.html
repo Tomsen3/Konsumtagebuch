@@ -145,6 +145,7 @@ h2.sec{font-size:15px;color:var(--navy);margin:22px 0 8px}
 aside.detail{position:fixed;top:0;right:0;height:100vh;width:min(420px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(20,30,60,.12);padding:16px 18px;overflow:auto;z-index:50;transform:translateX(105%);transition:transform .18s}
 aside.detail.open{transform:none}
 aside.detail h3{margin:0 0 4px;color:var(--navy)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d2433;color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;z-index:60;max-width:min(560px,calc(100vw - 32px));box-shadow:0 6px 20px rgba(0,0,0,.2)}
 aside.detail .x{position:absolute;top:10px;right:12px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
 aside.detail ul{padding-left:18px}
 .banner{background:#fff6d6;border:1px solid #f0d78a;color:#6b5000;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
@@ -221,6 +222,7 @@ aside.detail ul{padding-left:18px}
   </section>
 </main>
 
+<div id="toast" hidden></div>
 <aside class="detail" id="detail"><button class="x" id="detailX" aria-label="Schließen">×</button><div id="detailBody"></div></aside>
 
 <script>/*! xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
@@ -508,7 +510,7 @@ async function loadFile(file) {
     $("btnLoad").textContent = "Andere Datei";
     setupFilters(); render();
   } catch (e) {
-    alert("Die Datei konnte nicht gelesen werden.\n\n" + (e && e.message ? e.message : e));
+    toast("Die Datei konnte nicht gelesen werden: " + (e && e.message ? e.message : e), 9000);
   }
 }
 
@@ -701,11 +703,17 @@ function renderConf(V) {
       c.people.map((x) => `   • ${M.persons[x.p].name}: ${fmt(x.from)}–${fmt(x.to)}, verschiebbar: ${x.flex || "k. A."}`).join("\n");
   }).join("\n\n") || "Keine Engpässe.");
 }
+let toastTimer = null;
+function toast(msg, ms = 4000) { const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), ms); }
 function copyText(t) {
-  const done = () => alert("Liste in die Zwischenablage kopiert – z. B. in eine E-Mail einfügen.");
-  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, () => fallback());
+  const done = () => toast("Liste in die Zwischenablage kopiert – z. B. in eine E-Mail einfügen.");
+  const fallback = () => {
+    const ta = document.createElement("textarea"); ta.value = t; ta.style.cssText = "position:fixed;top:0;left:0;opacity:0"; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+    ta.remove(); ok ? done() : toast("Kopieren nicht möglich – bitte die Liste markieren und mit Strg+C kopieren.", 6000);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, fallback);
   else fallback();
-  function fallback() { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { prompt("Bitte kopieren:", t); } ta.remove(); }
 }
 function renderPers(V) {
   const rows = V.ps.slice().sort((a, b) => (M.persons[a].fi - M.persons[b].fi) || M.persons[a].name.localeCompare(M.persons[b].name, "de")).map((pi) => {
@@ -781,6 +789,12 @@ $("t-cal").onclick = (e) => { const td = e.target.closest("td[data-k]"); if (!td
 $("detailX").onclick = () => $("detail").classList.remove("open");
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
 
+// Demo-Version: eingebettete Beispieldatei automatisch laden (nur wenn window.__DEMO_XLSX__ gesetzt ist)
+if (window.__DEMO_XLSX__) {
+  const bin = atob(window.__DEMO_XLSX__), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  loadFile(new File([u8], "Beispieldatei (Demo)", { lastModified: Date.now() }));
+}
 // Zuletzt geöffnete Datei anbieten (nur Edge/Chrome)
 (async () => {
   const h = await IDB.get();
