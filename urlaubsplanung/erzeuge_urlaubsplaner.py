@@ -139,9 +139,9 @@ zeilen = [
     ("p", "•  Nach dem Übertragen in Spalte J das Datum eintragen. Die Zeile wird grau – so sieht man, was erledigt ist."),
     ("p", "•  Stichtag für die Wünsche im Team bekannt geben (z. B. 30.11.), danach übertragen."),
     ("h", "Einrichtung (einmalig, durch die verantwortliche Person)"),
-    ("p", "1.  »Einstellungen«: Startdatum (B3), Fachrichtungen und Stationen mit Grenze »max. gleichzeitig weg«, "
-          "Feiertage. Bundesweite Feiertage sind vorbelegt – Landesfeiertage und Schließtage ergänzen. Grenze leer = "
-          "keine Grenze."),
+    ("p", "1.  »Einstellungen«: Startdatum (B3), Fachrichtungen und Stationen mit ihren Ampel-Werten (ab wie vielen Abwesenden gelb/hellrot/dunkelrot), "
+          "Feiertage. Bundesweite Feiertage sind vorbelegt – Landesfeiertage und Schließtage ergänzen. Ampel-Werte leer: "
+          "Station = Standardregel, Fachteam = keine Ampel."),
     ("p", "2.  »Team«: alle Therapeut:innen mit Fachrichtung, bis zu 4 Stationen und (optional) Urlaubsanspruch. "
           "Jeder Name nur einmal."),
     ("p", "3.  Beispieldaten (graue Zeilen) in »Team« und »Wünsche« markieren → Entf. NICHT ›Zeilen löschen‹ und keine "
@@ -202,7 +202,7 @@ beispiel_w = [
     ("Beispiel David", date(y, 7, 12), date(y, 7, 30), "nein", "Reise gebucht"),
     ("Beispiel David", date(y, 3, 30), date(y, 4, 2), "ja", ""),
     ("Beispiel Eva", date(y, 10, 11), date(y, 10, 22), "etwas", ""),
-    ("Beispiel Finn", date(y, 7, 19), date(y, 7, 30), "ja", "Station 1A wäre dann zu dünn – klären"),
+    ("Beispiel Finn", date(y, 7, 19), date(y, 7, 30), "ja", "Station 1 wäre dann zu dünn – klären"),
     ("Beispiel Gül", date(y, 8, 16), date(y, 9, 3), "nein", ""),
 ]
 for i, rowv in enumerate(beispiel_w):
@@ -265,13 +265,13 @@ head(wt, 4, ["Name", "Fachrichtung"] + [f"Station {i + 1}" for i in range(N_ST_P
 cells(wt, f"A{P0}:{col(COL_ANSPRUCH + 1)}{P1}", f_input, fill_input)
 cells(wt, f"{col(COL_ANSPRUCH + 2)}{P0}:{col(COL_ANSPRUCH + 4)}{P1}", f_calc, fill_calc)
 beispiel_team = [
-    ("Beispiel Anna", "Ergotherapie", ["Station 1A", "Station 1B"], 30),
-    ("Beispiel Ben", "Ergotherapie", ["Station 2A"], 30),
-    ("Beispiel Clara", "Ergotherapie", ["Station 3", "Tagesklinik", "Station 1A"], 24),
-    ("Beispiel David", "Musiktherapie", ["Station 1A", "Station 2A"], 30),
-    ("Beispiel Eva", "Musiktherapie", ["Station 1B", "Station 3"], 30),
-    ("Beispiel Finn", "Bewegungstherapie", ["Station 1A", "Tagesklinik"], 30),
-    ("Beispiel Gül", "Bewegungstherapie", ["Station 1B", "Station 2A", "Station 3"], 28),
+    ("Beispiel Anna", "Ergotherapie", ["Station 1", "Station 2"], 30),
+    ("Beispiel Ben", "Ergotherapie", ["Station 3", "StäB"], 30),
+    ("Beispiel Clara", "Ergotherapie", ["TK Depression", "TK Sucht", "Station 1"], 24),
+    ("Beispiel David", "Musiktherapie", ["Station 1", "Station 3"], 30),
+    ("Beispiel Eva", "Musiktherapie", ["Station 2", "TK Depression"], 30),
+    ("Beispiel Finn", "Bewegungstherapie", ["Station 1", "TK Sucht"], 30),
+    ("Beispiel Gül", "Bewegungstherapie", ["Station 2", "Station 3", "TK Depression"], 28),
 ]
 for i, (n, fr, sts, ans) in enumerate(beispiel_team):
     r = P0 + i
@@ -338,7 +338,8 @@ for i in range(N_FACH):
     we.cell(r, 6).fill = fill(FACH_FARBEN[i])
     we.cell(r, 6).border = box
 cells(we, f"A{E0}:D{E0 + N_FACH - 1}", f_input, fill_input)
-st = ["Station 1A", "Station 1B", "Station 2A", "Station 3", "Tagesklinik"]
+st = ["StäB", "Station 1", "Station 2", "Station 3", "Station 4", "Station 5", "Station 6", "Station 7",
+      "TK Migration", "TK Sucht", "TK Depression", "TK Psychosomatik", "TK Allgemeinpsychiatrie", "TK 55+"]
 st_cols = f"{T}$C${P0}:${col(2 + N_ST_PRO_PERS)}${P1}"
 for i in range(N_STAT):
     r = E0 + i
