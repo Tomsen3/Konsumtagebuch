@@ -1,0 +1,3 @@
+# Echte Urlaubsdateien enthalten Namen von Mitarbeitenden (Personaldaten) – nie ins Repository.
+*.xlsx
+*.xlsm

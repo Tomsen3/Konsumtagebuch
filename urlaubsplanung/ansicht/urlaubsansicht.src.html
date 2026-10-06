@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Urlaubsansicht Kreativtherapie</title>
+<!--
+  Urlaubsansicht (Dashboard) – liest Urlaubswuensche_2027.xlsx / .xlsm und zeigt Kennzahlen, Jahres-Heatmap,
+  kritische Wochen, Monatsbalken, Personentabelle, Personenansicht, Kalender und Konflikte.
+  Läuft komplett lokal im Browser: kein Server, keine Internetverbindung, es werden keine Daten verschickt.
+  Die Excel-Datei wird nur gelesen, nie verändert.
+
+  QUELLTEXT: ansicht/urlaubsansicht.src.html  →  mit ansicht/baue_ansicht.py zu Urlaubsansicht.html zusammenbauen
+  (dabei wird die Bibliothek SheetJS ansicht/xlsx.full.min.js zum Lesen von Excel-Dateien eingebettet).
+  Doku: Dokumentation_Urlaubsansicht_Dashboard.md
+-->
+<style>
+:root{
+  --navy:#1F3864; --navy-2:#2F5496; --ink:#1d2433; --muted:#5b6475; --line:#dde2ea; --bg:#f4f6fa; --card:#fff;
+  --we:#eef0f4; --hol:#e4e0ef;
+  --l1:#d9efdc; --l1-ink:#1e6b2e;
+  --l2:#ffe58f; --l2-ink:#7a5600;
+  --l3:#f7a8a8; --l3-ink:#8a1010;
+  --l4:#b00020; --l4-ink:#fff;
+  --bar:#5b7bb5;
+  --cw-week:34px; --cw-day:22px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+button,select,input{font:inherit}
+header.top{background:var(--navy);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+header.top h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
+header.top .file{font-size:12.5px;opacity:.85;flex:1;min-width:200px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--navy-2)}
+.btn.primary{background:#fff;color:var(--navy);font-weight:600;border-color:#fff}
+header.top .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
+header.top .btn.primary{background:#fff;color:var(--navy)}
+main{padding:16px 20px 40px;max-width:100%}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.printinfo{display:none}
+
+/* Startbildschirm */
+.drop{max-width:720px;margin:40px auto;background:var(--card);border:2px dashed #b9c3d6;border-radius:16px;padding:36px;text-align:center}
+.drop.over{border-color:var(--navy-2);background:#eef3ff}
+.drop h2{margin:0 0 6px;color:var(--navy)}
+.drop p{color:var(--muted);margin:6px 0}
+.drop .btn{margin-top:14px}
+.drop ol{text-align:left;display:inline-block;color:var(--muted);margin:18px 0 0}
+
+/* Kennzahlen-Leiste */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:14px;font-weight:600;color:var(--muted)}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi.click{cursor:pointer}
+.kpi.click:hover{border-color:var(--navy-2)}
+.kpi .row{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-top:4px}
+.kpi.warn{border-left:5px solid #f2c200} .kpi.bad{border-left:5px solid var(--l4)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600}
+.lv1{background:var(--l1);color:var(--l1-ink)} .lv2{background:var(--l2);color:var(--l2-ink)}
+.lv3{background:var(--l3);color:var(--l3-ink)} .lv4{background:var(--l4);color:var(--l4-ink)}
+
+/* Filter */
+.filters{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-start;margin-bottom:14px}
+.fgroup{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fgroup > label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none}
+.chip .dot{width:10px;height:10px;border-radius:50%}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 12px;cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff}
+.filters input[type=search]{border:1px solid var(--line);border-radius:8px;padding:5px 10px;width:180px}
+.filters select,select.sel{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff}
+.reset{font-size:12.5px;color:var(--navy-2);background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
+.tab{border:0;background:none;padding:9px 14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-weight:600}
+.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
+.tab .count{margin-left:6px}
+
+/* Legende */
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(0,0,0,.06)}
+.legend b{color:var(--ink);font-weight:600}
+
+/* Dashboard */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;break-inside:avoid}
+.panel h2{font-size:15px;color:var(--navy);margin:0 0 4px}
+.panel .sub{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
+.dgrid > .panel{margin-bottom:0}
+@media (max-width:1100px){.dgrid{grid-template-columns:1fr}}
+
+/* Heatmap: Monate × Tage */
+table.heat{border-collapse:separate;border-spacing:2px;width:100%;table-layout:fixed;font-size:10.5px}
+table.heat th{font-weight:600;color:var(--muted);font-size:10px;padding:0}
+table.heat th.ml{width:62px;text-align:left;color:var(--navy);font-size:11.5px}
+table.heat td{height:22px;text-align:center;border-radius:3px;padding:0;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;position:relative}
+table.heat td.na{background:transparent;cursor:default}
+table.heat td.we{background:var(--we);color:#b0b6c3;font-weight:400}
+table.heat td.hol{background:var(--hol);color:#7d6fa6;font-weight:400}
+table.heat td.out{background:#f7f8fb;color:#c4c9d4;cursor:default}
+table.heat td.lv0{background:#f3f5f9;color:#9aa3b5}
+table.heat td.lv1{background:var(--l1);color:var(--l1-ink)} table.heat td.lv2{background:var(--l2);color:var(--l2-ink)}
+table.heat td.lv3{background:var(--l3);color:var(--l3-ink)} table.heat td.lv4{background:var(--l4);color:#fff}
+table.heat td.mo{box-shadow:inset 2px 0 0 #c6cee0}
+table.heat td.today{outline:2px solid #ED7D31;outline-offset:-2px}
+table.heat td.sel{outline:2px solid var(--navy);outline-offset:-2px}
+table.heat td.pw0{background:#fff;box-shadow:inset 0 0 0 1px #e3e7ef}
+table.heat td.pw{background:#c9d6ee;color:var(--navy)}
+table.heat td.pf{background:repeating-linear-gradient(135deg,#e4e9f3 0 3px,#f7f8fb 3px 6px);color:#8a93a6;font-weight:400}
+
+/* Top-5-Wochen */
+ol.top{list-style:none;margin:0;padding:0;counter-reset:t}
+ol.top li{counter-increment:t;display:grid;grid-template-columns:24px 1fr;gap:4px 8px;padding:8px 6px;border-bottom:1px solid #eef0f4;cursor:pointer;border-radius:8px}
+ol.top li:hover{background:#f6f8fc}
+ol.top li::before{content:counter(t);font-weight:700;color:var(--navy);font-size:15px}
+ol.top .w{font-weight:650}
+ol.top .d{font-size:12px;color:var(--muted)}
+ol.top .u{font-size:12px;margin-top:2px}
+
+/* Monatsbalken (Small Multiples) */
+table.bars{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px}
+table.bars th{font-weight:600;color:var(--muted);font-size:11px;padding:2px 0;text-align:center}
+table.bars th.gl{text-align:left;width:190px}
+table.bars td{padding:2px 2px;vertical-align:bottom;border-bottom:1px solid #f0f2f6}
+table.bars td.gl{vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
+table.bars td.gl .meta{color:var(--muted);font-size:11px;margin-left:4px}
+.bc{height:46px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:default}
+.bc .bv{font-size:10px;color:var(--muted);line-height:1.1;font-variant-numeric:tabular-nums}
+.bc .b{width:62%;max-width:26px;background:var(--bar);border-radius:3px 3px 0 0;min-height:0}
+.bc .mk{height:5px;width:62%;max-width:26px;margin-top:2px;border-radius:2px}
+.bc .mk.lv2{background:#f2c200} .bc .mk.lv3{background:#e45757} .bc .mk.lv4{background:var(--l4)}
+
+/* Kalender */
+.calwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 150px)}
+table.cal{border-collapse:separate;border-spacing:0;font-size:12px}
+table.cal th,table.cal td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;text-align:center;height:26px}
+table.cal thead th{position:sticky;background:#f8f9fc;z-index:2;font-weight:600;color:var(--muted)}
+table.cal thead tr.m th{top:0;height:24px;color:var(--navy);font-size:12px;text-align:left;padding-left:6px}
+table.cal thead tr.c th{top:24px;font-size:10.5px;line-height:1.1}
+table.cal .lh{position:sticky;left:0;z-index:3;background:#fff;text-align:left;padding:0 10px;min-width:230px;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.cal thead .lh{z-index:4;background:#f8f9fc}
+table.cal td.c{min-width:var(--cw);max-width:var(--cw);width:var(--cw);cursor:pointer;font-weight:600;font-size:11px}
+table.cal td.we{background:var(--we)} table.cal td.hol{background:var(--hol)}
+table.cal td.pf{background:repeating-linear-gradient(135deg,#e4e9f3 0 3px,#fff 3px 6px)}
+table.cal th.we{background:#e8ebf1} table.cal th.hol{background:#ddd7ec}
+table.cal th.today,table.cal td.today{box-shadow:inset 2px 0 0 #ED7D31, inset -2px 0 0 #ED7D31}
+table.cal th.mstart,table.cal td.mstart{border-left:2px solid #9aa7c2}
+table.cal tr.sec td{background:#eef2fa;color:var(--navy);font-weight:700;text-align:left;padding:6px 10px;position:sticky;left:0}
+table.cal tr.sec td span{position:sticky;left:10px}
+table.cal tr.sub td{background:#fafbfd;color:var(--muted);font-weight:600;text-align:left;padding:3px 10px;font-size:11.5px}
+.lh .nm{font-weight:600;color:var(--ink)}
+.lh .meta{color:var(--muted);font-size:11px;margin-left:6px}
+.lh .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+td.p{color:#fff}
+td.r2{box-shadow:inset 0 0 0 3px var(--l2)} td.r3{box-shadow:inset 0 0 0 3px #e45757} td.r4{box-shadow:inset 0 0 0 3px var(--l4)}
+td.u.lv1{background:var(--l1);color:var(--l1-ink)} td.u.lv2{background:var(--l2);color:var(--l2-ink)}
+td.u.lv3{background:var(--l3);color:var(--l3-ink)} td.u.lv4{background:var(--l4);color:#fff}
+td.u.lv0{color:#aab}
+td.sel{outline:2px solid var(--navy);outline-offset:-2px}
+
+/* Konflikte */
+.conf-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.conf-head .note{color:var(--muted);font-size:13px}
+.lvsec h3{margin:18px 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+.card{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;break-inside:avoid}
+.card.lv2b{border-left-color:#f2c200} .card.lv3b{border-left-color:#e45757} .card.lv4b{border-left-color:var(--l4)}
+.card .t{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.card .unit{font-weight:700;font-size:15px}
+.card .unit small{font-weight:600;color:var(--muted);font-size:12px;margin-right:4px}
+.card .when{color:var(--ink)}
+.card .size{color:var(--muted)}
+.card table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+.card th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);padding:4px 6px}
+.card td{padding:5px 6px;border-bottom:1px solid #f0f2f6;vertical-align:top}
+.card .ask{margin-top:8px;font-size:13px;background:#f6f8fc;border-radius:8px;padding:6px 10px}
+.flex{font-size:11.5px;border-radius:6px;padding:1px 7px;font-weight:600;white-space:nowrap}
+.flex.ja{background:#d9efdc;color:#1e6b2e} .flex.etwas{background:#fff1c2;color:#7a5600}
+.flex.nein{background:#f3d0d0;color:#8a1010} .flex.leer{background:#eceef3;color:#5b6475}
+.empty{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted)}
+
+/* Tabellen */
+table.list{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
+table.list th{background:#f8f9fc;text-align:left;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+table.list th.sort{cursor:pointer;user-select:none}
+table.list th.sort:hover{color:var(--navy)}
+table.list th.sort::after{content:" ↕";opacity:.35}
+table.list th.asc::after{content:" ▲";opacity:1;color:var(--navy)}
+table.list th.desc::after{content:" ▼";opacity:1;color:var(--navy)}
+table.list td{padding:7px 10px;border-bottom:1px solid #eef0f4;vertical-align:top}
+table.list td.num,table.list th.num{text-align:right;font-variant-numeric:tabular-nums}
+.plink{color:var(--navy);font-weight:600;cursor:pointer;text-decoration:none;border-bottom:1px dotted var(--navy-2)}
+.wchip{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;font-size:12px;white-space:nowrap}
+.wchip.c3{border-color:#e45757;background:#fdeeee} .wchip.c4{border-color:var(--l4);background:#fbe3e6} .wchip.c2{border-color:#f2c200;background:#fff8dc}
+.neg{color:#b00020;font-weight:700}
+.tz{font-size:11px;border-radius:6px;padding:1px 6px;background:#e8eefb;color:var(--navy);font-weight:600;white-space:nowrap}
+.warnlist li{margin:4px 0}
+h2.sec{font-size:15px;color:var(--navy);margin:22px 0 8px}
+.pfbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:13px}
+
+/* Personenansicht */
+.phead{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:12px}
+.phead h2{margin:0;color:var(--navy);font-size:19px}
+.pkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+
+/* Detail-Panel */
+aside.detail{position:fixed;top:0;right:0;height:100vh;width:min(440px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(20,30,60,.12);padding:16px 18px;overflow:auto;z-index:50;transform:translateX(105%);transition:transform .18s}
+aside.detail.open{transform:none}
+aside.detail h3{margin:0 0 4px;color:var(--navy);padding-right:26px}
+aside.detail h4{margin:14px 0 4px;font-size:13.5px}
+aside.detail .x{position:absolute;top:10px;right:12px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
+aside.detail ul{padding-left:18px;margin:4px 0}
+aside.detail li{margin:3px 0}
+.banner{background:#fff6d6;border:1px solid #f0d78a;color:#6b5000;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+
+@media (max-width:700px){
+  main{padding:12px}
+  table.cal .lh{min-width:150px;max-width:150px}
+  .filters input[type=search]{width:140px}
+  table.heat{font-size:8.5px;border-spacing:1px}
+  table.heat th.ml{width:40px}
+  table.bars th.gl{width:110px}
+  .panel{overflow-x:auto}
+}
+
+/* ===== Druckansicht A4 quer ===== */
+@page{size:A4 landscape;margin:9mm}
+@media print{
+  header.top .btn, .filters, .tabs, aside.detail, .conf-head .btn, .noprint{display:none!important}
+  html,body{background:#fff;font-size:11px}
+  main{padding:0}
+  header.top{background:#fff;color:#000;border-bottom:2px solid #000;padding:0 0 4px}
+  header.top h1{font-size:15px}
+  header.top .file{opacity:1;font-size:10px}
+  .printinfo{display:block;font-size:10px;color:#333;margin:4px 0 6px}
+  .kpis{grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:6px}
+  .kpi{padding:6px 8px;border-radius:6px}
+  .kpi .v{font-size:17px}
+  .panel{padding:6px 8px;margin-bottom:6px;border-radius:6px}
+  .panel h2{font-size:12.5px}
+  .panel .sub{font-size:10px;margin-bottom:4px}
+  .dgrid{grid-template-columns:minmax(0,1fr) 72mm;gap:6px}
+  table.heat{font-size:8.5px;border-spacing:1px}
+  table.heat td{height:15px}
+  table.heat th.ml{width:44px;font-size:9.5px}
+  ol.top li{padding:3px 2px}
+  .bc{height:30px}
+  .bars-panel{break-before:page}
+  .calwrap{max-height:none;overflow:visible;border:0}
+  .card{border-color:#999}
+  table.list{font-size:10px} table.list td,table.list th{padding:3px 5px}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Urlaubsansicht Kreativtherapie</h1>
+  <div class="file" id="fileinfo">Keine Datei geladen</div>
+  <button class="btn primary" id="btnLoad">Excel-Datei laden</button>
+  <button class="btn hidden" id="btnReload" title="Dieselbe Datei erneut einlesen (nach neuen Einträgen)">Neu laden</button>
+  <button class="btn hidden" id="btnPrint" title="Druckt die gerade geöffnete Registerkarte – eingestellt auf A4 quer">Drucken (A4 quer)</button>
+  <input type="file" id="fileInput" accept=".xlsx,.xlsm" class="hidden">
+</header>
+
+<main>
+  <section class="drop" id="drop">
+    <h2>Excel-Datei mit den Urlaubswünschen öffnen</h2>
+    <p>Datei <b>Urlaubswuensche_2027.xlsx</b> (oder die Makro-Fassung <b>.xlsm</b>) hier hineinziehen oder auswählen.</p>
+    <p>Alles bleibt auf diesem Rechner. Die Excel-Datei wird nur gelesen, nicht verändert.</p>
+    <button class="btn primary" id="btnLoad2" style="background:var(--navy);color:#fff;border-color:var(--navy)">Excel-Datei auswählen</button>
+    <div id="lastFile"></div>
+    <ol>
+      <li>Liegt die Datei in Teams/SharePoint: über den synchronisierten OneDrive-Ordner im Explorer auswählen oder vorher herunterladen.</li>
+      <li>Nach neuen Einträgen in Excel: speichern, dann hier auf »Neu laden«.</li>
+    </ol>
+  </section>
+
+  <section id="app" class="hidden">
+    <div id="banner"></div>
+    <div class="printinfo" id="printinfo"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="filters" id="filters">
+      <div class="fgroup"><label>Fachrichtung</label><div class="chips" id="fFach"></div></div>
+      <div class="fgroup"><label>Station</label><div class="chips" id="fStat"></div></div>
+      <div class="fgroup"><label>Person</label><input type="search" id="fQ" placeholder="Name suchen …"></div>
+      <div class="fgroup"><label>Zeitraum</label>
+        <div style="display:flex;gap:6px;align-items:center"><select id="fM0"></select><span>bis</span><select id="fM1"></select></div>
+      </div>
+      <div class="fgroup"><label>Kalender-Raster</label>
+        <div class="seg" id="fView"><button data-v="w">Wochen</button><button data-v="d">Tage</button></div>
+      </div>
+      <div class="fgroup"><label>&nbsp;</label>
+        <label style="font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:400"><input type="checkbox" id="fOnly"> nur Personen mit Wünschen</label>
+        <button class="reset" id="fReset">Filter zurücksetzen</button>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab" data-t="dash">Dashboard</button>
+      <button class="tab" data-t="cal">Kalender</button>
+      <button class="tab" data-t="conf">Konflikte <span class="count" id="confCount"></span></button>
+      <button class="tab" data-t="pers">Personen</button>
+      <button class="tab" data-t="one">Personenansicht</button>
+      <button class="tab" data-t="rules">Regeln &amp; Hinweise <span class="count" id="warnCount"></span></button>
+    </nav>
+
+    <section id="t-dash"></section>
+    <section id="t-cal" class="hidden"></section>
+    <section id="t-conf" class="hidden"></section>
+    <section id="t-pers" class="hidden"></section>
+    <section id="t-one" class="hidden"></section>
+    <section id="t-rules" class="hidden"></section>
+  </section>
+</main>
+
+<aside class="detail" id="detail"><button class="x" id="detailX" aria-label="Schließen">×</button><div id="detailBody"></div></aside>
+<!--SHEETJS-->
+<script>
+"use strict";
+/* ===================== Layout der Excel-Datei =====================
+   Muss zur Excel-Datei passen (siehe Dokumentation_Mein_Urlaub.md). Spalten als Buchstaben, Zeilen wie in Excel (ab 1). */
+const LAYOUT = {
+  tage: 366,
+  wuensche: { sheet: "Wünsche", firstRow: 6, cols: { name: "A", von: "B", bis: "C", flex: "D", bem: "E", atoss: "J" } },
+  team: { sheet: "Team", firstRow: 5, cols: { name: "A", fach: "B", st: ["C", "D", "E", "F"], anspruch: "G", tage: ["L", "M", "N", "O", "P"] } },
+  einst: {
+    sheet: "Einstellungen", start: "B3", firstRow: 7,
+    fach: { name: "A", g: "B", h: "C", d: "D" },
+    stat: { name: "H", g: "I", h: "J", d: "K" },
+    feier: { datum: "N", name: "O" }
+  }
+};
+/* Standardregel für Stationen, wenn in Einstellungen nichts eingetragen ist */
+const STANDARD = {
+  gelbAb: 2,                       // ab 2 Abwesenden gelb (1 weg = kein Warnsignal)
+  hellrotWennNochDa: 2,            // hellrot, wenn nur noch 2 anwesend sind …
+  hellrotAbGroesse: 4,             // … aber nur bei Stationen ab 4 Therapeut:innen
+  dunkelrot: "alle"                // dunkelrot, wenn alle weg sind (die an dem Tag arbeiten würden)
+};
+/* Top-5-Wochen: Punkte je Arbeitstag und Bereich nach Ampelstufe (Index = Stufe 0–4) */
+const WOCHEN_PUNKTE = [0, 0, 1, 3, 9];
+const FACH_FARBEN = ["#4E79A7","#B07AA1","#76B7B2","#9C755F","#F28E2B","#59A1A0","#D37295","#8E8CD8","#6A9FCB","#A08C7D"];
+const LV_NAME = ["", "unkritisch", "Gelb", "Hellrot", "Dunkelrot"];
+const MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+const MON_L = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const FLEX_ORDER = { ja: 0, etwas: 1, "": 2, nein: 3 };
+
+/* ===================== Hilfsfunktionen ===================== */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ser2date = (s) => new Date(Math.round((s - 25569) * 86400000));
+const date2ser = (y, m, d) => Math.round(Date.UTC(y, m - 1, d) / 86400000) + 25569;
+const wday = (s) => ser2date(s).getUTCDay();
+const fmt = (s) => { const d = ser2date(s); return String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0") + "."; };
+const fmtY = (s) => fmt(s) + ser2date(s).getUTCFullYear();
+const fmtW = (s) => WD[wday(s)] + " " + fmt(s);
+const range = (a, b) => (a === b ? fmtW(a) + ser2date(a).getUTCFullYear() : fmtW(a) + " – " + fmtW(b) + ser2date(b).getUTCFullYear());
+const monthKey = (s) => { const d = ser2date(s); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
+function isoWeek(s) { const th = s - ((wday(s) + 6) % 7) + 3; const y = ser2date(th).getUTCFullYear(); return Math.floor((th - date2ser(y, 1, 1)) / 7) + 1; }
+const todaySer = () => { const d = new Date(); return date2ser(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+function cell(ws, addr) { const c = ws[addr]; return c ? c.v : null; }
+function str(v) { return v == null ? "" : String(v).trim(); }
+function num(v) { if (v == null || v === "") return null; const n = Number(v); return Number.isFinite(n) ? Math.round(n) : null; }
+function toSer(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return Math.floor(v);
+  if (v instanceof Date) return date2ser(v.getFullYear(), v.getMonth() + 1, v.getDate());
+  const m = String(v).trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; return date2ser(y, +m[2], +m[1]); }
+  return null;
+}
+function lastRow(ws) { return ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]).e.r + 1 : 0; }
+
+/* ===================== Einlesen & Berechnen ===================== */
+function build(wb) {
+  const L = LAYOUT, warn = [];
+  const E = wb.Sheets[L.einst.sheet], T = wb.Sheets[L.team.sheet], W = wb.Sheets[L.wuensche.sheet];
+  const missing = [[E, L.einst.sheet], [T, L.team.sheet], [W, L.wuensche.sheet]].filter((x) => !x[0]).map((x) => "»" + x[1] + "«");
+  if (missing.length) throw new Error("In der Datei fehlen die Blätter " + missing.join(", ") + ". Ist das die richtige Excel-Datei?");
+
+  // Einstellungen
+  const fachs = [], stats = [], fachIdx = new Map(), statIdx = new Map(), holidays = new Map();
+  for (let r = L.einst.firstRow, n = lastRow(E); r <= n; r++) {
+    const f = L.einst.fach, s = L.einst.stat, h = L.einst.feier;
+    const fn = str(cell(E, f.name + r));
+    if (fn && !fachIdx.has(fn)) { fachIdx.set(fn, fachs.length); fachs.push({ type: "fach", name: fn, custom: { g: num(cell(E, f.g + r)), h: num(cell(E, f.h + r)), d: num(cell(E, f.d + r)) } }); }
+    const sn = str(cell(E, s.name + r));
+    if (sn && !statIdx.has(sn)) { statIdx.set(sn, stats.length); stats.push({ type: "stat", name: sn, custom: { g: num(cell(E, s.g + r)), h: num(cell(E, s.h + r)), d: num(cell(E, s.d + r)) } }); }
+    const hd = toSer(cell(E, h.datum + r));
+    if (hd) holidays.set(hd, str(cell(E, h.name + r)) || "Feiertag");
+  }
+
+  // Team (inkl. Teilzeit-Arbeitstage Mo–Fr in Spalten L–P)
+  const persons = [], pIdx = new Map();
+  for (let r = L.team.firstRow, n = lastRow(T); r <= n; r++) {
+    const c = L.team.cols, name = str(cell(T, c.name + r));
+    if (!name) continue;
+    if (pIdx.has(name)) { warn.push({ k: "team", t: `»${name}« steht mehrfach im Blatt Team (Zeile ${r}). Nur der erste Eintrag zählt.` }); continue; }
+    const fach = str(cell(T, c.fach + r));
+    let fi = fachIdx.has(fach) ? fachIdx.get(fach) : -1;
+    if (!fach) warn.push({ k: "team", t: `${name}: keine Fachrichtung eingetragen (Team, Zeile ${r}).` });
+    else if (fi < 0) { warn.push({ k: "team", t: `${name}: Fachrichtung »${fach}« fehlt im Blatt Einstellungen – wurde ergänzt.` }); fi = fachs.length; fachIdx.set(fach, fi); fachs.push({ type: "fach", name: fach, custom: { g: null, h: null, d: null } }); }
+    const st = [];
+    for (const sc of c.st) {
+      const s = str(cell(T, sc + r));
+      if (!s || st.includes(s)) continue;
+      if (!statIdx.has(s)) { warn.push({ k: "team", t: `${name}: Station »${s}« fehlt im Blatt Einstellungen – wurde mit Standardregel ergänzt.` }); statIdx.set(s, stats.length); stats.push({ type: "stat", name: s, custom: { g: null, h: null, d: null } }); }
+      st.push(s);
+    }
+    if (!st.length) warn.push({ k: "team", t: `${name}: keine Station eingetragen.` });
+    // Arbeitstage: wie in Excel (Spalte Q »Muster«) zählt nur »x«; alle leer = Vollzeit Mo–Fr
+    const raw = c.tage.map((col) => str(cell(T, col + r)).toLowerCase());
+    raw.forEach((v, k) => { if (v && v !== "x") warn.push({ k: "team", t: `${name}: in Team, Spalte ${c.tage[k]} steht »${v}« – als Arbeitstag zählt nur »x« (Zeile ${r}).` }); });
+    const marked = raw.map((v) => v === "x");
+    const tz = marked.some(Boolean);
+    const wk = tz ? marked : [true, true, true, true, true];   // Index 0 = Mo … 4 = Fr
+    pIdx.set(name, persons.length);
+    persons.push({ name, fach, fi, st, anspruch: num(cell(T, c.anspruch + r)), wk, tz, wishes: [] });
+  }
+
+  // Wünsche
+  const wishes = [];
+  let minVon = null;
+  for (let r = L.wuensche.firstRow, n = lastRow(W); r <= n; r++) {
+    const c = L.wuensche.cols, name = str(cell(W, c.name + r));
+    const von = toSer(cell(W, c.von + r)), bis = toSer(cell(W, c.bis + r));
+    if (!name && !von && !bis) continue;
+    if (!name) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r}: Name fehlt.` }); continue; }
+    if (!pIdx.has(name)) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r}: »${name}« steht nicht im Blatt Team – nicht berücksichtigt.` }); continue; }
+    if (!von || !bis) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r} (${name}): Von oder Bis fehlt bzw. ist kein Datum.` }); continue; }
+    if (bis < von) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r} (${name}): Bis liegt vor Von.` }); continue; }
+    const flex = str(cell(W, c.flex + r)).toLowerCase();
+    const w = { p: pIdx.get(name), von, bis, flex: ["ja", "etwas", "nein"].includes(flex) ? flex : "", bem: str(cell(W, c.bem + r)), atoss: toSer(cell(W, c.atoss + r)), row: r };
+    wishes.push(w); persons[w.p].wishes.push(w);
+    if (minVon == null || von < minVon) minVon = von;
+  }
+
+  // Zeitraum
+  let start = toSer(cell(E, L.einst.start));
+  if (!start) {
+    const y = minVon ? ser2date(minVon).getUTCFullYear() : new Date().getFullYear();
+    start = date2ser(y, 1, 1);
+    warn.push({ k: "einst", t: `Kein Startdatum in Einstellungen (B3) – verwendet wird 01.01.${y}.` });
+  }
+  const N = L.tage, ser = new Int32Array(N), work = new Uint8Array(N), hol = new Array(N);
+  for (let i = 0; i < N; i++) { ser[i] = start + i; const w = wday(ser[i]); hol[i] = holidays.get(ser[i]) || ""; work[i] = w !== 0 && w !== 6 && !hol[i] ? 1 : 0; }
+  // Arbeitet Person p am Datum s? (Wochenende, Feiertag und Teilzeit-freie Tage = nein)
+  const worksOn = (p, s) => { const w = wday(s); return w >= 1 && w <= 5 && !holidays.has(s) && p.wk[w - 1]; };
+
+  // Abwesenheit je Person: wish = Tag liegt in einem Wunsch · abs = an diesem Tag wäre sie im Dienst und fehlt
+  for (const p of persons) {
+    p.wish = new Uint8Array(N); p.abs = new Uint8Array(N); p.on = new Uint8Array(N);
+    for (let i = 0; i < N; i++) p.on[i] = worksOn(p, ser[i]) ? 1 : 0;
+    p.wishes.sort((a, b) => a.von - b.von);
+    let prev = null;
+    for (const w of p.wishes) {
+      w.wd = 0; for (let s = w.von; s <= w.bis; s++) if (worksOn(p, s)) w.wd++;
+      if (!w.wd) warn.push({ k: "wunsch", t: `${p.name}: Wunsch ${fmt(w.von)}–${fmtY(w.bis)} enthält keinen eigenen Arbeitstag (Wochenende/Feiertag/Teilzeit-frei).` });
+      if (prev && w.von <= prev.bis) warn.push({ k: "wunsch", t: `${p.name}: Wünsche überschneiden sich (${fmt(prev.von)}–${fmt(prev.bis)} und ${fmt(w.von)}–${fmt(w.bis)}).` });
+      if (w.von < start || w.bis > start + N - 1) warn.push({ k: "wunsch", t: `${p.name}: Wunsch ${fmtY(w.von)}–${fmtY(w.bis)} liegt ganz oder teilweise außerhalb des Planungszeitraums.` });
+      for (let s = Math.max(w.von, start); s <= Math.min(w.bis, start + N - 1); s++) { const i = s - start; p.wish[i] = 1; if (p.on[i]) p.abs[i] = 1; }
+      if (!prev || w.bis > prev.bis) prev = w;
+    }
+    p.total = p.wishes.reduce((a, w) => a + w.wd, 0);
+    p.rest = p.anspruch != null ? p.anspruch - p.total : null;
+    p.atossOpen = p.wishes.filter((w) => !w.atoss).length;
+    if (p.anspruch != null && p.total > p.anspruch) warn.push({ k: "wunsch", t: `${p.name}: ${p.total} Arbeitstage gewünscht, Anspruch ${p.anspruch}.` });
+  }
+
+  // Einheiten (Stationen + Fachteams) mit Schwellen
+  const units = [];
+  for (const s of stats) {
+    s.members = persons.map((p, i) => (p.st.includes(s.name) ? i : -1)).filter((i) => i >= 0);
+    const n = s.members.length, c = s.custom;
+    s.th = {
+      g: c.g ?? STANDARD.gelbAb,
+      h: c.h ?? (n >= STANDARD.hellrotAbGroesse ? n - STANDARD.hellrotWennNochDa : null),
+      d: c.d ?? (n > 0 ? n : null)
+    };
+    s.src = { g: c.g != null, h: c.h != null, d: c.d != null };
+    units.push(s);
+  }
+  for (const f of fachs) {
+    f.members = persons.map((p, i) => (p.fi === fachIdx.get(f.name) ? i : -1)).filter((i) => i >= 0);
+    f.th = { g: f.custom.g, h: f.custom.h, d: f.custom.d };
+    f.src = { g: true, h: true, d: true };
+    units.push(f);
+  }
+  const level = (a, th) => (a <= 0 ? 0 : th.d != null && a >= th.d ? 4 : th.h != null && a >= th.h ? 3 : th.g != null && a >= th.g ? 2 : 1);
+  for (const [ui, u] of units.entries()) {
+    u.ui = ui; u.n = u.members.length;
+    u.cnt = new Uint8Array(N); u.lv = new Uint8Array(N); u.nday = new Uint8Array(N);
+    for (let i = 0; i < N; i++) {
+      let a = 0, on = 0; for (const m of u.members) { a += persons[m].abs[i]; on += persons[m].on[i]; }
+      u.cnt[i] = a; u.nday[i] = on;
+      if (!work[i]) continue;
+      // Teilzeit: Standardregel (»nur noch 2 da« / »alle weg«) bezieht sich auf die, die an diesem Tag arbeiten würden
+      let th = u.th;
+      if (u.type === "stat" && (!u.src.h || !u.src.d)) {
+        th = { g: u.th.g,
+          h: u.src.h ? u.th.h : (u.n >= STANDARD.hellrotAbGroesse && on > 0 ? Math.max(1, on - STANDARD.hellrotWennNochDa) : null),
+          d: u.src.d ? u.th.d : (on > 0 ? on : null) };
+      }
+      u.lv[i] = level(a, th);
+    }
+  }
+  persons.forEach((p, pi) => {
+    p.units = units.filter((u) => u.members.includes(pi)).map((u) => u.ui);
+    p.lv = new Uint8Array(N);
+    for (let i = 0; i < N; i++) if (p.abs[i]) { let m = 0; for (const ui of p.units) m = Math.max(m, units[ui].lv[i]); p.lv[i] = m; }
+  });
+
+  // Konflikte: zusammenhängende Arbeitstage mit Stufe >= Gelb je Einheit
+  const conflicts = [];
+  for (const u of units) {
+    let cur = null;
+    const flush = () => {
+      if (!cur) return;
+      const d = cur.days;
+      cur.maxLv = Math.max(...d.map((i) => u.lv[i]));
+      cur.peak = Math.max(...d.map((i) => u.cnt[i]));
+      let a = -1, b = -1;
+      for (let k = 0; k < d.length; k++) { if (u.cnt[d[k]] === cur.peak) { if (a < 0) a = k; b = k; } else if (a >= 0) break; }
+      cur.peakFrom = ser[d[a]]; cur.peakTo = ser[d[b]]; cur.peakOn = u.nday[d[a]];
+      cur.from = ser[d[0]]; cur.to = ser[d[d.length - 1]]; cur.wd = d.length;
+      cur.people = u.members.filter((m) => d.some((i) => persons[m].abs[i])).map((m) => {
+        const p = persons[m], hit = d.filter((i) => p.abs[i]);
+        const ws = p.wishes.filter((w) => w.von <= cur.to && w.bis >= cur.from);
+        const flex = ws.map((w) => w.flex).sort((x, y) => FLEX_ORDER[x] - FLEX_ORDER[y])[0] ?? "";
+        return { p: m, from: ser[hit[0]], to: ser[hit[hit.length - 1]], days: hit.length, wishes: ws, flex };
+      }).sort((x, y) => FLEX_ORDER[x.flex] - FLEX_ORDER[y.flex] || x.from - y.from);
+      conflicts.push(cur); cur = null;
+    };
+    for (let i = 0; i < N; i++) {
+      if (!work[i]) continue;
+      if (u.lv[i] >= 2) { if (!cur) cur = { u: u.ui, days: [] }; cur.days.push(i); } else flush();
+    }
+    flush();
+  }
+  conflicts.sort((a, b) => b.maxLv - a.maxLv || a.from - b.from);
+  // Wunsch → höchste Konfliktstufe (für Markierung in der Personenliste)
+  for (const w of wishes) { let m = 0; const p = persons[w.p]; for (let s = Math.max(w.von, start); s <= Math.min(w.bis, start + N - 1); s++) m = Math.max(m, p.lv[s - start]); w.lv = m; }
+  for (const p of persons) p.maxLv = p.wishes.reduce((a, w) => Math.max(a, w.lv), 0);
+
+  const example = persons.some((p) => /^beispiel/i.test(p.name));
+  return { persons, units, fachs, stats, wishes, conflicts, warn, N, start, ser, work, hol, fachIdx, example };
+}
+
+/* ===================== Zustand ===================== */
+let M = null, fileHandle = null, lastFile = null;
+const S = Object.assign({ fach: [], stat: [], q: "", m0: null, m1: null, view: "w", only: false, tab: "dash", gelb: true,
+  bars: "fach", sort: { k: "fach", dir: 1 }, pf: "", person: "" }, lsGet("urlaubsansicht.state", {}));
+const save = () => lsSet("urlaubsansicht.state", { fach: S.fach, stat: S.stat, view: S.view, only: S.only, tab: S.tab, gelb: S.gelb, bars: S.bars, sort: S.sort, person: S.person });
+const TABS = ["dash", "cal", "conf", "pers", "one", "rules"];
+if (!TABS.includes(S.tab)) S.tab = "dash";
+
+function visible() {
+  const q = S.q.trim().toLowerCase();
+  const ps = M.persons.map((p, i) => i).filter((i) => {
+    const p = M.persons[i];
+    if (S.fach.length && !S.fach.includes(p.fach)) return false;
+    if (S.stat.length && !p.st.some((s) => S.stat.includes(s))) return false;
+    if (q && !p.name.toLowerCase().includes(q)) return false;
+    if (S.only && !p.wishes.length) return false;
+    return true;
+  });
+  const pset = new Set(ps);
+  const unitsVis = M.units.filter((u) => {
+    if (u.type === "stat") return S.stat.length ? S.stat.includes(u.name) : u.members.some((m) => pset.has(m)) || (!q && !S.fach.length && !S.only);
+    return S.fach.length ? S.fach.includes(u.name) : u.members.some((m) => pset.has(m)) || (!q && !S.stat.length && !S.only);
+  });
+  // Tagesbereich aus Monatsfilter
+  let i0 = 0, i1 = M.N - 1;
+  if (S.m0 != null) while (i0 < M.N - 1 && monthKey(M.ser[i0]) < S.m0) i0++;
+  if (S.m1 != null) while (i1 > 0 && monthKey(M.ser[i1]) > S.m1) i1--;
+  // Tageslage über alle sichtbaren Bereiche: höchste Ampelstufe und Zahl der abwesenden (sichtbaren) Personen
+  const dayLv = new Uint8Array(M.N), dayAbs = new Uint8Array(M.N);
+  for (let i = 0; i < M.N; i++) {
+    let a = 0; for (const pi of ps) a += M.persons[pi].abs[i];
+    let l = 0; for (const u of unitsVis) l = Math.max(l, u.lv[i]);
+    dayAbs[i] = a; dayLv[i] = l || (a ? 1 : 0);
+  }
+  return { ps, pset, units: unitsVis, uset: new Set(unitsVis.map((u) => u.ui)), i0, i1, q, dayLv, dayAbs };
+}
+
+/* ===================== Datei laden ===================== */
+const IDB = {
+  open() { return new Promise((res, rej) => { const r = indexedDB.open("urlaubsansicht", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async put(v) { try { const db = await this.open(); db.transaction("h", "readwrite").objectStore("h").put(v, "file"); } catch (e) {} },
+  async get() { try { const db = await this.open(); return await new Promise((res) => { const r = db.transaction("h").objectStore("h").get("file"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch (e) { return null; } }
+};
+async function pickFile() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [h] = await window.showOpenFilePicker({ types: [{ description: "Excel-Datei", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"], "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"] } }] });
+      fileHandle = h; IDB.put(h); await loadFile(await h.getFile()); return;
+    } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  $("fileInput").click();
+}
+async function reload() {
+  if (fileHandle) {
+    try {
+      if (fileHandle.queryPermission && (await fileHandle.queryPermission({ mode: "read" })) !== "granted") await fileHandle.requestPermission({ mode: "read" });
+      await loadFile(await fileHandle.getFile()); return;
+    } catch (e) { /* weiter mit Auswahl */ }
+  }
+  pickFile();
+}
+async function loadFile(file) {
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array", cellFormula: false, cellHTML: false, cellText: false });
+    M = build(wb);
+    lastFile = file;
+    const d = new Date(file.lastModified);
+    $("fileinfo").textContent = `${file.name} · gespeichert ${d.toLocaleDateString("de-DE")} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · eingelesen ${new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+    $("drop").classList.add("hidden"); $("app").classList.remove("hidden");
+    $("btnReload").classList.remove("hidden"); $("btnPrint").classList.remove("hidden");
+    $("btnLoad").textContent = "Andere Datei";
+    setupFilters(); render();
+  } catch (e) {
+    alert("Die Datei konnte nicht gelesen werden.\n\n" + (e && e.message ? e.message : e));
+  }
+}
+
+/* ===================== Filter ===================== */
+function setupFilters() {
+  S.fach = S.fach.filter((f) => M.fachIdx.has(f));
+  S.stat = S.stat.filter((s) => M.stats.some((x) => x.name === s));
+  $("fFach").innerHTML = M.fachs.map((f, i) => `<span class="chip${S.fach.includes(f.name) ? " on" : ""}" data-f="${esc(f.name)}"><span class="dot" style="background:${FACH_FARBEN[i % 10]}"></span>${esc(f.name)}</span>`).join("");
+  $("fStat").innerHTML = M.stats.map((s) => `<span class="chip${S.stat.includes(s.name) ? " on" : ""}" data-s="${esc(s.name)}">${esc(s.name)}</span>`).join("");
+  const months = []; for (let i = 0; i < M.N; i++) { const k = monthKey(M.ser[i]); if (!months.includes(k)) months.push(k); }
+  const opt = (k) => `<option value="${k}">${MON_L[k % 12]} ${Math.floor(k / 12)}</option>`;
+  $("fM0").innerHTML = months.map(opt).join(""); $("fM1").innerHTML = months.map(opt).join("");
+  if (S.m0 == null || !months.includes(S.m0)) S.m0 = months[0];
+  if (S.m1 == null || !months.includes(S.m1)) S.m1 = months[Math.min(11, months.length - 1)];
+  $("fM0").value = S.m0; $("fM1").value = S.m1;
+  $("fQ").value = S.q; $("fOnly").checked = S.only;
+  syncSeg();
+}
+function syncSeg() {
+  document.querySelectorAll("#fView button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.view));
+  document.querySelectorAll("#tabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.t === S.tab));
+  TABS.forEach((t) => $("t-" + t).classList.toggle("hidden", t !== S.tab));
+}
+
+/* ===================== Darstellung: Bausteine ===================== */
+const fachColor = (fi) => (fi >= 0 ? FACH_FARBEN[fi % 10] : "#9aa3b5");
+const unitLabel = (u) => (u.type === "stat" ? "Station" : "Fachteam");
+/* "Station 1A" nicht als "Station Station 1A" anzeigen */
+const unitTitle = (u) => (u.name.toLowerCase().startsWith(unitLabel(u).toLowerCase()) ? u.name : unitLabel(u) + " " + u.name);
+const thText = (u) => {
+  const t = u.th, parts = [];
+  if (t.g != null) parts.push(`G ${t.g}`); if (t.h != null) parts.push(`H ${t.h}`); if (t.d != null) parts.push(`D ${t.d}`);
+  return parts.length ? parts.join(" · ") : "ohne Ampel";
+};
+const ampText = (u) => { const t = thText(u); return t === "ohne Ampel" ? t : "Ampel " + t; };
+const flexBadge = (f) => `<span class="flex ${f || "leer"}">${f ? "verschiebbar: " + f : "verschiebbar: k. A."}</span>`;
+const dot = (fi) => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${fachColor(fi)};margin-right:6px"></span>`;
+const daysText = (p) => (p.tz ? ["Mo", "Di", "Mi", "Do", "Fr"].filter((d, k) => p.wk[k]).join(" ") : "Mo–Fr");
+const tzBadge = (p) => (p.tz ? `<span class="tz" title="Teilzeit – arbeitet nur an diesen Tagen">TZ ${daysText(p)}</span>` : "");
+const lvPill = (l) => (l >= 2 ? `<span class="pill lv${l}">${LV_NAME[l]}</span>` : "");
+const plink = (pi) => `<a class="plink" data-person="${pi}">${esc(M.persons[pi].name)}</a>`;
+function monthsInRange(V) { const ks = []; for (let i = V.i0; i <= V.i1; i++) { const k = monthKey(M.ser[i]); if (ks[ks.length - 1] !== k) ks.push(k); } return ks; }
+function idxOf(y, m, d) { const dt = new Date(Date.UTC(y, m - 1, d)); if (dt.getUTCMonth() !== m - 1) return -1; const i = date2ser(y, m, d) - M.start; return i >= 0 && i < M.N ? i : -1; }
+
+function render() {
+  if (!M) return;
+  const V = visible();
+  syncSeg();
+  renderBanner(); renderKpis(V); renderPrintInfo(V);
+  if (S.tab === "dash") renderDash(V);
+  if (S.tab === "cal") renderCal(V);
+  if (S.tab === "conf") renderConf(V);
+  if (S.tab === "pers") renderPers(V);
+  if (S.tab === "one") renderOne(V);
+  if (S.tab === "rules") renderRules(V);
+  const cs = confVisible(V);
+  $("confCount").innerHTML = cs.length ? `<span class="pill ${cs.some((c) => c.maxLv === 4) ? "lv4" : cs.some((c) => c.maxLv === 3) ? "lv3" : "lv2"}">${cs.length}</span>` : "";
+  $("warnCount").innerHTML = M.warn.length ? `<span class="pill lv2">${M.warn.length}</span>` : "";
+}
+function renderBanner() {
+  $("banner").innerHTML = M.example ? `<div class="banner">Die Datei enthält noch <b>Beispieldaten</b> (Namen mit »Beispiel«). Vor dem Start im Excel löschen – siehe Blatt Anleitung.</div>` : "";
+}
+function renderPrintInfo(V) {
+  const f = [];
+  if (S.fach.length) f.push("Fachrichtung: " + S.fach.join(", "));
+  if (S.stat.length) f.push("Station: " + S.stat.join(", "));
+  if (S.q.trim()) f.push("Name enthält »" + S.q.trim() + "«");
+  if (S.only) f.push("nur Personen mit Wünschen");
+  $("printinfo").textContent = `Zeitraum ${fmtY(M.ser[V.i0])} – ${fmtY(M.ser[V.i1])} · Filter: ${f.join(" · ") || "keine"} · gedruckt ${new Date().toLocaleDateString("de-DE")} · nur Wünsche, keine Genehmigung`;
+}
+function confVisible(V) {
+  const a = M.ser[V.i0], b = M.ser[V.i1];
+  return M.conflicts.filter((c) => V.uset.has(c.u) && c.to >= a && c.from <= b && (S.gelb || c.maxLv >= 3) &&
+    (!V.q || c.people.some((x) => M.persons[x.p].name.toLowerCase().includes(V.q))));
+}
+
+/* ===================== Kennzahlen-Leiste ===================== */
+function renderKpis(V) {
+  const a = M.ser[V.i0], b = M.ser[V.i1];
+  const ws = M.wishes.filter((w) => V.pset.has(w.p) && w.bis >= a && w.von <= b);
+  const without = V.ps.filter((i) => !M.persons[i].wishes.length).length;
+  const lvDays = [0, 0, 0, 0, 0];
+  for (let i = V.i0; i <= V.i1; i++) if (M.work[i]) lvDays[V.dayLv[i]]++;
+  const eng = lvDays[2] + lvDays[3] + lvDays[4];
+  const open = ws.filter((w) => !w.atoss).length;
+  const withA = V.ps.map((i) => M.persons[i]).filter((p) => p.anspruch != null);
+  const rest = withA.reduce((s, p) => s + p.rest, 0), over = withA.filter((p) => p.rest < 0).length, noA = V.ps.length - withA.length;
+  $("kpis").innerHTML = `
+    <div class="kpi click" data-go="pers" data-pf="" title="Zur Personentabelle"><div class="v">${ws.length}</div><div class="l">Urlaubswünsche im Zeitraum</div><div class="s">${ws.reduce((s, w) => s + w.wd, 0)} Arbeitstage gewünscht</div></div>
+    <div class="kpi click${without ? " warn" : ""}" data-go="pers" data-pf="none" title="Liste der Personen ohne Wunsch"><div class="v">${without} <small>/ ${V.ps.length}</small></div><div class="l">Personen ohne Wunsch</div><div class="s">${without ? "→ nachfragen" : "alle haben eingetragen"}</div></div>
+    <div class="kpi click${lvDays[4] || lvDays[3] ? " bad" : eng ? " warn" : ""}" data-go="conf" title="Zur Konfliktliste"><div class="v">${eng}</div><div class="l">Engpasstage (Arbeitstage ab Gelb)</div><div class="row"><span class="pill lv4">${lvDays[4]} dunkelrot</span><span class="pill lv3">${lvDays[3]} hellrot</span><span class="pill lv2">${lvDays[2]} gelb</span></div></div>
+    <div class="kpi click${open ? " warn" : ""}" data-go="pers" data-pf="atoss" title="Wünsche ohne Datum in »In ATOSS übertragen am«"><div class="v">${open}</div><div class="l">offene ATOSS-Übertragungen</div><div class="s">${ws.length - open} von ${ws.length} übertragen</div></div>
+    <div class="kpi click${over ? " bad" : ""}" data-go="pers" data-pf="rest" title="Resturlaub = Anspruch (Team, Spalte G) minus gewünschte Arbeitstage"><div class="v">${withA.length ? rest : "–"} <small>${withA.length ? "Tage" : ""}</small></div><div class="l">Resturlaub (noch nicht verplant)</div><div class="s">${over ? `<span class="neg">${over} überzogen</span> · ` : ""}${noA ? `${noA} ohne Anspruch` : "alle mit Anspruch"}</div></div>
+    <div class="kpi click" data-go="rules" title="Zu Regeln & Hinweise"><div class="v">${M.warn.length}</div><div class="l">Hinweise zu den Daten</div></div>`;
+}
+
+/* ===================== Dashboard ===================== */
+function renderDash(V) {
+  $("t-dash").innerHTML = `
+    <div class="dgrid">
+      <div class="panel"><h2>Jahresübersicht</h2>
+        <p class="sub">Farbe = höchste Ampelstufe der gefilterten Stationen/Fachteams · Zahl = wie viele Personen an dem Tag fehlen (Teilzeit-freie Tage zählen nicht) · <b>Klick auf einen Tag = wer fehlt</b></p>
+        ${heatLegend()}${heatTable(V, (i) => heatCell(V, i))}</div>
+      <div class="panel"><h2>Top 5 kritische Wochen</h2>
+        <p class="sub">Rangfolge: höchste Stufe, dann Punkte (je Arbeitstag und Bereich: Gelb ${WOCHEN_PUNKTE[2]} · Hellrot ${WOCHEN_PUNKTE[3]} · Dunkelrot ${WOCHEN_PUNKTE[4]}). Klick = Details.</p>
+        ${topWeeks(V)}</div>
+    </div>
+    <div class="panel bars-panel" style="margin-top:14px"><div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">
+      <h2>Urlaub je Monat</h2>
+      <div class="seg noprint" id="barSeg"><button data-b="fach" class="${S.bars === "fach" ? "on" : ""}">je Fachrichtung</button><button data-b="stat" class="${S.bars === "stat" ? "on" : ""}">je Station</button></div></div>
+      <p class="sub">Balken = Anteil Urlaub an den Soll-Arbeitstagen des Bereichs im Monat (gleiche Skala für alle Zeilen, Zahl = Urlaubs-Arbeitstage). Strich darunter = höchste Ampelstufe im Monat (<span style="color:#b38f00">gelb</span>/<span style="color:#c43c3c">hellrot</span>/<span style="color:var(--l4)">dunkelrot</span>). Eine Person mit mehreren Stationen zählt auf jeder.</p>
+      ${monthBars(V)}</div>`;
+  $("barSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.bars = b.dataset.b; save(); render(); };
+}
+function heatLegend() {
+  return `<div class="legend">
+    <span><span class="sw" style="background:#f3f5f9"></span>niemand weg</span>
+    <span><span class="sw" style="background:var(--l1)"></span>weg, unkritisch</span>
+    <span><span class="sw" style="background:var(--l2)"></span>gelb</span>
+    <span><span class="sw" style="background:var(--l3)"></span>hellrot</span>
+    <span><span class="sw" style="background:var(--l4)"></span>dunkelrot</span>
+    <span><span class="sw" style="background:var(--we)"></span>Wochenende</span>
+    <span><span class="sw" style="background:var(--hol)"></span>Feiertag/frei</span>
+    <span><span class="sw" style="background:#fff;border:2px solid #ED7D31"></span>heute</span></div>`;
+}
+/* Raster Monate (Zeilen) × Tage 1–31 (Spalten); cellFn(i) liefert {cls, txt, title} für Tag-Index i */
+function heatTable(V, cellFn) {
+  const today = todaySer();
+  let h = `<table class="heat"><thead><tr><th class="ml"></th>${Array.from({ length: 31 }, (_, d) => `<th>${d + 1}</th>`).join("")}</tr></thead><tbody>`;
+  for (const k of monthsInRange(V)) {
+    const y = Math.floor(k / 12), m = (k % 12) + 1;
+    h += `<tr><th class="ml">${MON[m - 1]} ${String(y).slice(2)}</th>`;
+    for (let d = 1; d <= 31; d++) {
+      const i = idxOf(y, m, d);
+      if (i < 0) { h += `<td class="na"></td>`; continue; }
+      if (i < V.i0 || i > V.i1) { h += `<td class="out"></td>`; continue; }
+      const c = cellFn(i);
+      const extra = (wday(M.ser[i]) === 1 ? " mo" : "") + (M.ser[i] === today ? " today" : "");
+      h += `<td class="${c.cls}${extra}" data-d="${i}" title="${esc(c.title)}">${c.txt}</td>`;
+    }
+    h += "</tr>";
+  }
+  return h + "</tbody></table>";
+}
+function heatCell(V, i) {
+  const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear();
+  if (!M.work[i]) return { cls: M.hol[i] ? "hol" : "we", txt: "", title: `${when} · ${M.hol[i] || "Wochenende"}` };
+  const a = V.dayAbs[i], l = V.dayLv[i];
+  return { cls: "lv" + l, txt: a || "", title: `${when} · ${a} weg${l >= 2 ? " · " + LV_NAME[l] : ""} – klicken für Details` };
+}
+function weekList(V) {
+  const weeks = [], mon0 = -((wday(M.ser[0]) + 6) % 7);
+  for (let a = mon0; a < M.N; a += 7) {
+    const lo = Math.max(a, V.i0, 0), hi = Math.min(a + 6, V.i1, M.N - 1);
+    if (lo > hi) continue;
+    let pts = 0, maxLv = 0, peak = 0; const uLv = new Map();
+    for (let i = lo; i <= hi; i++) {
+      if (!M.work[i]) continue;
+      peak = Math.max(peak, V.dayAbs[i]);
+      for (const u of V.units) { const l = u.lv[i]; pts += WOCHEN_PUNKTE[l]; if (l >= 2) uLv.set(u.ui, Math.max(uLv.get(u.ui) || 0, l)); maxLv = Math.max(maxLv, l); }
+    }
+    weeks.push({ lo, hi, mon: M.start + a, pts, maxLv, peak, uLv });
+  }
+  return weeks;
+}
+function topWeeks(V) {
+  const top = weekList(V).filter((w) => w.pts > 0).sort((x, y) => y.maxLv - x.maxLv || y.pts - x.pts || y.peak - x.peak || x.lo - y.lo).slice(0, 5);
+  if (!top.length) return `<div class="empty" style="padding:16px">Keine Woche mit Engpass (ab Gelb) im gewählten Zeitraum und Filter.</div>`;
+  return `<ol class="top">${top.map((w) => {
+    const us = [...w.uLv.entries()].sort((x, y) => y[1] - x[1]).map(([ui, l]) => `<span class="pill lv${l}" style="margin:1px 3px 1px 0">${esc(M.units[ui].name)}</span>`).join("");
+    return `<li data-w="${w.lo}:${w.hi}"><div><div class="w">KW ${isoWeek(w.mon)} ${lvPill(w.maxLv)}</div>
+      <div class="d">${fmtW(M.ser[w.lo])} – ${fmtW(M.ser[w.hi])} · bis zu ${plural(w.peak, "Person", "Personen")} weg · ${w.pts} Punkte</div>
+      <div class="u">${us}</div></div></li>`;
+  }).join("")}</ol>`;
+}
+function monthBars(V) {
+  const units = V.units.filter((u) => u.type === S.bars && u.n > 0);
+  if (!units.length) return `<div class="empty" style="padding:16px">Keine ${S.bars === "fach" ? "Fachrichtungen" : "Stationen"} im Filter.</div>`;
+  const ks = monthsInRange(V);
+  const data = units.map((u) => ks.map((k) => {
+    let abs = 0, soll = 0, lv = 0;
+    for (let i = V.i0; i <= V.i1; i++) { if (monthKey(M.ser[i]) !== k || !M.work[i]) continue; abs += u.cnt[i]; soll += u.nday[i]; lv = Math.max(lv, u.lv[i]); }
+    return { abs, soll, lv, q: soll ? abs / soll : 0 };
+  }));
+  const maxQ = Math.max(0.1, ...data.flat().map((x) => x.q));   // mind. 10 % als Skala, damit kleine Werte nicht riesig wirken
+  let h = `<table class="bars"><thead><tr><th class="gl">${S.bars === "fach" ? "Fachrichtung" : "Station"}</th>${ks.map((k) => `<th>${MON[k % 12]}</th>`).join("")}<th style="width:56px">Summe</th></tr></thead><tbody>`;
+  units.forEach((u, r) => {
+    const sum = data[r].reduce((s, x) => s + x.abs, 0);
+    h += `<tr><td class="gl" title="${esc(unitTitle(u))} – ${u.n} Personen">${u.type === "fach" ? dot(M.fachIdx.get(u.name)) : ""}${esc(u.name)}<span class="meta">${u.n} P.</span></td>`;
+    data[r].forEach((x, c) => {
+      const hp = Math.round((x.q / maxQ) * 34);
+      h += `<td><div class="bc" title="${esc(`${u.name} · ${MON_L[ks[c] % 12]}: ${x.abs} Urlaubs-Arbeitstage von ${x.soll} Soll-Arbeitstagen (${Math.round(x.q * 100)} %)${x.lv >= 2 ? " · höchste Stufe " + LV_NAME[x.lv] : ""}`)}">
+        <span class="bv">${x.abs || ""}</span><div class="b" style="height:${hp}px"></div><div class="mk${x.lv >= 2 ? " lv" + x.lv : ""}"></div></div></td>`;
+    });
+    h += `<td class="num" style="text-align:right;vertical-align:middle;font-weight:600">${sum}</td></tr>`;
+  });
+  return h + "</tbody></table>";
+}
+
+/* ===================== Kalender ===================== */
+function columns(V) {
+  const cols = [];
+  if (S.view === "d") {
+    for (let i = V.i0; i <= V.i1; i++) cols.push({ a: i, b: i, day: true });
+  } else {
+    const mon0 = -((wday(M.ser[0]) + 6) % 7);
+    for (let a = mon0; a < M.N; a += 7) {
+      const lo = Math.max(a, V.i0, 0), hi = Math.min(a + 6, V.i1, M.N - 1);
+      if (lo > hi) continue;
+      cols.push({ a: lo, b: hi, day: false, mon: M.start + a });
+    }
+  }
+  return cols;
+}
+function renderCal(V) {
+  const cols = columns(V), day = S.view === "d";
+  const todayS = todaySer();
+  const colCls = cols.map((c) => {
+    let k = "";
+    if (day) { if (M.hol[c.a]) k += " hol"; else if (!M.work[c.a]) k += " we"; if (ser2date(M.ser[c.a]).getUTCDate() === 1) k += " mstart"; }
+    if (M.ser[c.a] <= todayS && todayS <= M.ser[c.b]) k += " today";
+    return k;
+  });
+  // Monatszeile
+  let mrow = `<th class="lh">${day ? "Tag" : "Kalenderwoche"}</th>`, cur = null, span = 0, ms = "";
+  const mk = (c) => monthKey(day ? M.ser[c.a] : c.mon + 3);
+  cols.forEach((c, j) => { const k = mk(c); if (k !== cur) { if (span) mrow += `<th colspan="${span}" class="${ms}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`; cur = k; span = 0; ms = j ? "mstart" : ""; } span++; });
+  if (span) mrow += `<th colspan="${span}" class="${ms}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`;
+  const crow = `<th class="lh"></th>` + cols.map((c, j) => day
+    ? `<th class="${colCls[j]}" title="${esc(M.hol[c.a] || "")}">${ser2date(M.ser[c.a]).getUTCDate()}<br><span style="font-weight:400">${WD[wday(M.ser[c.a])]}</span></th>`
+    : `<th class="${colCls[j]}" title="Woche ab ${fmtY(c.mon)}">${isoWeek(c.mon)}<br><span style="font-weight:400;font-size:9.5px">${fmt(c.mon).slice(0, 5)}</span></th>`).join("");
+  const ncol = cols.length + 1;
+  let body = "";
+
+  const unitRow = (u) => {
+    let h = `<tr><td class="lh" title="${esc(unitTitle(u) + " – " + u.n + " Personen – Ampel " + thText(u))}"><span class="nm">${esc(u.name)}</span><span class="meta">${u.n} Pers. · ${thText(u)}</span></td>`;
+    cols.forEach((c, j) => {
+      let cnt = 0, lv = 0;
+      for (let i = c.a; i <= c.b; i++) { if (M.work[i] || day) cnt = Math.max(cnt, u.cnt[i]); lv = Math.max(lv, u.lv[i]); }
+      const cls = day && !M.work[c.a] ? colCls[j] : colCls[j].replace(/ (we|hol)/g, "");
+      h += `<td class="c u lv${lv}${cls}" data-k="u:${u.ui}:${c.a}:${c.b}">${cnt || ""}</td>`;
+    });
+    return h + "</tr>";
+  };
+  const st = V.units.filter((u) => u.type === "stat"), fa = V.units.filter((u) => u.type === "fach");
+  if (st.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Station · Zahl = gleichzeitig weg</span></td></tr>`; st.forEach((u) => (body += unitRow(u))); }
+  if (fa.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Fachteam · Zahl = gleichzeitig weg</span></td></tr>`; fa.forEach((u) => (body += unitRow(u))); }
+  if (V.ps.length) {
+    body += `<tr class="sec"><td colspan="${ncol}"><span>Personen · ${day ? "farbig = Urlaubswunsch · schraffiert = Teilzeit-frei" : "Zahl = eigene Arbeitstage Urlaub in der Woche"} · roter Rahmen = Engpass</span></td></tr>`;
+    let lastF = null;
+    const sorted = V.ps.slice().sort((a, b) => (M.persons[a].fi < 0 ? 99 : M.persons[a].fi) - (M.persons[b].fi < 0 ? 99 : M.persons[b].fi) || a - b);
+    for (const pi of sorted) {
+      const p = M.persons[pi];
+      if (p.fach !== lastF) { body += `<tr class="sub"><td class="lh" style="position:sticky;left:0">${esc(p.fach || "ohne Fachrichtung")}</td><td colspan="${cols.length}"></td></tr>`; lastF = p.fach; }
+      const col = fachColor(p.fi);
+      body += `<tr><td class="lh" title="${esc(p.name + " – " + p.fach + " – " + p.st.join(", ") + (p.tz ? " – Teilzeit " + daysText(p) : ""))}"><span class="dot" style="background:${col}"></span><span class="nm">${esc(p.name)}</span><span class="meta">${p.tz ? "TZ " + daysText(p) + " · " : ""}${esc(p.st.join(", "))}</span></td>`;
+      cols.forEach((c, j) => {
+        let n = 0, any = 0, lv = 0;
+        for (let i = c.a; i <= c.b; i++) { if (p.wish[i]) { any = 1; if (p.abs[i]) n++; lv = Math.max(lv, p.lv[i]); } }
+        const show = day ? any : n > 0;
+        const ring = lv >= 2 ? " r" + lv : "";
+        const off = day && M.work[c.a] && !p.on[c.a] ? " pf" : "";
+        body += show
+          ? `<td class="c p${ring}${colCls[j].replace(/ (we|hol)/g, "")}" style="background:${col}${day && !p.abs[c.a] ? ";opacity:.45" : ""}" data-k="p:${pi}:${c.a}:${c.b}">${day ? "" : n}</td>`
+          : `<td class="c${colCls[j]}${off}" data-k="p:${pi}:${c.a}:${c.b}"></td>`;
+      });
+      body += "</tr>";
+    }
+  }
+  if (!V.ps.length && !V.units.length) body = `<tr><td class="lh">Keine Treffer für diesen Filter.</td></tr>`;
+
+  const legendF = M.fachs.map((f, i) => `<span><span class="sw" style="background:${FACH_FARBEN[i % 10]}"></span>${esc(f.name)}</span>`).join("");
+  $("t-cal").innerHTML = `
+    <div class="legend"><b>Ampel:</b>
+      <span><span class="sw" style="background:var(--l1)"></span>weg, unkritisch</span>
+      <span><span class="sw" style="background:var(--l2)"></span>gelb</span>
+      <span><span class="sw" style="background:var(--l3)"></span>hellrot</span>
+      <span><span class="sw" style="background:var(--l4)"></span>dunkelrot</span>
+      <span>· G/H/D = ab so vielen Abwesenden gelb/hellrot/dunkelrot</span>
+    </div>
+    <div class="legend"><b>Fachrichtung:</b> ${legendF} <span>· grau = Wochenende · lila = Feiertag · schraffiert = Teilzeit-frei · orange = heute · Klick auf ein Feld = Details</span></div>
+    <div class="calwrap"><table class="cal" style="--cw:${day ? "var(--cw-day)" : "var(--cw-week)"}"><thead><tr class="m">${mrow}</tr><tr class="c">${crow}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* ===================== Konflikte ===================== */
+function personLine(x, withWish = true) {
+  const p = M.persons[x.p];
+  const wish = x.wishes.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}${w.bem ? " · " + esc(w.bem) : ""}`).join("<br>");
+  return `<tr><td>${dot(p.fi)}<b>${esc(p.name)}</b> ${tzBadge(p)}<div style="color:var(--muted);font-size:12px">${esc(p.fach)}</div></td>
+    <td>${fmt(x.from)}–${fmt(x.to)}<div style="color:var(--muted);font-size:12px">${x.days} Arbeitstag${x.days === 1 ? "" : "e"} im Engpass</div></td>
+    ${withWish ? `<td>${wish}</td>` : ""}<td>${flexBadge(x.flex)}</td></tr>`;
+}
+function confCard(c) {
+  const u = M.units[c.u];
+  const present = c.peakOn - c.peak;
+  const peakTxt = c.peakFrom === c.peakTo ? fmtW(c.peakFrom) : `${fmtW(c.peakFrom)} – ${fmtW(c.peakTo)}`;
+  const ask = c.people.filter((x) => x.flex === "ja" || x.flex === "etwas").map((x) => esc(M.persons[x.p].name));
+  const askTxt = ask.length ? `<b>Zuerst ansprechen:</b> ${ask.join(", ")} (als verschiebbar angegeben)` : `<b>Keiner hat »verschiebbar« angegeben</b> – Absprache mit allen Beteiligten bzw. Entscheidung durch die Leitung.`;
+  return `<div class="card lv${c.maxLv}b">
+    <div class="t"><span class="pill lv${c.maxLv}">${LV_NAME[c.maxLv]}</span>
+      <span class="unit">${esc(unitTitle(u))}</span>
+      <span class="when">${range(c.from, c.to)} · ${c.wd} Arbeitstag${c.wd === 1 ? "" : "e"}</span></div>
+    <div class="size" style="margin-top:4px">Am stärksten: <b style="color:var(--ink)">${c.peak} von ${u.n} weg</b>, noch ${present} im Dienst${c.peakOn < u.n ? ` (${u.n - c.peakOn} hat/haben Teilzeit-frei)` : ""} · ${peakTxt} · Ampel ${thText(u)}</div>
+    <table><thead><tr><th>Wer ist weg</th><th>Im Engpass</th><th>Eingetragener Wunsch</th><th>Flexibilität</th></tr></thead><tbody>${c.people.map((x) => personLine(x)).join("")}</tbody></table>
+    <div class="ask">${askTxt}</div></div>`;
+}
+function renderConf(V) {
+  const cs = confVisible(V);
+  let h = `<div class="conf-head"><div class="note">Jede Karte = ein zusammenhängender Zeitraum (nur Arbeitstage), in dem eine Station oder ein Fachteam mindestens »gelb« ist. Sortiert nach Schwere, dann Datum.</div>
+    <div style="display:flex;gap:8px;align-items:center"><label style="font-size:13px"><input type="checkbox" id="cGelb" ${S.gelb ? "checked" : ""}> gelbe anzeigen</label>
+    <button class="btn" id="cCopy">Liste kopieren</button></div></div>`;
+  if (!cs.length) h += `<div class="empty">Keine Engpässe im gewählten Zeitraum und Filter. 🎉</div>`;
+  for (const l of [4, 3, 2]) {
+    const g = cs.filter((c) => c.maxLv === l);
+    if (!g.length) continue;
+    h += `<div class="lvsec"><h3><span class="pill lv${l}">${LV_NAME[l]}</span> ${g.length} Engpass${g.length === 1 ? "" : "stellen"}</h3>${g.map(confCard).join("")}</div>`;
+  }
+  $("t-conf").innerHTML = h;
+  $("cGelb").onchange = (e) => { S.gelb = e.target.checked; save(); render(); };
+  $("cCopy").onclick = () => copyText(cs.map((c) => {
+    const u = M.units[c.u];
+    return `[${LV_NAME[c.maxLv]}] ${unitTitle(u)}: ${range(c.from, c.to)} (${c.wd} AT) – max. ${c.peak} von ${u.n} weg\n` +
+      c.people.map((x) => `   • ${M.persons[x.p].name}: ${fmt(x.from)}–${fmt(x.to)}, verschiebbar: ${x.flex || "k. A."}`).join("\n");
+  }).join("\n\n") || "Keine Engpässe.");
+}
+function copyText(t) {
+  const done = () => alert("Liste in die Zwischenablage kopiert – z. B. in eine E-Mail einfügen.");
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, () => fallback());
+  else fallback();
+  function fallback() { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { prompt("Bitte kopieren:", t); } ta.remove(); }
+}
+
+/* ===================== Personentabelle (sortierbar) ===================== */
+const PCOLS = [
+  { k: "name", t: "Name", v: (p) => p.name },
+  { k: "fach", t: "Fachrichtung", v: (p) => (p.fi < 0 ? "￿" : String(p.fi).padStart(3, "0")) + p.name },
+  { k: "st", t: "Stationen", v: (p) => p.st.join(", ") || "￿" },
+  { k: "tage", t: "Arbeitstage", v: (p) => p.wk.filter(Boolean).length },
+  { k: "n", t: "Wünsche", v: (p) => p.wishes.length, num: 1 },
+  { k: "total", t: "Gewünscht (AT)", v: (p) => p.total, num: 1 },
+  { k: "anspruch", t: "Anspruch", v: (p) => p.anspruch, num: 1 },
+  { k: "rest", t: "Rest", v: (p) => p.rest, num: 1 },
+  { k: "atoss", t: "ATOSS offen", v: (p) => p.atossOpen, num: 1 },
+  { k: "lv", t: "Engpass", v: (p) => p.maxLv, num: 1 }
+];
+const PF = { "": "alle", none: "ohne Wunsch", atoss: "ATOSS offen", rest: "mit Anspruch / überzogen zuerst" };
+function renderPers(V) {
+  let ps = V.ps.slice();
+  if (S.pf === "none") ps = ps.filter((i) => !M.persons[i].wishes.length);
+  if (S.pf === "atoss") ps = ps.filter((i) => M.persons[i].atossOpen > 0);
+  const col = PCOLS.find((c) => c.k === S.sort.k) || PCOLS[1], dir = S.sort.dir;
+  const cmp = (a, b) => {
+    const x = col.v(M.persons[a]), y = col.v(M.persons[b]);
+    if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;   // leere Werte immer unten
+    return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "de")) * dir || M.persons[a].name.localeCompare(M.persons[b].name, "de");
+  };
+  ps.sort(cmp);
+  const rows = ps.map((pi) => {
+    const p = M.persons[pi];
+    const chips = p.wishes.map((w) => `<span class="wchip${w.lv >= 2 ? " c" + w.lv : ""}" title="${esc((w.bem ? w.bem + " · " : "") + "verschiebbar: " + (w.flex || "k. A.") + (w.atoss ? " · in ATOSS übertragen " + fmtY(w.atoss) : " · noch nicht in ATOSS"))}">${fmt(w.von)}–${fmt(w.bis)} · ${w.wd} AT${w.atoss ? " ✓" : ""}</span>`).join("") || `<span class="muted">noch keine Wünsche</span>`;
+    return `<tr><td style="white-space:nowrap">${dot(p.fi)}${plink(pi)}</td><td>${esc(p.fach)}</td><td>${esc(p.st.join(", "))}</td><td>${p.tz ? tzBadge(p) : "Mo–Fr"}</td>
+      <td class="num">${p.wishes.length}</td><td class="num">${p.total}</td><td class="num">${p.anspruch ?? ""}</td><td class="num ${p.rest != null && p.rest < 0 ? "neg" : ""}">${p.rest ?? ""}</td>
+      <td class="num">${p.atossOpen || ""}</td><td>${lvPill(p.maxLv)}</td><td>${chips}</td></tr>`;
+  }).join("");
+  $("t-pers").innerHTML = `<div class="pfbar noprint"><b>Anzeigen:</b> <div class="seg" id="pfSeg">${["", "none", "atoss"].map((k) => `<button data-pf="${k}" class="${S.pf === k ? "on" : ""}">${PF[k]}</button>`).join("")}</div>
+      <span class="muted">${plural(ps.length, "Person", "Personen")} · Klick auf eine Spaltenüberschrift = sortieren · Klick auf einen Namen = Personenansicht</span></div>
+    <div class="legend">Wunsch-Kästchen mit farbigem Rand = liegt in einem Engpass · ✓ = in ATOSS übertragen · AT = eigene Arbeitstage (Teilzeit berücksichtigt) · TZ = Teilzeit</div>
+    <table class="list" id="ptable"><thead><tr>${PCOLS.map((c) => `<th class="sort${c.num ? " num" : ""}${c.k === col.k ? (dir > 0 ? " asc" : " desc") : ""}" data-sk="${c.k}">${c.t}</th>`).join("")}<th>Wünsche (Zeitraum · AT)</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="11">Keine Treffer.</td></tr>`}</tbody></table>`;
+  $("pfSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.pf = b.dataset.pf; render(); };
+  $("ptable").querySelector("thead").onclick = (e) => {
+    const th = e.target.closest("th[data-sk]"); if (!th) return;
+    const k = th.dataset.sk, numCol = PCOLS.find((c) => c.k === k).num;
+    S.sort = S.sort.k === k ? { k, dir: -S.sort.dir } : { k, dir: numCol ? -1 : 1 };   // Zahlen zuerst absteigend
+    save(); render();
+  };
+}
+
+/* ===================== Personenansicht ===================== */
+function renderOne(V) {
+  const list = (V.ps.length ? V.ps : M.persons.map((p, i) => i)).slice().sort((a, b) => M.persons[a].name.localeCompare(M.persons[b].name, "de"));
+  let pi = M.persons.findIndex((p) => p.name === S.person);
+  if (pi < 0 || !list.includes(pi)) pi = list[0];
+  const opts = list.map((i) => `<option value="${i}"${i === pi ? " selected" : ""}>${esc(M.persons[i].name)}</option>`).join("");
+  if (pi == null) { $("t-one").innerHTML = `<div class="empty">Keine Person im Filter.</div>`; return; }
+  const p = M.persons[pi];
+  const pcell = (i) => {
+    const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear();
+    if (!M.work[i]) return { cls: M.hol[i] ? "hol" : "we", txt: "", title: `${when} · ${M.hol[i] || "Wochenende"}` };
+    if (!p.on[i]) return { cls: "pf", txt: "", title: `${when} · arbeitet an diesem Wochentag nicht (Teilzeit)${p.wish[i] ? " – liegt im Wunsch, zählt aber nicht" : ""}` };
+    if (p.abs[i]) return { cls: p.lv[i] >= 2 ? "lv" + p.lv[i] : "pw", txt: "U", title: `${when} · Urlaubswunsch${p.lv[i] >= 2 ? " · Engpass " + LV_NAME[p.lv[i]] : ""}` };
+    return { cls: "pw0", txt: "", title: when + " · im Dienst" };
+  };
+  const wrows = p.wishes.map((w) => `<tr><td>${range(w.von, w.bis)}</td><td class="num">${w.wd}</td><td>${flexBadge(w.flex)}</td><td>${lvPill(w.lv) || '<span class="muted">–</span>'}</td>
+    <td>${w.atoss ? "✓ " + fmtY(w.atoss) : '<span class="neg">offen</span>'}</td><td>${esc(w.bem)}</td><td class="num muted">${w.row}</td></tr>`).join("");
+  $("t-one").innerHTML = `
+    <div class="phead noprint"><label>Person: <select class="sel" id="oneSel">${opts}</select></label><span class="muted">Liste folgt den Filtern oben</span></div>
+    <div class="panel"><div class="phead"><h2>${dot(p.fi)}${esc(p.name)}</h2><span>${esc(p.fach || "ohne Fachrichtung")}</span><span class="muted">${esc(p.st.join(", ") || "keine Station")}</span>${p.tz ? tzBadge(p) : '<span class="muted">Vollzeit Mo–Fr</span>'}</div>
+      <div class="pkpis">
+        <div class="kpi"><div class="v">${p.wishes.length}</div><div class="l">Wünsche</div></div>
+        <div class="kpi"><div class="v">${p.total}</div><div class="l">gewünschte Arbeitstage</div></div>
+        <div class="kpi"><div class="v">${p.anspruch ?? "–"}</div><div class="l">Anspruch${p.anspruch == null ? " (Team, Spalte G leer)" : ""}</div></div>
+        <div class="kpi${p.rest != null && p.rest < 0 ? " bad" : ""}"><div class="v${p.rest != null && p.rest < 0 ? " neg" : ""}">${p.rest ?? "–"}</div><div class="l">Rest</div></div>
+        <div class="kpi${p.atossOpen ? " warn" : ""}"><div class="v">${p.atossOpen}</div><div class="l">noch nicht in ATOSS</div></div>
+        <div class="kpi"><div class="v">${p.maxLv >= 2 ? lvPill(p.maxLv) : "–"}</div><div class="l">höchster Engpass</div></div>
+      </div>
+      <div class="legend"><span><span class="sw" style="background:#c9d6ee"></span>Urlaubswunsch (U)</span><span><span class="sw" style="background:var(--l2)"></span><span class="sw" style="background:var(--l3)"></span><span class="sw" style="background:var(--l4)"></span>Wunsch in Engpass</span>
+        <span><span class="sw" style="background:repeating-linear-gradient(135deg,#e4e9f3 0 3px,#f7f8fb 3px 6px)"></span>Teilzeit-frei</span><span><span class="sw" style="background:var(--we)"></span>Wochenende</span><span><span class="sw" style="background:var(--hol)"></span>Feiertag/frei</span></div>
+      ${heatTable(V, pcell).replace('<table class="heat"', '<table class="heat" id="oneHeat"')}</div>
+    <div class="panel"><h2>Wünsche</h2>
+      ${p.wishes.length ? `<table class="list"><thead><tr><th>Zeitraum</th><th class="num">AT</th><th>Verschiebbar</th><th>Engpass</th><th>ATOSS</th><th>Bemerkung</th><th class="num">Zeile</th></tr></thead><tbody>${wrows}</tbody></table>` : `<p class="muted">Noch keine Wünsche eingetragen.</p>`}
+      <h2 style="margin-top:14px">Lage in den eigenen Bereichen</h2>
+      <p>${p.units.map((ui) => { const u = M.units[ui]; const n = M.conflicts.filter((c) => c.u === ui && c.people.some((x) => x.p === pi)).length; return `${esc(unitTitle(u))} (${u.n} P., ${ampText(u)})${n ? ` – <b>${plural(n, "Engpass", "Engpässe")}</b> mit eigenem Wunsch` : ""}`; }).join("<br>") || "–"}</p></div>`;
+  $("oneSel").onchange = (e) => { S.person = M.persons[+e.target.value].name; save(); render(); };
+  S.person = p.name;
+}
+
+/* ===================== Regeln & Hinweise ===================== */
+function renderRules(V) {
+  const row = (u) => {
+    const t = u.th, s = u.src, v = (x, own) => (x == null ? "–" : x + (u.type === "stat" && !own ? ' <span style="color:var(--muted);font-size:11px">(Standard)</span>' : ""));
+    const tz = u.members.filter((m) => M.persons[m].tz).length;
+    return `<tr><td><b>${esc(u.name)}</b></td><td>${unitLabel(u)}</td><td class="num">${u.n}${tz ? ` <span class="muted">(${tz} TZ)</span>` : ""}</td><td>${v(t.g, s.g)}</td><td>${v(t.h, s.h)}</td><td>${v(t.d, s.d)}</td></tr>`;
+  };
+  const tzs = M.persons.filter((p) => p.tz);
+  $("t-rules").innerHTML = `
+    <h2 class="sec">So rechnet die Ampel</h2>
+    <p>Gezählt wird pro Arbeitstag, wie viele Mitglieder einer Station bzw. eines Fachteams einen Urlaubswunsch haben. Die Zahlen in der Tabelle bedeuten: <b>ab so vielen gleichzeitig Abwesenden</b> gilt die Farbe. Die höchste erreichte Stufe zählt. Eine Person mit mehreren Stationen zählt auf jeder ihrer Stationen.</p>
+    <p><b>Standardregel für Stationen</b> (wenn in Excel → Einstellungen nichts eingetragen ist): 1 weg = unkritisch · <span class="pill lv2">Gelb</span> ab ${STANDARD.gelbAb} weg · <span class="pill lv3">Hellrot</span>, wenn nur noch ${STANDARD.hellrotWennNochDa} da sind (nur bei Stationen ab ${STANDARD.hellrotAbGroesse} Therapeut:innen) · <span class="pill lv4">Dunkelrot</span>, wenn alle weg sind. Fachteams haben nur eine Ampel, wenn Werte eingetragen sind.</p>
+    <p><b>Teilzeit</b> (Blatt Team, Spalten L–P, »x« = Arbeitstag): Ein Urlaubswunsch zählt nur an den eigenen Arbeitstagen als »weg«. Bei der Standardregel beziehen sich »nur noch ${STANDARD.hellrotWennNochDa} da« und »alle weg« auf die Personen, die an dem Wochentag arbeiten würden (H/D in der Tabelle unten = Vollzeit-Wert). Fest eingetragene Werte gelten unverändert.
+      ${tzs.length ? `Teilzeit eingetragen: ${tzs.map((p) => `${esc(p.name)} (${daysText(p)})`).join(", ")}.` : "Zurzeit ist niemand als Teilzeit markiert."}</p>
+    <table class="list"><thead><tr><th>Name</th><th>Art</th><th class="num">Personen</th><th>Gelb ab</th><th>Hellrot ab</th><th>Dunkelrot ab</th></tr></thead><tbody>${M.units.map(row).join("")}</tbody></table>
+    <h2 class="sec">Hinweise zu den Daten (${M.warn.length})</h2>
+    ${M.warn.length ? `<ul class="warnlist">${M.warn.map((w) => `<li>${esc(w.t)}</li>`).join("")}</ul>` : `<p>Keine – die Daten sind vollständig.</p>`}
+    <h2 class="sec">Planungszeitraum</h2><p>${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} · Feiertage/freie Tage: ${[...new Set(M.hol.filter(Boolean))].length ? M.hol.map((h, i) => (h ? `${fmt(M.ser[i])} ${esc(h)}` : "")).filter(Boolean).join(" · ") : "keine eingetragen"}</p>`;
+}
+
+/* ===================== Detail-Panel ===================== */
+function openDetail(h) { $("detailBody").innerHTML = h; $("detail").classList.add("open"); }
+/* Tag oder Woche aus Heatmap / Top-5: wer fehlt, welche Bereiche, wer hat ohnehin frei */
+function showRange(i0, i1) {
+  const V = visible();
+  const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
+  let lv = 0, peak = 0; for (let i = i0; i <= i1; i++) if (M.work[i]) { lv = Math.max(lv, V.dayLv[i]); peak = Math.max(peak, V.dayAbs[i]); }
+  const days = (p) => { let n = 0; for (let i = i0; i <= i1; i++) n += p.abs[i]; return n; };
+  const who = V.ps.filter((pi) => days(M.persons[pi]) > 0).sort((a, b) => M.persons[b].lv.slice(i0, i1 + 1).reduce((s, x) => Math.max(s, x), 0) - M.persons[a].lv.slice(i0, i1 + 1).reduce((s, x) => Math.max(s, x), 0) || M.persons[a].name.localeCompare(M.persons[b].name, "de"));
+  const units = V.units.map((u) => { let l = 0, c = 0, on = 0; for (let i = i0; i <= i1; i++) if (M.work[i]) { l = Math.max(l, u.lv[i]); if (u.cnt[i] >= c) { c = u.cnt[i]; on = u.nday[i]; } } return { u, l, c, on }; }).filter((x) => x.c > 0).sort((a, b) => b.l - a.l || b.c - a.c);
+  const off = i0 === i1 && M.work[i0] ? V.ps.filter((pi) => !M.persons[pi].on[i0]) : [];
+  let h = `<h3>${i0 === i1 ? "Wer fehlt am" : "Wer fehlt in der Woche"}</h3><div class="muted">${when}${i0 === i1 && M.hol[i0] ? " · " + esc(M.hol[i0]) : ""}</div>`;
+  if (i0 === i1 && !M.work[i0]) return openDetail(h + `<p>Kein Arbeitstag (${esc(M.hol[i0] || "Wochenende")}).</p>`);
+  h += `<p>${lvPill(lv)} ${i0 === i1 ? `<b>${who.length}</b> ${who.length === 1 ? "Person" : "Personen"} weg` : `bis zu <b>${peak}</b> gleichzeitig weg, insgesamt ${plural(who.length, "Person", "Personen")}`} (im aktuellen Filter)</p>`;
+  h += `<h4>Weg</h4>${who.length ? `<ul>${who.map((pi) => {
+    const p = M.persons[pi], ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]);
+    let pl = 0; for (let i = i0; i <= i1; i++) pl = Math.max(pl, p.lv[i]);
+    return `<li>${dot(p.fi)}${plink(pi)} ${lvPill(pl)} ${tzBadge(p)}<br><span class="muted">${esc(p.fach)} · ${esc(p.st.join(", "))}${i0 !== i1 ? ` · ${days(p)} AT` : ""}</span><br>${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)} ${flexBadge(w.flex)}${w.atoss ? "" : ' <span class="neg" style="font-size:11.5px">ATOSS offen</span>'}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}`).join("<br>")}</li>`;
+  }).join("")}</ul>` : "<p>niemand</p>"}`;
+  h += `<h4>Betroffene Bereiche</h4>${units.length ? `<ul>${units.map((x) => `<li>${esc(unitTitle(x.u))}: ${x.c} von ${x.on} im Dienst weg ${lvPill(x.l)} <span class="muted">· ${ampText(x.u)}</span></li>`).join("")}</ul>` : "<p>keine</p>"}`;
+  if (off.length) h += `<h4>Hat an diesem Wochentag ohnehin frei (Teilzeit)</h4><p>${off.map((pi) => esc(M.persons[pi].name)).join(", ")}</p>`;
+  openDetail(h);
+}
+/* Zelle im Kalender (Station/Fachteam oder Person) */
+function showDetail(k) {
+  const [t, idx, a, b] = k.split(":"); const i0 = +a, i1 = +b;
+  const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
+  let h = "";
+  if (t === "u") {
+    const u = M.units[+idx];
+    let lv = 0, cnt = 0; for (let i = i0; i <= i1; i++) { lv = Math.max(lv, u.lv[i]); if (M.work[i]) cnt = Math.max(cnt, u.cnt[i]); }
+    const who = u.members.filter((m) => { for (let i = i0; i <= i1; i++) if (M.persons[m].abs[i]) return true; return false; });
+    const free = i0 === i1 && M.work[i0] ? u.members.filter((m) => !who.includes(m) && !M.persons[m].on[i0]) : [];
+    h = `<h3>${esc(unitTitle(u))}</h3><div class="muted">${when}</div>
+      <p>${lv ? `<span class="pill lv${lv}">${LV_NAME[lv]}</span> ` : ""}höchstens <b>${cnt} von ${u.n}</b> gleichzeitig weg · ${ampText(u)}</p>
+      <b>Weg in diesem Zeitraum:</b>${who.length ? `<ul>${who.map((m) => { const p = M.persons[m]; const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]); return `<li>${plink(m)} (${esc(p.fach)}) ${tzBadge(p)}<br>${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)} ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}`).join("<br>")}</li>`; }).join("")}</ul>` : "<p>niemand</p>"}
+      <b>Anwesend:</b><p>${u.members.filter((m) => !who.includes(m) && !free.includes(m)).map((m) => esc(M.persons[m].name)).join(", ") || "niemand"}</p>
+      ${free.length ? `<b>Teilzeit-frei:</b><p>${free.map((m) => esc(M.persons[m].name)).join(", ")}</p>` : ""}`;
+  } else {
+    const p = M.persons[+idx];
+    const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]);
+    h = `<h3>${esc(p.name)}</h3><div class="muted">${esc(p.fach)} · ${esc(p.st.join(", "))} ${tzBadge(p)}</div><p class="muted">${when}</p>
+      <b>Wünsche in diesem Zeitraum:</b>${ws.length ? `<ul>${ws.map((w) => `<li>${fmt(w.von)}–${fmtY(w.bis)} · ${w.wd} AT ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}</li>`).join("")}</ul>` : "<p>keine</p>"}
+      <b>Lage in den eigenen Bereichen:</b><ul>${p.units.map((ui) => { const u = M.units[ui]; let lv = 0, c = 0; for (let i = i0; i <= i1; i++) { lv = Math.max(lv, u.lv[i]); if (M.work[i]) c = Math.max(c, u.cnt[i]); } return `<li>${esc(unitTitle(u))}: max. ${c} von ${u.n} weg ${lv >= 1 ? `<span class="pill lv${lv}">${LV_NAME[lv]}</span>` : ""}</li>`; }).join("")}</ul>
+      <p>Alle Wünsche: ${p.wishes.map((w) => `${fmt(w.von)}–${fmt(w.bis)}`).join(", ") || "–"} · gesamt ${p.total} AT${p.anspruch != null ? ` von ${p.anspruch}` : ""}</p>
+      <p><a class="plink" data-person="${+idx}">→ Personenansicht öffnen</a></p>`;
+  }
+  openDetail(h);
+}
+function goPerson(pi) { S.person = M.persons[pi].name; S.tab = "one"; $("detail").classList.remove("open"); save(); render(); window.scrollTo(0, 0); }
+
+/* ===================== Ereignisse ===================== */
+$("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = reload; $("btnPrint").onclick = () => window.print();
+$("fileInput").onchange = (e) => { const f = e.target.files[0]; if (f) { fileHandle = null; loadFile(f); } e.target.value = ""; };
+const drop = $("drop");
+["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+document.addEventListener("drop", async (e) => {
+  const it = e.dataTransfer.items && e.dataTransfer.items[0];
+  if (it && it.getAsFileSystemHandle) { try { const h = await it.getAsFileSystemHandle(); if (h && h.kind === "file") { fileHandle = h; IDB.put(h); loadFile(await h.getFile()); return; } } catch (er) {} }
+  const f = e.dataTransfer.files[0]; if (f) { fileHandle = null; loadFile(f); }
+});
+$("fFach").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return; const f = c.dataset.f; S.fach = S.fach.includes(f) ? S.fach.filter((x) => x !== f) : S.fach.concat(f); c.classList.toggle("on"); save(); render(); };
+$("fStat").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return; const s = c.dataset.s; S.stat = S.stat.includes(s) ? S.stat.filter((x) => x !== s) : S.stat.concat(s); c.classList.toggle("on"); save(); render(); };
+$("fQ").oninput = (e) => { S.q = e.target.value; render(); };
+$("fOnly").onchange = (e) => { S.only = e.target.checked; save(); render(); };
+$("fM0").onchange = (e) => { S.m0 = +e.target.value; if (S.m1 < S.m0) { S.m1 = S.m0; $("fM1").value = S.m1; } render(); };
+$("fM1").onchange = (e) => { S.m1 = +e.target.value; if (S.m0 > S.m1) { S.m0 = S.m1; $("fM0").value = S.m0; } render(); };
+$("fView").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.view = b.dataset.v; save(); render(); };
+$("fReset").onclick = () => { S.fach = []; S.stat = []; S.q = ""; S.only = false; S.m0 = null; S.m1 = null; S.pf = ""; setupFilters(); save(); render(); };
+$("tabs").onclick = (e) => { const b = e.target.closest(".tab"); if (!b) return; S.tab = b.dataset.t; save(); render(); };
+$("kpis").onclick = (e) => { const k = e.target.closest("[data-go]"); if (!k) return; S.tab = k.dataset.go; if (k.dataset.pf != null) { S.pf = k.dataset.pf === "rest" ? "" : k.dataset.pf; if (k.dataset.pf === "rest") S.sort = { k: "rest", dir: 1 }; } save(); render(); };
+$("t-cal").onclick = (e) => { const td = e.target.closest("td[data-k]"); if (!td) return; document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); showDetail(td.dataset.k); };
+$("t-dash").onclick = (e) => {
+  const td = e.target.closest("table.heat td[data-d]");
+  if (td) { document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); const i = +td.dataset.d; showRange(i, i); return; }
+  const li = e.target.closest("li[data-w]"); if (li) { const [a, b] = li.dataset.w.split(":").map(Number); showRange(a, b); }
+};
+$("t-one").onclick = (e) => { const td = e.target.closest("table.heat td[data-d]"); if (td) { const i = +td.dataset.d; showRange(i, i); } };
+document.addEventListener("click", (e) => { const a = e.target.closest("[data-person]"); if (a) { e.preventDefault(); goPerson(+a.dataset.person); } });
+$("detailX").onclick = () => $("detail").classList.remove("open");
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
+
+// Zuletzt geöffnete Datei anbieten (nur Edge/Chrome)
+(async () => {
+  const h = await IDB.get();
+  if (h && h.name) {
+    fileHandle = h;
+    $("lastFile").innerHTML = `<p style="margin-top:14px">Zuletzt geöffnet: <b>${esc(h.name)}</b> <button class="btn" id="btnLast">wieder laden</button></p>`;
+    $("btnLast").onclick = reload;
+  }
+})();
+</script>
+</body>
+</html>
