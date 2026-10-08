@@ -314,7 +314,7 @@ aside.detail li{margin:3px 0}
   header.top .logo{height:32px;padding:0}
   header.top .file{opacity:1;font-size:10px}
   .printinfo{display:block;font-size:10px;color:#333;margin:4px 0 6px}
-  .kpis{grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:6px}
+  .kpis{grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px}
   .kpi{padding:6px 8px;border-radius:6px}
   .kpi .v{font-size:17px}
   .panel{padding:6px 8px;margin-bottom:6px;border-radius:6px}
@@ -406,259 +406,7 @@ aside.detail li{margin:3px 0}
 <!--SHEETJS-->
 <script>
 "use strict";
-/* ===================== Layout der Excel-Datei =====================
-   Muss zur Excel-Datei passen (siehe Dokumentation_Mein_Urlaub.md). Spalten als Buchstaben, Zeilen wie in Excel (ab 1). */
-const LAYOUT = {
-  tage: 366,
-  wuensche: { sheet: "Wünsche", firstRow: 6, cols: { name: "A", von: "B", bis: "C", flex: "D", bem: "E", atoss: "J" } },
-  team: { sheet: "Team", firstRow: 5, cols: { name: "A", fach: "B", st: ["C", "D", "E", "F", "R"], anspruch: "G", tage: ["L", "M", "N", "O", "P"] } },
-  einst: {
-    sheet: "Einstellungen", start: "B3", firstRow: 7,
-    fach: { name: "A", g: "B", h: "C", d: "D" },
-    stat: { name: "H", g: "I", h: "J", d: "K" },
-    feier: { datum: "N", name: "O" }
-  }
-};
-/* Standardregel für Stationen, wenn in Einstellungen nichts eingetragen ist (Vorgabe –
-   kann im Reiter »Regeln« für diesen Browser überschrieben werden, siehe AMPEL_KEY) */
-const STANDARD = {
-  gelbAb: 2,                       // ab 2 Abwesenden gelb (1 weg = kein Warnsignal)
-  hellrotWennNochDa: 2,            // hellrot, wenn nur noch 2 anwesend sind …
-  hellrotAbGroesse: 4,             // … aber nur bei Stationen ab 4 Therapeut:innen
-  dunkelrot: "alle"                // dunkelrot, wenn alle weg sind (die an dem Tag arbeiten würden)
-};
-/* Ampel-Einstellungen aus dem Reiter »Regeln«: nur in diesem Browser gespeichert (localStorage), nie in der Excel-Datei.
-   Vorrang: hier eingestellt  >  Excel → Einstellungen  >  Standardregel */
-const AMPEL_KEY = "urlaubsansicht.ampel";
-const ampelGet = () => { const a = lsGet(AMPEL_KEY, {}) || {}; return { std: a.std || {}, units: a.units || {} }; };
-const ampelSet = (a) => lsSet(AMPEL_KEY, a);
-const ukey = (u) => u.type + ":" + u.name;
-/* Top-5-Wochen: Punkte je Arbeitstag und Bereich nach Ampelstufe (Index = Stufe 0–4) */
-const WOCHEN_PUNKTE = [0, 0, 1, 3, 9];
-const FACH_FARBEN = ["#4E79A7","#B07AA1","#76B7B2","#9C755F","#F28E2B","#59A1A0","#D37295","#8E8CD8","#6A9FCB","#A08C7D"];
-const LV_NAME = ["", "unkritisch", "Gelb", "Hellrot", "Dunkelrot"];
-const MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-const MON_L = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
-const FLEX_ORDER = { ja: 0, etwas: 1, "": 2, nein: 3 };
-
-/* ===================== Hilfsfunktionen ===================== */
-const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const ser2date = (s) => new Date(Math.round((s - 25569) * 86400000));
-const date2ser = (y, m, d) => Math.round(Date.UTC(y, m - 1, d) / 86400000) + 25569;
-const wday = (s) => ser2date(s).getUTCDay();
-const fmt = (s) => { const d = ser2date(s); return String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0") + "."; };
-const fmtY = (s) => fmt(s) + ser2date(s).getUTCFullYear();
-const fmtW = (s) => WD[wday(s)] + " " + fmt(s);
-const range = (a, b) => (a === b ? fmtW(a) + ser2date(a).getUTCFullYear() : fmtW(a) + " – " + fmtW(b) + ser2date(b).getUTCFullYear());
-const monthKey = (s) => { const d = ser2date(s); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
-function isoWeek(s) { const th = s - ((wday(s) + 6) % 7) + 3; const y = ser2date(th).getUTCFullYear(); return Math.floor((th - date2ser(y, 1, 1)) / 7) + 1; }
-const todaySer = () => { const d = new Date(); return date2ser(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
-const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
-const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
-const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-
-function cell(ws, addr) { const c = ws[addr]; return c ? c.v : null; }
-function str(v) { return v == null ? "" : String(v).trim(); }
-function num(v) { if (v == null || v === "") return null; const n = Number(v); return Number.isFinite(n) ? Math.round(n) : null; }
-function toSer(v) {
-  if (v == null || v === "") return null;
-  if (typeof v === "number") return Math.floor(v);
-  if (v instanceof Date) return date2ser(v.getFullYear(), v.getMonth() + 1, v.getDate());
-  const m = String(v).trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
-  if (m) { let y = +m[3]; if (y < 100) y += 2000; return date2ser(y, +m[2], +m[1]); }
-  return null;
-}
-function lastRow(ws) { return ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]).e.r + 1 : 0; }
-
-/* ===================== Einlesen & Berechnen ===================== */
-function build(wb) {
-  const L = LAYOUT, warn = [];
-  const E = wb.Sheets[L.einst.sheet], T = wb.Sheets[L.team.sheet], W = wb.Sheets[L.wuensche.sheet];
-  const missing = [[E, L.einst.sheet], [T, L.team.sheet], [W, L.wuensche.sheet]].filter((x) => !x[0]).map((x) => "»" + x[1] + "«");
-  if (missing.length) throw new Error("In der Datei fehlen die Blätter " + missing.join(", ") + ". Ist das die richtige Excel-Datei?");
-
-  // Einstellungen
-  const fachs = [], stats = [], fachIdx = new Map(), statIdx = new Map(), holidays = new Map();
-  for (let r = L.einst.firstRow, n = lastRow(E); r <= n; r++) {
-    const f = L.einst.fach, s = L.einst.stat, h = L.einst.feier;
-    const fn = str(cell(E, f.name + r));
-    if (fn && !fachIdx.has(fn)) { fachIdx.set(fn, fachs.length); fachs.push({ type: "fach", inExcel: true, name: fn, custom: { g: num(cell(E, f.g + r)), h: num(cell(E, f.h + r)), d: num(cell(E, f.d + r)) } }); }
-    const sn = str(cell(E, s.name + r));
-    if (sn && !statIdx.has(sn)) { statIdx.set(sn, stats.length); stats.push({ type: "stat", inExcel: true, name: sn, custom: { g: num(cell(E, s.g + r)), h: num(cell(E, s.h + r)), d: num(cell(E, s.d + r)) } }); }
-    const hd = toSer(cell(E, h.datum + r));
-    if (hd) holidays.set(hd, str(cell(E, h.name + r)) || "Feiertag");
-  }
-
-  // Team (inkl. Teilzeit-Arbeitstage Mo–Fr in Spalten L–P)
-  const persons = [], pIdx = new Map();
-  for (let r = L.team.firstRow, n = lastRow(T); r <= n; r++) {
-    const c = L.team.cols, name = str(cell(T, c.name + r));
-    if (!name) continue;
-    if (pIdx.has(name)) { warn.push({ k: "team", t: `»${name}« steht mehrfach im Blatt Team (Zeile ${r}). Nur der erste Eintrag zählt.` }); continue; }
-    const fach = str(cell(T, c.fach + r));
-    let fi = fachIdx.has(fach) ? fachIdx.get(fach) : -1;
-    if (!fach) warn.push({ k: "team", t: `${name}: keine Fachrichtung eingetragen (Team, Zeile ${r}).` });
-    else if (fi < 0) { warn.push({ k: "team", t: `${name}: Fachrichtung »${fach}« fehlt im Blatt Einstellungen – wurde ergänzt.` }); fi = fachs.length; fachIdx.set(fach, fi); fachs.push({ type: "fach", name: fach, custom: { g: null, h: null, d: null } }); }
-    const st = [];
-    for (const sc of c.st) {
-      const s = str(cell(T, sc + r));
-      if (!s || st.includes(s)) continue;
-      if (!statIdx.has(s)) { warn.push({ k: "team", t: `${name}: Station »${s}« fehlt im Blatt Einstellungen – wurde mit Standardregel ergänzt.` }); statIdx.set(s, stats.length); stats.push({ type: "stat", name: s, custom: { g: null, h: null, d: null } }); }
-      st.push(s);
-    }
-    if (!st.length) warn.push({ k: "team", t: `${name}: keine Station eingetragen.` });
-    // Arbeitstage: wie in Excel (Spalte Q »Muster«) zählt nur »x«; alle leer = Vollzeit Mo–Fr
-    const raw = c.tage.map((col) => str(cell(T, col + r)).toLowerCase());
-    raw.forEach((v, k) => { if (v && v !== "x") warn.push({ k: "team", t: `${name}: in Team, Spalte ${c.tage[k]} steht »${v}« – als Arbeitstag zählt nur »x« (Zeile ${r}).` }); });
-    const marked = raw.map((v) => v === "x");
-    const tz = marked.some(Boolean);
-    const wk = tz ? marked : [true, true, true, true, true];   // Index 0 = Mo … 4 = Fr
-    pIdx.set(name, persons.length);
-    persons.push({ name, fach, fi, st, anspruch: num(cell(T, c.anspruch + r)), wk, tz, wishes: [] });
-  }
-
-  // Wünsche
-  const wishes = [];
-  let minVon = null;
-  for (let r = L.wuensche.firstRow, n = lastRow(W); r <= n; r++) {
-    const c = L.wuensche.cols, name = str(cell(W, c.name + r));
-    const von = toSer(cell(W, c.von + r)), bis = toSer(cell(W, c.bis + r));
-    if (!name && !von && !bis) continue;
-    if (!name) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r}: Name fehlt.` }); continue; }
-    if (!pIdx.has(name)) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r}: »${name}« steht nicht im Blatt Team – nicht berücksichtigt.` }); continue; }
-    if (!von || !bis) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r} (${name}): Von oder Bis fehlt bzw. ist kein Datum.` }); continue; }
-    if (bis < von) { warn.push({ k: "wunsch", t: `Wünsche, Zeile ${r} (${name}): Bis liegt vor Von.` }); continue; }
-    const flex = str(cell(W, c.flex + r)).toLowerCase();
-    const w = { p: pIdx.get(name), von, bis, flex: ["ja", "etwas", "nein"].includes(flex) ? flex : "", bem: str(cell(W, c.bem + r)), atoss: toSer(cell(W, c.atoss + r)), row: r };
-    wishes.push(w); persons[w.p].wishes.push(w);
-    if (minVon == null || von < minVon) minVon = von;
-  }
-
-  // Zeitraum
-  let start = toSer(cell(E, L.einst.start));
-  if (!start) {
-    const y = minVon ? ser2date(minVon).getUTCFullYear() : new Date().getFullYear();
-    start = date2ser(y, 1, 1);
-    warn.push({ k: "einst", t: `Kein Startdatum in Einstellungen (B3) – verwendet wird 01.01.${y}.` });
-  }
-  const N = L.tage, ser = new Int32Array(N), work = new Uint8Array(N), hol = new Array(N);
-  for (let i = 0; i < N; i++) { ser[i] = start + i; const w = wday(ser[i]); hol[i] = holidays.get(ser[i]) || ""; work[i] = w !== 0 && w !== 6 && !hol[i] ? 1 : 0; }
-  // Arbeitet Person p am Datum s? (Wochenende, Feiertag und Teilzeit-freie Tage = nein)
-  const worksOn = (p, s) => { const w = wday(s); return w >= 1 && w <= 5 && !holidays.has(s) && p.wk[w - 1]; };
-
-  // Abwesenheit je Person: wish = Tag liegt in einem Wunsch · abs = an diesem Tag wäre sie im Dienst und fehlt
-  for (const p of persons) {
-    p.wish = new Uint8Array(N); p.abs = new Uint8Array(N); p.on = new Uint8Array(N);
-    for (let i = 0; i < N; i++) p.on[i] = worksOn(p, ser[i]) ? 1 : 0;
-    p.wishes.sort((a, b) => a.von - b.von);
-    let prev = null;
-    for (const w of p.wishes) {
-      w.wd = 0; for (let s = w.von; s <= w.bis; s++) if (worksOn(p, s)) w.wd++;
-      if (!w.wd) warn.push({ k: "wunsch", t: `${p.name}: Wunsch ${fmt(w.von)}–${fmtY(w.bis)} enthält keinen eigenen Arbeitstag (Wochenende/Feiertag/Teilzeit-frei).` });
-      if (prev && w.von <= prev.bis) warn.push({ k: "wunsch", t: `${p.name}: Wünsche überschneiden sich (${fmt(prev.von)}–${fmt(prev.bis)} und ${fmt(w.von)}–${fmt(w.bis)}).` });
-      if (w.von < start || w.bis > start + N - 1) warn.push({ k: "wunsch", t: `${p.name}: Wunsch ${fmtY(w.von)}–${fmtY(w.bis)} liegt ganz oder teilweise außerhalb des Planungszeitraums.` });
-      for (let s = Math.max(w.von, start); s <= Math.min(w.bis, start + N - 1); s++) { const i = s - start; p.wish[i] = 1; if (p.on[i]) p.abs[i] = 1; }
-      if (!prev || w.bis > prev.bis) prev = w;
-    }
-    p.total = p.wishes.reduce((a, w) => a + w.wd, 0);
-    p.rest = p.anspruch != null ? p.anspruch - p.total : null;
-    p.atossOpen = p.wishes.filter((w) => !w.atoss).length;
-    if (p.anspruch != null && p.total > p.anspruch) warn.push({ k: "wunsch", t: `${p.name}: ${p.total} Arbeitstage gewünscht, Anspruch ${p.anspruch}.` });
-  }
-
-  // Einheiten (Stationen + Fachteams) mit Schwellen
-  // Reihenfolge je Wert: im Reiter »Regeln« eingestellt (lokal) > Excel → Einstellungen > Standardregel
-  const AMP = ampelGet(), std = {};
-  for (const k of ["gelbAb", "hellrotWennNochDa", "hellrotAbGroesse"]) std[k] = AMP.std[k] != null ? AMP.std[k] : STANDARD[k];
-  const applyLocal = (u) => {
-    u.excel = Object.assign({}, u.custom);
-    const o = AMP.units[ukey(u)] || {};
-    u.local = { g: o.g ?? null, h: o.h ?? null, d: o.d ?? null };
-    u.custom = { g: u.local.g ?? u.excel.g, h: u.local.h ?? u.excel.h, d: u.local.d ?? u.excel.d };
-    u.orig = {}; for (const k of ["g", "h", "d"]) u.orig[k] = u.local[k] != null ? "lokal" : u.excel[k] != null ? "Excel" : u.type === "stat" ? "Standard" : "";
-  };
-  const units = [];
-  for (const s of stats) {
-    applyLocal(s);
-    s.members = persons.map((p, i) => (p.st.includes(s.name) ? i : -1)).filter((i) => i >= 0);
-    const n = s.members.length, c = s.custom;
-    s.th = {
-      g: c.g ?? std.gelbAb,
-      h: c.h ?? (n >= std.hellrotAbGroesse ? n - std.hellrotWennNochDa : null),
-      d: c.d ?? (n > 0 ? n : null)
-    };
-    s.src = { g: c.g != null, h: c.h != null, d: c.d != null };
-    units.push(s);
-  }
-  for (const f of fachs) {
-    applyLocal(f);
-    f.members = persons.map((p, i) => (p.fi === fachIdx.get(f.name) ? i : -1)).filter((i) => i >= 0);
-    f.th = { g: f.custom.g, h: f.custom.h, d: f.custom.d };
-    f.src = { g: true, h: true, d: true };
-    units.push(f);
-  }
-  const localCount = Object.keys(AMP.std).filter((k) => AMP.std[k] != null).length + units.reduce((a, u) => a + ["g", "h", "d"].filter((k) => u.local[k] != null).length, 0);
-  const level = (a, th) => (a <= 0 ? 0 : th.d != null && a >= th.d ? 4 : th.h != null && a >= th.h ? 3 : th.g != null && a >= th.g ? 2 : 1);
-  for (const [ui, u] of units.entries()) {
-    u.ui = ui; u.n = u.members.length;
-    u.cnt = new Uint8Array(N); u.lv = new Uint8Array(N); u.nday = new Uint8Array(N);
-    for (let i = 0; i < N; i++) {
-      let a = 0, on = 0; for (const m of u.members) { a += persons[m].abs[i]; on += persons[m].on[i]; }
-      u.cnt[i] = a; u.nday[i] = on;
-      if (!work[i]) continue;
-      // Teilzeit: Standardregel (»nur noch 2 da« / »alle weg«) bezieht sich auf die, die an diesem Tag arbeiten würden
-      let th = u.th;
-      if (u.type === "stat" && (!u.src.h || !u.src.d)) {
-        th = { g: u.th.g,
-          h: u.src.h ? u.th.h : (u.n >= std.hellrotAbGroesse && on > 0 ? Math.max(1, on - std.hellrotWennNochDa) : null),
-          d: u.src.d ? u.th.d : (on > 0 ? on : null) };
-      }
-      u.lv[i] = level(a, th);
-    }
-  }
-  persons.forEach((p, pi) => {
-    p.units = units.filter((u) => u.members.includes(pi)).map((u) => u.ui);
-    p.lv = new Uint8Array(N);
-    for (let i = 0; i < N; i++) if (p.abs[i]) { let m = 0; for (const ui of p.units) m = Math.max(m, units[ui].lv[i]); p.lv[i] = m; }
-  });
-
-  // Konflikte: zusammenhängende Arbeitstage mit Stufe >= Gelb je Einheit
-  const conflicts = [];
-  for (const u of units) {
-    let cur = null;
-    const flush = () => {
-      if (!cur) return;
-      const d = cur.days;
-      cur.maxLv = Math.max(...d.map((i) => u.lv[i]));
-      cur.peak = Math.max(...d.map((i) => u.cnt[i]));
-      let a = -1, b = -1;
-      for (let k = 0; k < d.length; k++) { if (u.cnt[d[k]] === cur.peak) { if (a < 0) a = k; b = k; } else if (a >= 0) break; }
-      cur.peakFrom = ser[d[a]]; cur.peakTo = ser[d[b]]; cur.peakOn = u.nday[d[a]];
-      cur.from = ser[d[0]]; cur.to = ser[d[d.length - 1]]; cur.wd = d.length;
-      cur.people = u.members.filter((m) => d.some((i) => persons[m].abs[i])).map((m) => {
-        const p = persons[m], hit = d.filter((i) => p.abs[i]);
-        const ws = p.wishes.filter((w) => w.von <= cur.to && w.bis >= cur.from);
-        const flex = ws.map((w) => w.flex).sort((x, y) => FLEX_ORDER[x] - FLEX_ORDER[y])[0] ?? "";
-        return { p: m, from: ser[hit[0]], to: ser[hit[hit.length - 1]], days: hit.length, wishes: ws, flex };
-      }).sort((x, y) => FLEX_ORDER[x.flex] - FLEX_ORDER[y.flex] || x.from - y.from);
-      conflicts.push(cur); cur = null;
-    };
-    for (let i = 0; i < N; i++) {
-      if (!work[i]) continue;
-      if (u.lv[i] >= 2) { if (!cur) cur = { u: u.ui, days: [] }; cur.days.push(i); } else flush();
-    }
-    flush();
-  }
-  conflicts.sort((a, b) => b.maxLv - a.maxLv || a.from - b.from);
-  // Wunsch → höchste Konfliktstufe (für Markierung in der Personenliste)
-  for (const w of wishes) { let m = 0; const p = persons[w.p]; for (let s = Math.max(w.von, start); s <= Math.min(w.bis, start + N - 1); s++) m = Math.max(m, p.lv[s - start]); w.lv = m; }
-  for (const p of persons) p.maxLv = p.wishes.reduce((a, w) => Math.max(a, w.lv), 0);
-
-  const example = persons.some((p) => /^beispiel/i.test(p.name));
-  return { persons, units, fachs, stats, wishes, conflicts, warn, N, start, ser, work, hol, fachIdx, example, std, localCount };
-}
+<!--KERN-->
 
 /* ===================== Zustand ===================== */
 let M = null, fileHandle = null, lastFile = null, lastWb = null;
@@ -822,14 +570,12 @@ function renderKpis(V) {
   const lvDays = [0, 0, 0, 0, 0];
   for (let i = V.i0; i <= V.i1; i++) if (M.work[i]) lvDays[V.dayLv[i]]++;
   const eng = lvDays[2] + lvDays[3] + lvDays[4];
-  const open = ws.filter((w) => !w.atoss).length;
   const withA = V.ps.map((i) => M.persons[i]).filter((p) => p.anspruch != null);
   const rest = withA.reduce((s, p) => s + p.rest, 0), over = withA.filter((p) => p.rest < 0).length, noA = V.ps.length - withA.length;
   $("kpis").innerHTML = `
     <div class="kpi click" data-go="pers" data-pf="" title="Zur Personentabelle"><div class="v">${ws.length}</div><div class="l">Urlaubswünsche im Zeitraum</div><div class="s">${ws.reduce((s, w) => s + w.wd, 0)} Arbeitstage gewünscht</div></div>
     <div class="kpi click${without ? " warn" : ""}" data-go="pers" data-pf="none" title="Liste der Personen ohne Wunsch"><div class="v">${without} <small>/ ${V.ps.length}</small></div><div class="l">Personen ohne Wunsch</div><div class="s">${without ? "→ nachfragen" : "alle haben eingetragen"}</div></div>
     <div class="kpi click${lvDays[4] || lvDays[3] ? " bad" : eng ? " warn" : ""}" data-go="conf" title="Zur Konfliktliste"><div class="v">${eng}</div><div class="l">Engpasstage (Arbeitstage ab Gelb)</div><div class="row"><span class="pill lv4">${lvDays[4]} dunkelrot</span><span class="pill lv3">${lvDays[3]} hellrot</span><span class="pill lv2">${lvDays[2]} gelb</span></div></div>
-    <div class="kpi click${open ? " warn" : ""}" data-go="pers" data-pf="atoss" title="Wünsche ohne Datum in »In ATOSS übertragen am«"><div class="v">${open}</div><div class="l">offene ATOSS-Übertragungen</div><div class="s">${ws.length - open} von ${ws.length} übertragen</div></div>
     <div class="kpi click${over ? " bad" : ""}" data-go="pers" data-pf="rest" title="Resturlaub = Anspruch (Team, Spalte G) minus gewünschte Arbeitstage"><div class="v">${withA.length ? rest : "–"} <small>${withA.length ? "Tage" : ""}</small></div><div class="l">Resturlaub (noch nicht verplant)</div><div class="s">${over ? `<span class="neg">${over} überzogen</span> · ` : ""}${noA ? `${noA} ohne Anspruch` : "alle mit Anspruch"}</div></div>
     <div class="kpi click" data-go="rules" title="Zu Regeln & Hinweise"><div class="v">${M.warn.length}</div><div class="l">Hinweise zu den Daten</div></div>`;
 }
@@ -870,7 +616,7 @@ function renderHome() {
   const crit = all.filter((c) => c.maxLv >= 3).sort((a, b) => b.maxLv - a.maxLv || a.from - b.from);
   const gelb = all.filter((c) => c.maxLv === 2).sort((a, b) => a.from - b.from);
   const noWish = M.persons.filter((p) => !p.wishes.length).length;
-  const atoss = M.wishes.filter((w) => !w.atoss).length, over = M.persons.filter((p) => p.rest != null && p.rest < 0).length;
+  const over = M.persons.filter((p) => p.rest != null && p.rest < 0).length;
   const zahl = (n) => (n <= 12 ? ["keine", "einer", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"][n] : String(n));
   const zahlF = (n) => (n <= 12 ? ["keine", "eine", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"][n] : String(n));
 
@@ -912,7 +658,6 @@ function renderHome() {
   const okUnits = M.units.filter((u) => u.n > 0 && !all.some((c) => c.u === u.ui) && unitStatus(u).noAmp === false && u.type === "stat").map((u) => esc(u.name));
   const todo = [
     [noWish, `✉️ ${noWish === 1 ? "1 Person" : noWish + " Personen"} nachfragen, ob sie Urlaub planen`, "pers", "none"],
-    [atoss, `📋 ${plural(atoss, "Wunsch", "Wünsche")} in ATOSS übertragen`, "pers", "atoss"],
     [over, `⚖️ ${over === 1 ? "1 Person hat" : over + " Personen haben"} mehr Tage gewünscht als zustehen`, "pers", "rest"],
     [M.warn.length, `🔎 ${plural(M.warn.length, "Hinweis", "Hinweise")} zu den Daten in Excel prüfen`, "rules", ""]
   ].filter((t) => t[0] > 0);
@@ -1198,14 +943,12 @@ const PCOLS = [
   { k: "total", t: "Gewünscht (AT)", v: (p) => p.total, num: 1 },
   { k: "anspruch", t: "Anspruch", v: (p) => p.anspruch, num: 1 },
   { k: "rest", t: "Rest", v: (p) => p.rest, num: 1 },
-  { k: "atoss", t: "ATOSS offen", v: (p) => p.atossOpen, num: 1 },
   { k: "lv", t: "Engpass", v: (p) => p.maxLv, num: 1 }
 ];
-const PF = { "": "alle", none: "ohne Wunsch", atoss: "ATOSS offen", rest: "mit Anspruch / überzogen zuerst" };
+const PF = { "": "alle", none: "ohne Wunsch", rest: "mit Anspruch / überzogen zuerst" };
 function renderPers(V) {
   let ps = V.ps.slice();
   if (S.pf === "none") ps = ps.filter((i) => !M.persons[i].wishes.length);
-  if (S.pf === "atoss") ps = ps.filter((i) => M.persons[i].atossOpen > 0);
   const col = PCOLS.find((c) => c.k === S.sort.k) || PCOLS[1], dir = S.sort.dir;
   const cmp = (a, b) => {
     const x = col.v(M.persons[a]), y = col.v(M.persons[b]);
@@ -1215,16 +958,16 @@ function renderPers(V) {
   ps.sort(cmp);
   const rows = ps.map((pi) => {
     const p = M.persons[pi];
-    const chips = p.wishes.map((w) => `<span class="wchip${w.lv >= 2 ? " c" + w.lv : ""}" title="${esc((w.bem ? w.bem + " · " : "") + "verschiebbar: " + (w.flex || "k. A.") + (w.atoss ? " · in ATOSS übertragen " + fmtY(w.atoss) : " · noch nicht in ATOSS"))}">${fmt(w.von)}–${fmt(w.bis)} · ${w.wd} AT${w.atoss ? " ✓" : ""}</span>`).join("") || `<span class="muted">noch keine Wünsche</span>`;
+    const chips = p.wishes.map((w) => `<span class="wchip${w.lv >= 2 ? " c" + w.lv : ""}" title="${esc((w.bem ? w.bem + " · " : "") + "verschiebbar: " + (w.flex || "k. A."))}">${fmt(w.von)}–${fmt(w.bis)} · ${w.wd} AT</span>`).join("") || `<span class="muted">noch keine Wünsche</span>`;
     return `<tr><td style="white-space:nowrap">${dot(p.fi)}${plink(pi)}</td><td>${esc(p.fach)}</td><td>${esc(p.st.join(", "))}</td><td>${p.tz ? tzBadge(p) : "Mo–Fr"}</td>
       <td class="num">${p.wishes.length}</td><td class="num">${p.total}</td><td class="num">${p.anspruch ?? ""}</td><td class="num ${p.rest != null && p.rest < 0 ? "neg" : ""}">${p.rest ?? ""}</td>
-      <td class="num">${p.atossOpen || ""}</td><td>${lvPill(p.maxLv)}</td><td>${chips}</td></tr>`;
+      <td>${lvPill(p.maxLv)}</td><td>${chips}</td></tr>`;
   }).join("");
-  $("t-pers").innerHTML = `<div class="pfbar noprint"><b>Anzeigen:</b> <div class="seg" id="pfSeg">${["", "none", "atoss"].map((k) => `<button data-pf="${k}" class="${S.pf === k ? "on" : ""}">${PF[k]}</button>`).join("")}</div>
+  $("t-pers").innerHTML = `<div class="pfbar noprint"><b>Anzeigen:</b> <div class="seg" id="pfSeg">${["", "none"].map((k) => `<button data-pf="${k}" class="${S.pf === k ? "on" : ""}">${PF[k]}</button>`).join("")}</div>
       <span class="muted">${plural(ps.length, "Person", "Personen")} · Klick auf eine Spaltenüberschrift = sortieren · Klick auf einen Namen = Personenansicht</span></div>
-    <div class="legend">Wunsch-Kästchen mit farbigem Rand = liegt in einem Engpass · ✓ = in ATOSS übertragen · AT = eigene Arbeitstage (Teilzeit berücksichtigt) · TZ = Teilzeit</div>
+    <div class="legend">Wunsch-Kästchen mit farbigem Rand = liegt in einem Engpass · AT = eigene Arbeitstage (Teilzeit berücksichtigt) · TZ = Teilzeit</div>
     <table class="list" id="ptable"><thead><tr>${PCOLS.map((c) => `<th class="sort${c.num ? " num" : ""}${c.k === col.k ? (dir > 0 ? " asc" : " desc") : ""}" data-sk="${c.k}">${c.t}</th>`).join("")}<th>Wünsche (Zeitraum · AT)</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="11">Keine Treffer.</td></tr>`}</tbody></table>`;
+    <tbody>${rows || `<tr><td colspan="10">Keine Treffer.</td></tr>`}</tbody></table>`;
   $("pfSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.pf = b.dataset.pf; render(); };
   $("ptable").querySelector("thead").onclick = (e) => {
     const th = e.target.closest("th[data-sk]"); if (!th) return;
@@ -1250,7 +993,7 @@ function renderOne(V) {
     return { cls: "pw0", txt: "", title: when + " · im Dienst" };
   };
   const wrows = p.wishes.map((w) => `<tr><td>${range(w.von, w.bis)}</td><td class="num">${w.wd}</td><td>${flexBadge(w.flex)}</td><td>${lvPill(w.lv) || '<span class="muted">–</span>'}</td>
-    <td>${w.atoss ? "✓ " + fmtY(w.atoss) : '<span class="neg">offen</span>'}</td><td>${esc(w.bem)}</td><td class="num muted">${w.row}</td></tr>`).join("");
+    <td>${esc(w.bem)}</td><td class="num muted">${w.row}</td></tr>`).join("");
   $("t-one").innerHTML = `
     <div class="phead noprint"><label>Person: <select class="sel" id="oneSel">${opts}</select></label><span class="muted">Liste folgt den Filtern oben</span></div>
     <div class="panel"><div class="phead"><h2>${dot(p.fi)}${esc(p.name)}</h2><span>${esc(p.fach || "ohne Fachrichtung")}</span><span class="muted">${esc(p.st.join(", ") || "keine Station")}</span>${p.tz ? tzBadge(p) : '<span class="muted">Vollzeit Mo–Fr</span>'}</div>
@@ -1259,14 +1002,13 @@ function renderOne(V) {
         <div class="kpi"><div class="v">${p.total}</div><div class="l">gewünschte Arbeitstage</div></div>
         <div class="kpi"><div class="v">${p.anspruch ?? "–"}</div><div class="l">Anspruch${p.anspruch == null ? " (Team, Spalte G leer)" : ""}</div></div>
         <div class="kpi${p.rest != null && p.rest < 0 ? " bad" : ""}"><div class="v${p.rest != null && p.rest < 0 ? " neg" : ""}">${p.rest ?? "–"}</div><div class="l">Rest</div></div>
-        <div class="kpi${p.atossOpen ? " warn" : ""}"><div class="v">${p.atossOpen}</div><div class="l">noch nicht in ATOSS</div></div>
         <div class="kpi"><div class="v">${p.maxLv >= 2 ? lvPill(p.maxLv) : "–"}</div><div class="l">höchster Engpass</div></div>
       </div>
       <div class="legend"><span><span class="sw" style="background:#c9d6ee"></span>Urlaubswunsch (U)</span><span><span class="sw" style="background:var(--l2)"></span><span class="sw" style="background:var(--l3)"></span><span class="sw" style="background:var(--l4)"></span>Wunsch in Engpass</span>
         <span><span class="sw" style="background:repeating-linear-gradient(135deg,#e4e9f3 0 3px,#f7f8fb 3px 6px)"></span>Teilzeit-frei</span><span><span class="sw" style="background:var(--we)"></span>Wochenende</span><span><span class="sw" style="background:var(--hol)"></span>Feiertag/frei</span></div>
       ${heatTable(V, pcell).replace('<table class="heat"', '<table class="heat" id="oneHeat"')}</div>
     <div class="panel"><h2>Wünsche</h2>
-      ${p.wishes.length ? `<table class="list"><thead><tr><th>Zeitraum</th><th class="num">AT</th><th>Verschiebbar</th><th>Engpass</th><th>ATOSS</th><th>Bemerkung</th><th class="num">Zeile</th></tr></thead><tbody>${wrows}</tbody></table>` : `<p class="muted">Noch keine Wünsche eingetragen.</p>`}
+      ${p.wishes.length ? `<table class="list"><thead><tr><th>Zeitraum</th><th class="num">AT</th><th>Verschiebbar</th><th>Engpass</th><th>Bemerkung</th><th class="num">Zeile</th></tr></thead><tbody>${wrows}</tbody></table>` : `<p class="muted">Noch keine Wünsche eingetragen.</p>`}
       <h2 style="margin-top:14px">Lage in den eigenen Bereichen</h2>
       <p>${p.units.map((ui) => { const u = M.units[ui]; const n = M.conflicts.filter((c) => c.u === ui && c.people.some((x) => x.p === pi)).length; return `${esc(unitTitle(u))} (${u.n} P., ${ampText(u)})${n ? ` – <b>${plural(n, "Engpass", "Engpässe")}</b> mit eigenem Wunsch` : ""}`; }).join("<br>") || "–"}</p></div>`;
   $("oneSel").onchange = (e) => { S.person = M.persons[+e.target.value].name; save(); render(); };
@@ -1358,7 +1100,7 @@ function showRange(i0, i1) {
   h += `<h4>Weg</h4>${who.length ? `<ul>${who.map((pi) => {
     const p = M.persons[pi], ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]);
     let pl = 0; for (let i = i0; i <= i1; i++) pl = Math.max(pl, p.lv[i]);
-    return `<li>${dot(p.fi)}${plink(pi)} ${lvPill(pl)} ${tzBadge(p)}<br><span class="muted">${esc(p.fach)} · ${esc(p.st.join(", "))}${i0 !== i1 ? ` · ${days(p)} AT` : ""}</span><br>${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)} ${flexBadge(w.flex)}${w.atoss ? "" : ' <span class="neg" style="font-size:11.5px">ATOSS offen</span>'}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}`).join("<br>")}</li>`;
+    return `<li>${dot(p.fi)}${plink(pi)} ${lvPill(pl)} ${tzBadge(p)}<br><span class="muted">${esc(p.fach)} · ${esc(p.st.join(", "))}${i0 !== i1 ? ` · ${days(p)} AT` : ""}</span><br>${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)} ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}`).join("<br>")}</li>`;
   }).join("")}</ul>` : "<p>niemand</p>"}`;
   h += `<h4>Betroffene Bereiche</h4>${units.length ? `<ul>${units.map((x) => `<li>${esc(unitTitle(x.u))}: ${x.c} von ${x.on} im Dienst weg ${lvPill(x.l)} <span class="muted">· ${ampText(x.u)}</span></li>`).join("")}</ul>` : "<p>keine</p>"}`;
   if (off.length) h += `<h4>Hat an diesem Wochentag ohnehin frei (Teilzeit)</h4><p>${off.map((pi) => esc(M.persons[pi].name)).join(", ")}</p>`;
@@ -1434,14 +1176,16 @@ document.addEventListener("click", (e) => { const a = e.target.closest("[data-pe
 $("detailX").onclick = () => $("detail").classList.remove("open");
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
 
-// Zuletzt geöffnete Datei anbieten (nur Edge/Chrome)
+// Zuletzt geöffnete Datei (nur Edge/Chrome, nur wenn einmal per Ziehen-und-Ablegen geöffnet):
+// Erlaubt der Browser das Lesen noch (gleiche Sitzung oder »bei jedem Besuch zulassen«), wird sie ohne Klick geladen.
+// Sonst ein großer Knopf – der Browser verlangt dann einen Klick (Sicherheitsregel, lässt sich in der Seite nicht umgehen).
 (async () => {
   const h = await IDB.get();
-  if (h && h.name) {
-    fileHandle = h;
-    $("lastFile").innerHTML = `<p style="margin-top:14px">Zuletzt geöffnet: <b>${esc(h.name)}</b> <button class="btn" id="btnLast">wieder laden</button></p>`;
-    $("btnLast").onclick = reload;
-  }
+  if (!h || !h.name) return;
+  fileHandle = h;
+  try { if (h.queryPermission && (await h.queryPermission({ mode: "read" })) === "granted") { await loadFile(await h.getFile()); return; } } catch (e) {}
+  $("lastFile").innerHTML = `<p style="margin-top:14px"><button class="btn" id="btnLast" style="background:#2e7d32;color:#fff;border-color:#2e7d32;font-weight:600">»${esc(h.name)}« laden</button><br><span style="font-size:12.5px">zuletzt geöffnete Datei – ein Klick genügt</span></p>`;
+  $("btnLast").onclick = reload;
 })();
 </script>
 </body>

@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
-"""Baut aus dem Quelltext die fertige, einzelne Datei Urlaubsansicht.html.
+"""Baut aus den Quelltexten die fertigen, einzelnen HTML-Dateien.
 
 Aufruf (aus dem Ordner urlaubsplanung/):
     python3 ansicht/baue_ansicht.py
 
-Was passiert: In ansicht/urlaubsansicht.src.html wird der Platzhalter <!--SHEETJS-->
-durch die Bibliothek ansicht/xlsx.full.min.js (SheetJS 0.18.5, Apache-2.0) ersetzt.
-Optional: ansicht/logo.svg bzw. logo.png wird als Logo in den Kopf eingebettet.
-Ergebnis: ../Urlaubsansicht.html – eine Datei, die ohne Internet funktioniert.
+Ergebnis (je eine Datei, die ohne Internet funktioniert):
+    ../Urlaubsansicht.html  – Leitung (aus ansicht/urlaubsansicht.src.html)
+    ../Teamansicht.html     – Kolleg:innen (aus ansicht/teamansicht.src.html)
+
+Was passiert in jedem Quelltext:
+    <!--KERN-->   → ansicht/kern.js (Excel einlesen + Ampel berechnen, gemeinsam für beide Seiten)
+    <!--SHEETJS--> → ansicht/xlsx.full.min.js (SheetJS 0.18.5, Apache-2.0)
+    <!--LOGO-->   → ansicht/logo.svg bzw. logo.png als eingebettetes Bild (optional)
 """
+import base64
 from pathlib import Path
 
 hier = Path(__file__).resolve().parent
-src = (hier / "urlaubsansicht.src.html").read_text(encoding="utf-8")
 lib = (hier / "xlsx.full.min.js").read_text(encoding="utf-8")
-platzhalter = "<!--SHEETJS-->"
-if src.count(platzhalter) != 1:
-    raise SystemExit(f"Platzhalter {platzhalter} muss genau einmal im Quelltext stehen.")
-if "</script" in lib.lower():
-    raise SystemExit("Bibliothek enthält '</script' – Einbetten würde die Seite zerstören.")
-# Logo (optional): ansicht/logo.svg oder ansicht/logo.png wird als data:-URI eingebettet,
-# damit die Seite eine einzelne Datei ohne Internet bleibt. Fehlt die Datei, bleibt der Kopf ohne Logo.
-import base64
+kern = (hier / "kern.js").read_text(encoding="utf-8")
+for name, inhalt in (("xlsx.full.min.js", lib), ("kern.js", kern)):
+    if "</script" in inhalt.lower():
+        raise SystemExit(f"{name} enthält '</script' – Einbetten würde die Seite zerstören.")
+
+# Logo (optional): wird als data:-URI eingebettet, damit jede Seite eine einzelne Datei ohne Internet bleibt.
 logo_html = ""
 for name, mime in (("logo.svg", "image/svg+xml"), ("logo.png", "image/png")):
     f = hier / name
@@ -31,7 +33,16 @@ for name, mime in (("logo.svg", "image/svg+xml"), ("logo.png", "image/png")):
         break
 else:
     print("Kein Logo gefunden (ansicht/logo.svg oder ansicht/logo.png) – Kopf ohne Logo.")
-src = src.replace("<!--LOGO-->", logo_html)
-ziel = hier.parent / "Urlaubsansicht.html"
-ziel.write_text(src.replace(platzhalter, "<script>" + lib + "</script>"), encoding="utf-8")
-print(f"geschrieben: {ziel} ({ziel.stat().st_size // 1024} KB)")
+
+SEITEN = (("urlaubsansicht.src.html", "Urlaubsansicht.html"), ("teamansicht.src.html", "Teamansicht.html"))
+for quelle, ziel_name in SEITEN:
+    src = (hier / quelle).read_text(encoding="utf-8")
+    for platzhalter in ("<!--SHEETJS-->", "<!--KERN-->"):
+        if src.count(platzhalter) != 1:
+            raise SystemExit(f"{quelle}: Platzhalter {platzhalter} muss genau einmal im Quelltext stehen.")
+    src = src.replace("<!--LOGO-->", logo_html)
+    src = src.replace("<!--KERN-->", kern)
+    src = src.replace("<!--SHEETJS-->", "<script>" + lib + "</script>")
+    ziel = hier.parent / ziel_name
+    ziel.write_text(src, encoding="utf-8")
+    print(f"geschrieben: {ziel} ({ziel.stat().st_size // 1024} KB)")

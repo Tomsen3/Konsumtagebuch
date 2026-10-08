@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teamurlaubsplanung Kreativtherapie</title>
+<!--
+  Teamansicht für die Kolleg:innen – liest dieselbe Excel-Datei (Urlaubswuensche_2027.xlsx / .xlsm) wie die
+  Leitungsansicht (Urlaubsansicht.html), zeigt aber nur, was für die Absprache im Team nötig ist:
+  wer wann Urlaub wünscht und wo es schon eng wird. Bewusst NICHT angezeigt: Bemerkung, »verschiebbar«,
+  ATOSS-Status, Urlaubsanspruch/Rest, Datenhinweise, Ampel-Einstellungen.
+  Läuft komplett lokal im Browser: kein Server, keine Internetverbindung, es werden keine Daten verschickt.
+  Die Excel-Datei wird nur gelesen, nie verändert.
+
+  QUELLTEXT: ansicht/teamansicht.src.html  →  mit ansicht/baue_ansicht.py zu Teamansicht.html zusammenbauen
+  (dabei werden ansicht/kern.js = Einlesen + Ampel und SheetJS ansicht/xlsx.full.min.js eingebettet).
+  Doku: Dokumentation_Teamansicht.md
+-->
+<style>
+:root{
+  --navy:#1F3864; --navy-2:#2F5496; --ink:#1d2433; --muted:#5b6475; --line:#dde2ea; --bg:#f4f6fa; --card:#fff;
+  --we:#eef0f4; --hol:#e4e0ef;
+  --l1:#d9efdc; --l1-ink:#1e6b2e;
+  --l2:#ffe58f; --l2-ink:#7a5600;
+  --l3:#f7a8a8; --l3-ink:#8a1010;
+  --l4:#b00020; --l4-ink:#fff;
+  --wish:#5b7bb5;
+  --cw-week:34px; --cw-day:22px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+button,select,input{font:inherit}
+header.top{background:var(--navy);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+header.top h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
+header.top .logo{height:56px;width:auto;background:#fff;border-radius:8px;padding:3px 6px}
+header.top .file{font-size:12.5px;opacity:.85;flex:1;min-width:200px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--navy-2)}
+header.top .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
+header.top .btn.primary{background:#fff;color:var(--navy);font-weight:600;border-color:#fff}
+main{padding:16px 20px 40px;max-width:100%}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.printinfo{display:none}
+
+.drop{max-width:720px;margin:40px auto;background:var(--card);border:2px dashed #b9c3d6;border-radius:16px;padding:36px;text-align:center}
+.drop.over{border-color:var(--navy-2);background:#eef3ff}
+.drop h2{margin:0 0 6px;color:var(--navy)}
+.drop p{color:var(--muted);margin:6px 0}
+.drop .btn{margin-top:14px}
+.drop ol{text-align:left;display:inline-block;color:var(--muted);margin:18px 0 0}
+
+.filters{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-start;margin-bottom:14px}
+.fgroup{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fgroup > label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer;user-select:none}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 12px;cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff}
+.filters select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.panel h2{margin:0 0 2px;font-size:15.5px;color:var(--navy)}
+.panel .sub{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+.lage{font-size:15px;margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(0,0,0,.06)}
+
+/* Jahresübersicht Monat × Tag */
+table.heat{border-collapse:separate;border-spacing:2px;width:100%;table-layout:fixed;font-size:10.5px}
+table.heat th{font-weight:600;color:var(--muted);font-size:10px;padding:0}
+table.heat th.ml{width:62px;text-align:left;color:var(--navy);font-size:11.5px}
+table.heat td{height:22px;text-align:center;border-radius:3px;padding:0;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
+table.heat td.na{background:transparent;cursor:default}
+table.heat td.out{background:#f7f8fb;cursor:default}
+table.heat td.we{background:var(--we);color:#b0b6c3;font-weight:400}
+table.heat td.hol{background:var(--hol);color:#7d6fa6;font-weight:400}
+table.heat td.lv0{background:#f3f5f9;color:#9aa3b5}
+table.heat td.lv1{background:var(--l1);color:var(--l1-ink)} table.heat td.lv2{background:var(--l2);color:var(--l2-ink)}
+table.heat td.lv3{background:var(--l3);color:var(--l3-ink)} table.heat td.lv4{background:var(--l4);color:#fff}
+table.heat td.mo{box-shadow:inset 2px 0 0 #c6cee0}
+table.heat td.today{outline:2px solid #ED7D31;outline-offset:-2px}
+table.heat td.sel{outline:2px solid var(--navy);outline-offset:-2px}
+
+/* Kalender Personen × Wochen/Tage */
+.calwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 150px)}
+table.cal{border-collapse:separate;border-spacing:0;font-size:12px}
+table.cal th,table.cal td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;text-align:center;height:26px}
+table.cal thead th{position:sticky;background:#f8f9fc;z-index:2;font-weight:600;color:var(--muted)}
+table.cal thead tr.m th{top:0;height:24px;color:var(--navy);font-size:12px;text-align:left;padding-left:6px}
+table.cal thead tr.c th{top:24px;font-size:10.5px;line-height:1.1}
+table.cal .lh{position:sticky;left:0;z-index:3;background:#fff;text-align:left;padding:0 10px;min-width:200px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.cal thead .lh{z-index:4;background:#f8f9fc}
+table.cal td.c{min-width:var(--cw);max-width:var(--cw);width:var(--cw);cursor:pointer;font-weight:600;font-size:11px}
+table.cal td.we{background:var(--we)} table.cal td.hol{background:var(--hol)}
+table.cal th.we{background:#e8ebf1} table.cal th.hol{background:#ddd7ec}
+table.cal th.today,table.cal td.today{box-shadow:inset 2px 0 0 #ED7D31, inset -2px 0 0 #ED7D31}
+table.cal th.mstart,table.cal td.mstart{border-left:2px solid #9aa7c2}
+table.cal td.w{background:var(--wish);color:#fff}
+table.cal td.lv1{background:var(--l1);color:var(--l1-ink)} table.cal td.lv2{background:var(--l2);color:var(--l2-ink)}
+table.cal td.lv3{background:var(--l3);color:var(--l3-ink)} table.cal td.lv4{background:var(--l4);color:#fff}
+table.cal tr.sum td.lh{font-weight:700;color:var(--navy)}
+table.cal tr.sum td{border-bottom:2px solid #c6cee0}
+table.cal td.sel{outline:2px solid var(--navy);outline-offset:-2px}
+
+/* Liste der Wünsche */
+table.list{width:100%;border-collapse:collapse;font-size:13px}
+table.list th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);padding:5px 8px}
+table.list td{padding:5px 8px;border-bottom:1px solid #f0f2f6}
+.pill{display:inline-block;border-radius:999px;padding:0 8px;font-size:11.5px;font-weight:600}
+.pill.lv2{background:var(--l2);color:var(--l2-ink)} .pill.lv3{background:var(--l3);color:var(--l3-ink)} .pill.lv4{background:var(--l4);color:#fff}
+
+aside.detail{position:fixed;top:0;right:0;height:100vh;width:min(400px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(20,30,60,.12);padding:16px 18px;overflow:auto;z-index:50;transform:translateX(105%);transition:transform .18s}
+aside.detail.open{transform:none}
+aside.detail h3{margin:0 0 4px;color:var(--navy);padding-right:26px}
+aside.detail .x{position:absolute;top:10px;right:12px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
+aside.detail ul{padding-left:18px;margin:4px 0}
+aside.detail li{margin:3px 0}
+
+@page{size:A4 landscape;margin:9mm}
+@media print{
+  header.top .btn, .filters, aside.detail, .noprint{display:none!important}
+  html,body{background:#fff;font-size:11px}
+  main{padding:0}
+  header.top{background:#fff;color:#000;border-bottom:2px solid #000;padding:0 0 4px}
+  header.top h1{font-size:15px}
+  header.top .logo{height:32px;padding:0}
+  header.top .file{opacity:1;font-size:10px}
+  .printinfo{display:block;font-size:10px;color:#333;margin:4px 0 6px}
+  .panel{padding:6px 8px;margin-bottom:6px;border-radius:6px;break-inside:avoid}
+  table.heat{font-size:8.5px;border-spacing:1px}
+  table.heat td{height:15px}
+  .calwrap{max-height:none;overflow:visible;border:0}
+  .cal-panel,.list-panel{break-before:page}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <!--LOGO-->
+  <h1>Teamurlaubsplanung Kreativtherapie</h1>
+  <div class="file" id="fileinfo">Keine Datei geladen</div>
+  <button class="btn primary" id="btnLoad">Excel-Datei laden</button>
+  <button class="btn hidden" id="btnReload" title="Dieselbe Datei erneut einlesen (nach neuen Einträgen)">Neu laden</button>
+  <button class="btn hidden" id="btnPrint" title="Druckt die Ansicht – eingestellt auf A4 quer">Drucken (A4 quer)</button>
+  <input type="file" id="fileInput" accept=".xlsx,.xlsm" class="hidden">
+</header>
+
+<main>
+  <section class="drop" id="drop">
+    <h2>Wer ist wann im Urlaub?</h2>
+    <p>Datei <b>Urlaubswuensche_2027.xlsx</b> (oder <b>.xlsm</b>) hier hineinziehen oder auswählen.</p>
+    <p>Alles bleibt auf diesem Rechner. Die Excel-Datei wird nur gelesen, nicht verändert.</p>
+    <button class="btn" id="btnLoad2" style="background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600">Excel-Datei auswählen</button>
+    <div id="lastFile"></div>
+    <ol>
+      <li>Liegt die Datei in Teams/SharePoint: über den synchronisierten OneDrive-Ordner im Explorer auswählen oder vorher herunterladen.</li>
+      <li>Passiert beim Klick nichts: die Excel-Datei aus dem Explorer einfach in dieses Fenster ziehen.</li>
+      <li>Eigene Wünsche trägst du wie gewohnt in der Excel-Datei ein (Blatt »Mein Urlaub« oder »Wünsche«), dann speichern und hier »Neu laden«.</li>
+    </ol>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="printinfo" id="printinfo"></div>
+    <div class="filters" id="filters">
+      <div class="fgroup"><label>Fachteam</label><div class="chips" id="fFach"></div></div>
+      <div class="fgroup"><label>Einsatzort</label><div class="chips" id="fOrt"></div></div>
+      <div class="fgroup"><label>Zeitraum</label>
+        <div style="display:flex;gap:6px;align-items:center"><select id="fM0"></select><span>bis</span><select id="fM1"></select></div>
+      </div>
+      <div class="fgroup"><label>Kalender-Raster</label>
+        <div class="seg" id="fView"><button data-v="w">Wochen</button><button data-v="d">Tage</button></div>
+      </div>
+    </div>
+
+    <div class="panel"><p class="lage" id="lage"></p></div>
+    <div class="panel" id="p-heat"></div>
+    <div class="panel cal-panel" id="p-cal"></div>
+    <div class="panel list-panel" id="p-list"></div>
+  </section>
+</main>
+
+<aside class="detail" id="detail"><button class="x" id="detailX" aria-label="Schließen">×</button><div id="detailBody"></div></aside>
+<!--SHEETJS-->
+<script>
+"use strict";
+<!--KERN-->
+
+/* ===================== Zustand =====================
+   sel = gewähltes Team: "" = alle · "fach:<Name>" = Fachteam · "stat:<Name>" = Einsatzort (intern heißen Einsatzorte »stat«). */
+let M = null, fileHandle = null;
+const KEY = "teamansicht.state";   // eigener Schlüssel, getrennt von der Leitungsansicht
+const S = Object.assign({ sel: "", view: "w", m0: null, m1: null }, lsGet(KEY, {}));
+const save = () => lsSet(KEY, { sel: S.sel, view: S.view });
+
+/* Gewähltes Team → Personen, Bereich (für die Ampel) und Tageswerte */
+function auswahl() {
+  const u = S.sel ? M.units.find((x) => ukey(x) === S.sel) : null;
+  const ps = u ? u.members.slice() : M.persons.map((p, i) => i);
+  ps.sort((a, b) => M.persons[a].name.localeCompare(M.persons[b].name, "de"));
+  let i0 = 0, i1 = M.N - 1;
+  if (S.m0 != null) while (i0 < M.N - 1 && monthKey(M.ser[i0]) < S.m0) i0++;
+  if (S.m1 != null) while (i1 > 0 && monthKey(M.ser[i1]) > S.m1) i1--;
+  // Je Tag: wie viele aus dem Team fehlen und welche Ampelstufe gilt.
+  // Ein Team: dessen Ampel (Regeln aus Excel). Alle: höchste Stufe aller Bereiche.
+  const lv = new Uint8Array(M.N), abs = new Uint8Array(M.N);
+  for (let i = 0; i < M.N; i++) {
+    let a = 0; for (const pi of ps) a += M.persons[pi].abs[i];
+    let l = 0;
+    if (u) l = u.lv[i]; else for (const x of M.units) l = Math.max(l, x.lv[i]);
+    abs[i] = a; lv[i] = l || (a ? 1 : 0);
+  }
+  return { u, ps, i0, i1, lv, abs, name: u ? u.name : "alle Teams" };
+}
+
+/* ===================== Datei laden ===================== */
+const IDB = {
+  open() { return new Promise((res, rej) => { const r = indexedDB.open("teamansicht", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async put(v) { try { const db = await this.open(); db.transaction("h", "readwrite").objectStore("h").put(v, "file"); } catch (e) {} },
+  async get() { try { const db = await this.open(); return await new Promise((res) => { const r = db.transaction("h").objectStore("h").get("file"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch (e) { return null; } }
+};
+function pickFile() { $("fileInput").click(); }
+async function reload() {
+  if (fileHandle) {
+    try {
+      if (fileHandle.queryPermission && (await fileHandle.queryPermission({ mode: "read" })) !== "granted") await fileHandle.requestPermission({ mode: "read" });
+      await loadFile(await fileHandle.getFile()); return;
+    } catch (e) { alert("Die Datei konnte nicht erneut gelesen werden.\n\nBitte auf »Andere Datei« klicken und die Excel-Datei neu auswählen."); return; }
+  }
+  pickFile();
+}
+async function loadFile(file) {
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellFormula: false, cellHTML: false, cellText: false });
+    M = build(wb, { nurExcel: true });   // Ampel nur nach den Regeln in Excel – nie nach Einstellungen in diesem Browser
+    const d = new Date(file.lastModified);
+    $("fileinfo").textContent = `${file.name} · Stand ${d.toLocaleDateString("de-DE")} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+    $("drop").classList.add("hidden"); $("app").classList.remove("hidden");
+    $("btnReload").classList.remove("hidden"); $("btnPrint").classList.remove("hidden");
+    $("btnLoad").textContent = "Andere Datei";
+    setupFilters(); render();
+  } catch (e) {
+    alert("Die Datei konnte nicht gelesen werden.\n\n" + (e && e.message ? e.message : e));
+  }
+}
+
+/* ===================== Auswahl oben ===================== */
+function setupFilters() {
+  if (S.sel && !M.units.some((u) => ukey(u) === S.sel)) S.sel = "";
+  const chip = (key, label) => `<span class="chip${S.sel === key ? " on" : ""}" data-sel="${esc(key)}">${esc(label)}</span>`;
+  // Nur Bereiche mit Personen anbieten (leere Zeilen der Einstellungen-Liste sind für Kolleg:innen ohne Nutzen)
+  $("fFach").innerHTML = chip("", "alle") + M.units.filter((u) => u.type === "fach" && u.n).map((u) => chip(ukey(u), u.name)).join("");
+  $("fOrt").innerHTML = M.units.filter((u) => u.type === "stat" && u.n).map((u) => chip(ukey(u), u.name)).join("");
+  const months = []; for (let i = 0; i < M.N; i++) { const k = monthKey(M.ser[i]); if (!months.includes(k)) months.push(k); }
+  const opt = (k) => `<option value="${k}">${MON_L[k % 12]} ${Math.floor(k / 12)}</option>`;
+  $("fM0").innerHTML = months.map(opt).join(""); $("fM1").innerHTML = months.map(opt).join("");
+  if (S.m0 == null || !months.includes(S.m0)) S.m0 = months[0];
+  if (S.m1 == null || !months.includes(S.m1)) S.m1 = months[Math.min(11, months.length - 1)];
+  $("fM0").value = S.m0; $("fM1").value = S.m1;
+}
+function syncChips() {
+  document.querySelectorAll("#filters .chip").forEach((c) => c.classList.toggle("on", c.dataset.sel === S.sel));
+  document.querySelectorAll("#fView button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.view));
+}
+
+/* ===================== Darstellung ===================== */
+const LV_TXT = ["", "weg, unkritisch", "knapp", "eng", "niemand mehr da"];
+const pill = (l) => (l >= 2 ? `<span class="pill lv${l}">${LV_TXT[l]}</span>` : "");
+const proseName = (n) => { const m = String(n).match(/^([^,]+),\s*(.+)$/); return m ? m[2] + " " + m[1] : n; };
+function idxOf(y, m, d) { const dt = new Date(Date.UTC(y, m - 1, d)); if (dt.getUTCMonth() !== m - 1) return -1; const i = date2ser(y, m, d) - M.start; return i >= 0 && i < M.N ? i : -1; }
+
+function render() {
+  if (!M) return;
+  const A = auswahl();
+  syncChips();
+  $("printinfo").textContent = `Team: ${A.name} · ${MON_L[S.m0 % 12]} ${Math.floor(S.m0 / 12)} – ${MON_L[S.m1 % 12]} ${Math.floor(S.m1 / 12)} · gedruckt ${new Date().toLocaleDateString("de-DE")}`;
+  renderLage(A); renderHeat(A); renderCal(A); renderList(A);
+}
+
+/* Ein Satz zur Lage: wie viele Wünsche, wie viele Tage knapp/eng */
+function renderLage(A) {
+  let wishes = 0; for (const pi of A.ps) wishes += M.persons[pi].wishes.filter((w) => w.bis >= M.ser[A.i0] && w.von <= M.ser[A.i1]).length;
+  let knapp = 0, eng = 0;
+  for (let i = A.i0; i <= A.i1; i++) if (M.work[i]) { if (A.lv[i] === 2) knapp++; else if (A.lv[i] >= 3) eng++; }
+  const wer = A.u ? `Im Team <b>${esc(A.name)}</b> (${plural(A.ps.length, "Person", "Personen")})` : `In allen Teams (${plural(A.ps.length, "Person", "Personen")})`;
+  let t = `${wer} sind im gewählten Zeitraum ${plural(wishes, "Urlaubswunsch", "Urlaubswünsche")} eingetragen. `;
+  if (A.u && A.u.th.g == null && A.u.th.h == null && A.u.th.d == null) t += "Für dieses Team ist keine Ampel hinterlegt – grün heißt hier nur »jemand ist weg«.";
+  else if (!knapp && !eng) t += "Es gibt noch <b>keine knappen Tage</b>.";
+  else t += `${eng ? `An <b>${plural(eng, "Arbeitstag", "Arbeitstagen")}</b> wird es <b>eng</b> (rot)` : ""}${eng && knapp ? ", an " : knapp ? "An " : ""}${knapp ? `<b>${plural(knapp, "Arbeitstag", "Arbeitstagen")}</b> ist es <b>knapp</b> (gelb)` : ""}. Bitte für neue Wünsche möglichst andere Zeiten wählen oder vorher im Team absprechen.`;
+  $("lage").innerHTML = t;
+}
+
+function legend() {
+  return `<div class="legend">
+    <span><span class="sw" style="background:#f3f5f9"></span>niemand weg</span>
+    <span><span class="sw" style="background:var(--l1)"></span>jemand weg, noch Platz</span>
+    <span><span class="sw" style="background:var(--l2)"></span>knapp – keiner mehr dazu</span>
+    <span><span class="sw" style="background:var(--l3)"></span>eng</span>
+    <span><span class="sw" style="background:var(--l4)"></span>niemand mehr da</span>
+    <span><span class="sw" style="background:var(--we)"></span>Wochenende</span>
+    <span><span class="sw" style="background:var(--hol)"></span>Feiertag/frei</span>
+    <span><span class="sw" style="background:#fff;border:2px solid #ED7D31"></span>heute</span></div>`;
+}
+
+/* Jahresübersicht: Zeile = Monat, Spalte = Tag 1–31, Zahl = so viele aus dem Team weg */
+function renderHeat(A) {
+  const today = todaySer();
+  const ks = []; for (let i = A.i0; i <= A.i1; i++) { const k = monthKey(M.ser[i]); if (ks[ks.length - 1] !== k) ks.push(k); }
+  let h = `<table class="heat"><thead><tr><th class="ml"></th>${Array.from({ length: 31 }, (_, d) => `<th>${d + 1}</th>`).join("")}</tr></thead><tbody>`;
+  for (const k of ks) {
+    const y = Math.floor(k / 12), m = (k % 12) + 1;
+    h += `<tr><th class="ml">${MON[m - 1]} ${String(y).slice(2)}</th>`;
+    for (let d = 1; d <= 31; d++) {
+      const i = idxOf(y, m, d);
+      if (i < 0) { h += `<td class="na"></td>`; continue; }
+      if (i < A.i0 || i > A.i1) { h += `<td class="out"></td>`; continue; }
+      const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear();
+      const extra = (wday(M.ser[i]) === 1 ? " mo" : "") + (M.ser[i] === today ? " today" : "");
+      if (!M.work[i]) { h += `<td class="${M.hol[i] ? "hol" : "we"}${extra}" data-d="${i}" title="${esc(when + " · " + (M.hol[i] || "Wochenende"))}"></td>`; continue; }
+      const a = A.abs[i], l = A.lv[i];
+      h += `<td class="lv${l}${extra}" data-d="${i}" title="${esc(`${when} · ${a} weg${l >= 2 ? " · " + LV_TXT[l] : ""} – klicken: wer?`)}">${a || ""}</td>`;
+    }
+    h += "</tr>";
+  }
+  $("p-heat").innerHTML = `<h2>Jahresübersicht – wann ist es schon eng?</h2>
+    <div class="sub">Zahl = so viele aus ${A.u ? "dem Team" : "allen Teams"} haben an dem Tag Urlaub gewünscht. Ein Klick auf einen Tag zeigt, wer weg ist.</div>
+    ${legend()}${h}</tbody></table>`;
+}
+
+/* Kalender: oben das Team gesamt (Ampel), darunter je Person ihre Wünsche */
+function columns(A) {
+  const cols = [];
+  if (S.view === "d") { for (let i = A.i0; i <= A.i1; i++) cols.push({ a: i, b: i }); return cols; }
+  const mon0 = -((wday(M.ser[0]) + 6) % 7);
+  for (let a = mon0; a < M.N; a += 7) {
+    const lo = Math.max(a, A.i0, 0), hi = Math.min(a + 6, A.i1, M.N - 1);
+    if (lo <= hi) cols.push({ a: lo, b: hi, mon: M.start + a });
+  }
+  return cols;
+}
+function renderCal(A) {
+  const day = S.view === "d", cols = columns(A), todayS = todaySer();
+  const colCls = cols.map((c) => {
+    let k = "";
+    if (day) { if (M.hol[c.a]) k += " hol"; else if (!M.work[c.a]) k += " we"; if (ser2date(M.ser[c.a]).getUTCDate() === 1) k += " mstart"; }
+    if (M.ser[c.a] <= todayS && todayS <= M.ser[c.b]) k += " today";
+    return k;
+  });
+  let mrow = `<th class="lh">${day ? "Tag" : "Kalenderwoche"}</th>`, cur = null, span = 0;
+  const mk = (c) => monthKey(day ? M.ser[c.a] : c.mon + 3);
+  cols.forEach((c) => { const k = mk(c); if (k !== cur) { if (span) mrow += `<th colspan="${span}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`; cur = k; span = 0; } span++; });
+  if (span) mrow += `<th colspan="${span}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`;
+  const crow = `<th class="lh"></th>` + cols.map((c, j) => day
+    ? `<th class="${colCls[j]}" title="${esc(M.hol[c.a] || "")}">${ser2date(M.ser[c.a]).getUTCDate()}<br><span style="font-weight:400">${WD[wday(M.ser[c.a])]}</span></th>`
+    : `<th class="${colCls[j]}" title="Woche ab ${fmtY(c.mon)}">${isoWeek(c.mon)}<br><span style="font-weight:400;font-size:9.5px">${fmt(c.mon).slice(0, 5)}</span></th>`).join("");
+  const plain = (j) => colCls[j].replace(/ (we|hol)/g, "");
+  // Zeile »Team gesamt«: höchste Stufe und meiste Abwesende in der Spalte
+  let body = `<tr class="sum"><td class="lh">${A.u ? "Team gesamt" : "alle Teams"}</td>`;
+  cols.forEach((c, j) => {
+    let n = 0, l = 0; for (let i = c.a; i <= c.b; i++) if (M.work[i]) { n = Math.max(n, A.abs[i]); l = Math.max(l, A.lv[i]); }
+    body += day && !M.work[c.a] ? `<td class="c${colCls[j]}"></td>` : `<td class="c lv${l}${plain(j)}" data-r="${c.a}:${c.b}">${n || ""}</td>`;
+  });
+  body += "</tr>";
+  for (const pi of A.ps) {
+    const p = M.persons[pi];
+    body += `<tr><td class="lh" title="${esc(p.name)}">${esc(p.name)}</td>`;
+    cols.forEach((c, j) => {
+      let n = 0, any = 0; for (let i = c.a; i <= c.b; i++) if (p.wish[i]) { any = 1; if (p.abs[i]) n++; }
+      const show = day ? any && (p.abs[c.a] || !M.work[c.a]) : n > 0;
+      body += show ? `<td class="c w${plain(j)}" data-r="${c.a}:${c.b}" ${day && !M.work[c.a] ? 'style="opacity:.45"' : ""}>${day ? "" : n}</td>` : `<td class="c${colCls[j]}" data-r="${c.a}:${c.b}"></td>`;
+    });
+    body += "</tr>";
+  }
+  $("p-cal").innerHTML = `<h2>Kalender – wer hat wann Urlaub gewünscht?</h2>
+    <div class="sub">Oberste Zeile = ${A.u ? "Team" : "alle"} gesamt (Farbe wie oben, Zahl = meiste gleichzeitig weg). Darunter je Person: ${day ? "blau = Urlaubswunsch" : "Zahl = Urlaubs-Arbeitstage in der Woche"}. Klick = wer ist weg.</div>
+    <div class="calwrap"><table class="cal" style="--cw:${day ? "var(--cw-day)" : "var(--cw-week)"}"><thead><tr class="m">${mrow}</tr><tr class="c">${crow}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* Liste aller Wünsche im Team, nach Datum */
+function renderList(A) {
+  const rows = [];
+  for (const pi of A.ps) for (const w of M.persons[pi].wishes) if (w.bis >= M.ser[A.i0] && w.von <= M.ser[A.i1]) rows.push(w);
+  rows.sort((a, b) => a.von - b.von || M.persons[a.p].name.localeCompare(M.persons[b.p].name, "de"));
+  // Stufe des Wunsches = höchste Stufe des gewählten Teams an den Tagen, an denen die Person fehlt
+  const lvOf = (w) => { const p = M.persons[w.p]; let m = 0; for (let s = Math.max(w.von, M.start); s <= Math.min(w.bis, M.start + M.N - 1); s++) { const i = s - M.start; if (p.abs[i]) m = Math.max(m, A.lv[i]); } return m; };
+  $("p-list").innerHTML = `<h2>Alle Urlaubswünsche ${A.u ? "im Team " + esc(A.name) : ""} nach Datum</h2>
+    <div class="sub">Nur Wünsche – genehmigt wird später durch die Leitung.</div>
+    ${rows.length ? `<table class="list"><thead><tr><th>Von</th><th>Bis</th><th>Name</th><th>Arbeitstage</th><th>Lage im Team</th></tr></thead><tbody>${rows.map((w) => `<tr><td>${fmtW(w.von)}${ser2date(w.von).getUTCFullYear()}</td><td>${fmtW(w.bis)}${ser2date(w.bis).getUTCFullYear()}</td><td>${esc(M.persons[w.p].name)}</td><td>${w.wd}</td><td>${pill(lvOf(w))}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">Noch keine Wünsche in diesem Zeitraum.</p>`}`;
+}
+
+/* Klick auf einen Tag / eine Woche: wer aus dem Team ist weg */
+function showRange(i0, i1) {
+  const A = auswahl();
+  const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
+  let h = `<h3>${i0 === i1 ? "Wer ist weg am" : "Wer ist weg in der Woche"}</h3><div class="muted">${when} · ${esc(A.u ? "Team " + A.name : "alle Teams")}</div>`;
+  if (i0 === i1 && !M.work[i0]) { openDetail(h + `<p>Kein Arbeitstag (${esc(M.hol[i0] || "Wochenende")}).</p>`); return; }
+  let l = 0, peak = 0; for (let i = i0; i <= i1; i++) if (M.work[i]) { l = Math.max(l, A.lv[i]); peak = Math.max(peak, A.abs[i]); }
+  const who = A.ps.filter((pi) => { for (let i = i0; i <= i1; i++) if (M.persons[pi].abs[i]) return true; return false; });
+  h += `<p>${pill(l)} ${i0 === i1 ? plural(peak, "Person", "Personen") + " weg" : `bis zu ${peak} gleichzeitig weg`}</p>`;
+  h += who.length ? `<ul>${who.map((pi) => { const p = M.persons[pi]; const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]); return `<li><b>${esc(proseName(p.name))}</b><br><span class="muted">${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}`).join(", ")}</span></li>`; }).join("")}</ul>` : "<p>niemand</p>";
+  openDetail(h);
+}
+function openDetail(h) { $("detailBody").innerHTML = h; $("detail").classList.add("open"); }
+
+/* ===================== Ereignisse ===================== */
+$("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = () => (fileHandle ? reload() : pickFile()); $("btnPrint").onclick = () => window.print();
+$("fileInput").onchange = (e) => { const f = e.target.files[0]; if (f) { fileHandle = null; loadFile(f); } e.target.value = ""; };
+const drop = $("drop");
+["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+document.addEventListener("drop", async (e) => {
+  const it = e.dataTransfer.items && e.dataTransfer.items[0];
+  if (it && it.getAsFileSystemHandle) { try { const h = await it.getAsFileSystemHandle(); if (h && h.kind === "file") { fileHandle = h; IDB.put(h); loadFile(await h.getFile()); return; } } catch (er) {} }
+  const f = e.dataTransfer.files[0]; if (f) { fileHandle = null; loadFile(f); }
+});
+$("filters").addEventListener("click", (e) => {
+  const c = e.target.closest(".chip"); if (c) { S.sel = c.dataset.sel; save(); render(); $("detail").classList.remove("open"); return; }
+  const b = e.target.closest("#fView button"); if (b) { S.view = b.dataset.v; save(); render(); }
+});
+$("fM0").onchange = (e) => { S.m0 = +e.target.value; if (S.m1 < S.m0) { S.m1 = S.m0; $("fM1").value = S.m1; } render(); };
+$("fM1").onchange = (e) => { S.m1 = +e.target.value; if (S.m0 > S.m1) { S.m0 = S.m1; $("fM0").value = S.m0; } render(); };
+const markSel = (td) => { document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); };
+$("p-heat").onclick = (e) => { const td = e.target.closest("td[data-d]"); if (!td) return; markSel(td); showRange(+td.dataset.d, +td.dataset.d); };
+$("p-cal").onclick = (e) => { const td = e.target.closest("td[data-r]"); if (!td) return; markSel(td); const [a, b] = td.dataset.r.split(":").map(Number); showRange(a, b); };
+$("detailX").onclick = () => $("detail").classList.remove("open");
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
+
+// Zuletzt geöffnete Datei (nur Edge/Chrome, nur wenn einmal per Ziehen-und-Ablegen geöffnet):
+// Erlaubt der Browser das Lesen noch (gleiche Sitzung oder »bei jedem Besuch zulassen«), wird sie ohne Klick geladen.
+// Sonst ein großer Knopf – der Browser verlangt dann einen Klick (Sicherheitsregel, lässt sich in der Seite nicht umgehen).
+(async () => {
+  const h = await IDB.get();
+  if (!h || !h.name) return;
+  fileHandle = h;
+  try { if (h.queryPermission && (await h.queryPermission({ mode: "read" })) === "granted") { await loadFile(await h.getFile()); return; } } catch (e) {}
+  $("lastFile").innerHTML = `<p style="margin-top:14px"><button class="btn" id="btnLast" style="background:#2e7d32;color:#fff;border-color:#2e7d32;font-weight:600">»${esc(h.name)}« laden</button><br><span style="font-size:12.5px">zuletzt geöffnete Datei – ein Klick genügt</span></p>`;
+  $("btnLast").onclick = reload;
+})();
+</script>
+</body>
+</html>

@@ -20,10 +20,25 @@ Option Explicit
 '
 '  Der Knopf "Wunsch eintragen" muss auf das Makro "WunschEintragen"
 '  zeigen (Rechtsklick auf den Knopf -> Makro zuweisen).
+'
+'  Fuer die Leitung (Alt+F8, ab 08.10.2026):
+'   PlanungFreigeben      - wenn Einstellungen und Team fertig sind:
+'                           Team + Einstellungen ausgeblendet, Wuensche
+'                           und Anleitung nur lesbar, Mein Urlaub wie
+'                           bisher (gelbe Felder bearbeitbar).
+'   EinrichtungBearbeiten - alles wieder sichtbar und bearbeitbar
+'                           (z. B. Team pflegen, ATOSS-Datum eintragen,
+'                           Wunsch aendern/loeschen). Danach wieder
+'                           PlanungFreigeben ausfuehren.
 ' =====================================================================
 
 Private Const ERSTE_ZEILE As Long = 6      ' erste Datenzeile im Blatt Wuensche
 Private Const LETZTE_ZEILE As Long = 605   ' letzte Datenzeile im Blatt Wuensche
+' Kennwort fuer Blattschutz/Arbeitsmappenschutz. Leer = ohne Kennwort (schuetzt
+' nur vor Versehen). Wer ein Kennwort eintraegt, sollte zusaetzlich das
+' VBA-Projekt sperren (Extras -> Eigenschaften von VBAProject -> Schutz),
+' sonst ist es hier lesbar. Kennwort gut dokumentiert ablegen!
+Private Const KENNWORT As String = ""
 
 Public Sub WunschEintragen()
     Dim wsM As Worksheet, wsW As Worksheet
@@ -97,13 +112,16 @@ Public Sub WunschEintragen()
         Exit Sub
     End If
 
-    ' --- eintragen (Blatt Wuensche ist normalerweise nicht geschuetzt; falls doch: ohne Kennwort aufheben)
-    If wsW.ProtectContents Then wsW.Unprotect
+    ' --- eintragen (nach PlanungFreigeben ist Wuensche geschuetzt: kurz aufheben, danach wieder schuetzen)
+    Dim warGeschuetzt As Boolean
+    warGeschuetzt = wsW.ProtectContents
+    If warGeschuetzt Then wsW.Unprotect KENNWORT
     wsW.Cells(r, 1).Value = sName
     wsW.Cells(r, 2).Value = dVon
     wsW.Cells(r, 3).Value = dBis
     If sFlex <> "" Then wsW.Cells(r, 4).Value = sFlex
     If sBem <> "" Then wsW.Cells(r, 5).Value = sBem
+    If warGeschuetzt Then NurLesen wsW
 
     ' --- Eingabefelder leeren (sind entsperrt, gehen auch bei Blattschutz)
     wsM.Range("B13").ClearContents
@@ -123,10 +141,84 @@ Public Sub WunschEintragen()
     Exit Sub
 
 Fehler:
+    On Error Resume Next
+    If warGeschuetzt And Not wsW Is Nothing Then NurLesen wsW
+    On Error GoTo 0
     MsgBox D("Der Wunsch konnte nicht eingetragen werden.") & vbCrLf & vbCrLf & _
            D("Fehler: ") & Err.Description & vbCrLf & vbCrLf & _
            D("Bitte pr{ue}fen: Blattnamen {>>}Mein Urlaub{<<} und {>>}W{ue}nsche{<<} unver{ae}ndert? Datei nicht schreibgesch{ue}tzt?"), _
            vbCritical, D("Urlaubsw{ue}nsche")
+End Sub
+
+' =====================================================================
+'  Leitung: Planung fuer das Team freigeben
+' =====================================================================
+Public Sub PlanungFreigeben()
+    Dim sTitel As String
+    On Error GoTo Fehler
+    sTitel = D("Planung freigeben")
+    If MsgBox(D("Einstellungen und Team sind fertig eingetragen?") & vbCrLf & vbCrLf & _
+              D("Danach sind {>>}Team{<<} und {>>}Einstellungen{<<} ausgeblendet, {>>}W{ue}nsche{<<} und {>>}Anleitung{<<} nur lesbar. ") & _
+              D("Eintragen geht nur noch {ue}ber {>>}Mein Urlaub{<<}.") & vbCrLf & vbCrLf & _
+              D("Zur{ue}ck mit dem Makro {>>}EinrichtungBearbeiten{<<} (Alt+F8)."), vbQuestion + vbYesNo, sTitel) = vbNo Then Exit Sub
+
+    Application.ScreenUpdating = False
+    If ThisWorkbook.ProtectStructure Then ThisWorkbook.Unprotect KENNWORT
+    ThisWorkbook.Worksheets("Mein Urlaub").Visible = xlSheetVisible
+    ThisWorkbook.Worksheets("Mein Urlaub").Activate
+    ' Ganz ausblenden (xlSheetVeryHidden): erscheint nicht unter "Einblenden".
+    ' Die Formeln und die Team-/Urlaubsansicht lesen die Blaetter trotzdem.
+    ThisWorkbook.Worksheets("Team").Visible = xlSheetVeryHidden
+    ThisWorkbook.Worksheets("Einstellungen").Visible = xlSheetVeryHidden
+    NurLesen ThisWorkbook.Worksheets(D("W{ue}nsche"))
+    NurLesen ThisWorkbook.Worksheets("Anleitung")
+    With ThisWorkbook.Worksheets("Mein Urlaub")
+        If Not .ProtectContents Then .Protect Password:=KENNWORT
+    End With
+    ThisWorkbook.Protect Password:=KENNWORT, Structure:=True
+    Application.ScreenUpdating = True
+
+    If MsgBox(D("Freigegeben. Datei jetzt speichern?"), vbInformation + vbYesNo, sTitel) = vbYes Then ThisWorkbook.Save
+    Exit Sub
+Fehler:
+    Application.ScreenUpdating = True
+    MsgBox D("Freigabe nicht vollst{ae}ndig: ") & Err.Description & vbCrLf & _
+           D("Bitte {>>}EinrichtungBearbeiten{<<} ausf{ue}hren und erneut versuchen."), vbCritical, D("Planung freigeben")
+End Sub
+
+' =====================================================================
+'  Leitung: Einrichtung wieder bearbeiten (alles sichtbar und offen)
+' =====================================================================
+Public Sub EinrichtungBearbeiten()
+    Dim pw As String
+    On Error GoTo Fehler
+    pw = KENNWORT
+    If KENNWORT <> "" Then
+        pw = InputBox(D("Kennwort f{ue}r die Einrichtung:"), D("Einrichtung bearbeiten"))
+        If pw <> KENNWORT Then MsgBox D("Kennwort falsch."), vbExclamation, D("Einrichtung bearbeiten"): Exit Sub
+    End If
+    Application.ScreenUpdating = False
+    If ThisWorkbook.ProtectStructure Then ThisWorkbook.Unprotect pw
+    ThisWorkbook.Worksheets("Team").Visible = xlSheetVisible
+    ThisWorkbook.Worksheets("Einstellungen").Visible = xlSheetVisible
+    ThisWorkbook.Worksheets(D("W{ue}nsche")).Unprotect pw
+    ThisWorkbook.Worksheets("Anleitung").Unprotect pw
+    ' "Mein Urlaub" bleibt geschuetzt (gelbe Felder sind entsperrt, Formeln geschuetzt).
+    Application.ScreenUpdating = True
+    MsgBox D("Alle Bl{ae}tter sind wieder sichtbar und bearbeitbar.") & vbCrLf & _
+           D("Wenn fertig: Makro {>>}PlanungFreigeben{<<} ausf{ue}hren (Alt+F8)."), vbInformation, D("Einrichtung bearbeiten")
+    Exit Sub
+Fehler:
+    Application.ScreenUpdating = True
+    MsgBox D("Fehler: ") & Err.Description, vbCritical, D("Einrichtung bearbeiten")
+End Sub
+
+' Blatt nur lesbar: alle Zellen sperren, Schutz ein; Filtern bleibt erlaubt
+Private Sub NurLesen(ByVal ws As Worksheet)
+    If ws.ProtectContents Then ws.Unprotect KENNWORT
+    ws.Cells.Locked = True
+    ws.Protect Password:=KENNWORT, DrawingObjects:=True, Contents:=True, Scenarios:=True, _
+               AllowFiltering:=True, AllowFormattingColumns:=True
 End Sub
 
 ' Ersetzt Platzhalter durch Sonderzeichen (Quelltext bleibt reines ASCII)

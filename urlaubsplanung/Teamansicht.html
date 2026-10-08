@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Urlaubsplanung Kreativtherapie</title>
+<title>Teamurlaubsplanung Kreativtherapie</title>
 <!--
-  Urlaubsansicht (Dashboard) – liest Urlaubswuensche_2027.xlsx / .xlsm und zeigt Kennzahlen, Jahres-Heatmap,
-  kritische Wochen, Monatsbalken, Personentabelle, Personenansicht, Kalender und Konflikte.
+  Teamansicht für die Kolleg:innen – liest dieselbe Excel-Datei (Urlaubswuensche_2027.xlsx / .xlsm) wie die
+  Leitungsansicht (Urlaubsansicht.html), zeigt aber nur, was für die Absprache im Team nötig ist:
+  wer wann Urlaub wünscht und wo es schon eng wird. Bewusst NICHT angezeigt: Bemerkung, »verschiebbar«,
+  ATOSS-Status, Urlaubsanspruch/Rest, Datenhinweise, Ampel-Einstellungen.
   Läuft komplett lokal im Browser: kein Server, keine Internetverbindung, es werden keine Daten verschickt.
   Die Excel-Datei wird nur gelesen, nie verändert.
 
-  QUELLTEXT: ansicht/urlaubsansicht.src.html  →  mit ansicht/baue_ansicht.py zu Urlaubsansicht.html zusammenbauen
-  (dabei wird die Bibliothek SheetJS ansicht/xlsx.full.min.js zum Lesen von Excel-Dateien eingebettet).
-  Doku: Dokumentation_Urlaubsansicht_Dashboard.md
+  QUELLTEXT: ansicht/teamansicht.src.html  →  mit ansicht/baue_ansicht.py zu Teamansicht.html zusammenbauen
+  (dabei werden ansicht/kern.js = Einlesen + Ampel und SheetJS ansicht/xlsx.full.min.js eingebettet).
+  Doku: Dokumentation_Teamansicht.md
 -->
 <style>
 :root{
@@ -22,7 +24,7 @@
   --l2:#ffe58f; --l2-ink:#7a5600;
   --l3:#f7a8a8; --l3-ink:#8a1010;
   --l4:#b00020; --l4-ink:#fff;
-  --bar:#5b7bb5;
+  --wish:#5b7bb5;
   --cw-week:34px; --cw-day:22px;
 }
 *{box-sizing:border-box}
@@ -31,20 +33,17 @@ body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;c
 button,select,input{font:inherit}
 header.top{background:var(--navy);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 header.top h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
-/* Logo (wird von baue_ansicht.py aus ansicht/logo.svg|png eingebettet): weißes Feld, damit farbige Logos auf Dunkelblau lesbar bleiben */
 header.top .logo{height:56px;width:auto;background:#fff;border-radius:8px;padding:3px 6px}
 header.top .file{font-size:12.5px;opacity:.85;flex:1;min-width:200px}
 .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--navy-2)}
-.btn.primary{background:#fff;color:var(--navy);font-weight:600;border-color:#fff}
 header.top .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
-header.top .btn.primary{background:#fff;color:var(--navy)}
+header.top .btn.primary{background:#fff;color:var(--navy);font-weight:600;border-color:#fff}
 main{padding:16px 20px 40px;max-width:100%}
 .hidden{display:none!important}
 .muted{color:var(--muted)}
 .printinfo{display:none}
 
-/* Startbildschirm */
 .drop{max-width:720px;margin:40px auto;background:var(--card);border:2px dashed #b9c3d6;border-radius:16px;padding:36px;text-align:center}
 .drop.over{border-color:var(--navy-2);background:#eef3ff}
 .drop h2{margin:0 0 6px;color:var(--navy)}
@@ -52,261 +51,78 @@ main{padding:16px 20px 40px;max-width:100%}
 .drop .btn{margin-top:14px}
 .drop ol{text-align:left;display:inline-block;color:var(--muted);margin:18px 0 0}
 
-/* Kennzahlen-Leiste */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.kpi .v{font-size:24px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
-.kpi .v small{font-size:14px;font-weight:600;color:var(--muted)}
-.kpi .l{font-size:12px;color:var(--muted)}
-.kpi .s{font-size:12px;color:var(--muted);margin-top:4px}
-.kpi.click{cursor:pointer}
-.kpi.click:hover{border-color:var(--navy-2)}
-.kpi .row{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-top:4px}
-.kpi.warn{border-left:5px solid #f2c200} .kpi.bad{border-left:5px solid var(--l4)}
-.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600}
-.lv1{background:var(--l1);color:var(--l1-ink)} .lv2{background:var(--l2);color:var(--l2-ink)}
-.lv3{background:var(--l3);color:var(--l3-ink)} .lv4{background:var(--l4);color:var(--l4-ink)}
-
-/* Filter */
 .filters{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-start;margin-bottom:14px}
 .fgroup{display:flex;flex-direction:column;gap:6px;min-width:0}
 .fgroup > label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none}
-.chip .dot{width:10px;height:10px;border-radius:50%}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer;user-select:none}
 .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;background:#fff;padding:5px 12px;cursor:pointer}
 .seg button.on{background:var(--navy);color:#fff}
-.filters input[type=search]{border:1px solid var(--line);border-radius:8px;padding:5px 10px;width:180px}
-.filters select,select.sel{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff}
-.reset{font-size:12.5px;color:var(--navy-2);background:none;border:0;cursor:pointer;padding:0;text-decoration:underline}
+.filters select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff}
 
-/* Tabs */
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
-.tab{border:0;background:none;padding:9px 14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-weight:600}
-.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
-.tab .count{margin-left:6px}
-
-/* Legende */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.panel h2{margin:0 0 2px;font-size:15.5px;color:var(--navy)}
+.panel .sub{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+.lage{font-size:15px;margin:0}
 .legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px;color:var(--muted);margin:0 0 10px}
 .legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(0,0,0,.06)}
-.legend b{color:var(--ink);font-weight:600}
 
-/* Dashboard */
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;break-inside:avoid}
-.panel h2{font-size:15px;color:var(--navy);margin:0 0 4px}
-.panel .sub{font-size:12.5px;color:var(--muted);margin:0 0 10px}
-.dgrid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
-.dgrid > .panel{margin-bottom:0}
-@media (max-width:1100px){.dgrid{grid-template-columns:1fr}}
-
-/* Heatmap: Monate × Tage */
+/* Jahresübersicht Monat × Tag */
 table.heat{border-collapse:separate;border-spacing:2px;width:100%;table-layout:fixed;font-size:10.5px}
 table.heat th{font-weight:600;color:var(--muted);font-size:10px;padding:0}
 table.heat th.ml{width:62px;text-align:left;color:var(--navy);font-size:11.5px}
-table.heat td{height:22px;text-align:center;border-radius:3px;padding:0;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;position:relative}
+table.heat td{height:22px;text-align:center;border-radius:3px;padding:0;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
 table.heat td.na{background:transparent;cursor:default}
+table.heat td.out{background:#f7f8fb;cursor:default}
 table.heat td.we{background:var(--we);color:#b0b6c3;font-weight:400}
 table.heat td.hol{background:var(--hol);color:#7d6fa6;font-weight:400}
-table.heat td.out{background:#f7f8fb;color:#c4c9d4;cursor:default}
 table.heat td.lv0{background:#f3f5f9;color:#9aa3b5}
 table.heat td.lv1{background:var(--l1);color:var(--l1-ink)} table.heat td.lv2{background:var(--l2);color:var(--l2-ink)}
 table.heat td.lv3{background:var(--l3);color:var(--l3-ink)} table.heat td.lv4{background:var(--l4);color:#fff}
 table.heat td.mo{box-shadow:inset 2px 0 0 #c6cee0}
 table.heat td.today{outline:2px solid #ED7D31;outline-offset:-2px}
 table.heat td.sel{outline:2px solid var(--navy);outline-offset:-2px}
-table.heat td.pw0{background:#fff;box-shadow:inset 0 0 0 1px #e3e7ef}
-table.heat td.pw{background:#c9d6ee;color:var(--navy)}
-table.heat td.pf{background:repeating-linear-gradient(135deg,#e4e9f3 0 3px,#f7f8fb 3px 6px);color:#8a93a6;font-weight:400}
 
-/* Top-5-Wochen */
-ol.top{list-style:none;margin:0;padding:0;counter-reset:t}
-ol.top li{counter-increment:t;display:grid;grid-template-columns:24px 1fr;gap:4px 8px;padding:8px 6px;border-bottom:1px solid #eef0f4;cursor:pointer;border-radius:8px}
-ol.top li:hover{background:#f6f8fc}
-ol.top li::before{content:counter(t);font-weight:700;color:var(--navy);font-size:15px}
-ol.top .w{font-weight:650}
-ol.top .d{font-size:12px;color:var(--muted)}
-ol.top .u{font-size:12px;margin-top:2px}
-
-/* Monatsbalken (Small Multiples) */
-table.bars{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px}
-table.bars th{font-weight:600;color:var(--muted);font-size:11px;padding:2px 0;text-align:center}
-table.bars th.gl{text-align:left;width:190px}
-table.bars td{padding:2px 2px;vertical-align:bottom;border-bottom:1px solid #f0f2f6}
-table.bars td.gl{vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
-table.bars td.gl .meta{color:var(--muted);font-size:11px;margin-left:4px}
-.bc{height:46px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:default}
-.bc .bv{font-size:10px;color:var(--muted);line-height:1.1;font-variant-numeric:tabular-nums}
-.bc .b{width:62%;max-width:26px;background:var(--bar);border-radius:3px 3px 0 0;min-height:0}
-.bc .mk{height:5px;width:62%;max-width:26px;margin-top:2px;border-radius:2px}
-.bc .mk.lv2{background:#f2c200} .bc .mk.lv3{background:#e45757} .bc .mk.lv4{background:var(--l4)}
-
-/* Kalender */
+/* Kalender Personen × Wochen/Tage */
 .calwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 150px)}
 table.cal{border-collapse:separate;border-spacing:0;font-size:12px}
 table.cal th,table.cal td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;text-align:center;height:26px}
 table.cal thead th{position:sticky;background:#f8f9fc;z-index:2;font-weight:600;color:var(--muted)}
 table.cal thead tr.m th{top:0;height:24px;color:var(--navy);font-size:12px;text-align:left;padding-left:6px}
 table.cal thead tr.c th{top:24px;font-size:10.5px;line-height:1.1}
-table.cal .lh{position:sticky;left:0;z-index:3;background:#fff;text-align:left;padding:0 10px;min-width:230px;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.cal .lh{position:sticky;left:0;z-index:3;background:#fff;text-align:left;padding:0 10px;min-width:200px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 table.cal thead .lh{z-index:4;background:#f8f9fc}
 table.cal td.c{min-width:var(--cw);max-width:var(--cw);width:var(--cw);cursor:pointer;font-weight:600;font-size:11px}
 table.cal td.we{background:var(--we)} table.cal td.hol{background:var(--hol)}
-table.cal td.pf{background:repeating-linear-gradient(135deg,#e4e9f3 0 3px,#fff 3px 6px)}
 table.cal th.we{background:#e8ebf1} table.cal th.hol{background:#ddd7ec}
 table.cal th.today,table.cal td.today{box-shadow:inset 2px 0 0 #ED7D31, inset -2px 0 0 #ED7D31}
 table.cal th.mstart,table.cal td.mstart{border-left:2px solid #9aa7c2}
-table.cal tr.sec td{background:#eef2fa;color:var(--navy);font-weight:700;text-align:left;padding:6px 10px;position:sticky;left:0}
-table.cal tr.sec td span{position:sticky;left:10px}
-table.cal tr.sub td{background:#fafbfd;color:var(--muted);font-weight:600;text-align:left;padding:3px 10px;font-size:11.5px}
-.lh .nm{font-weight:600;color:var(--ink)}
-.lh .meta{color:var(--muted);font-size:11px;margin-left:6px}
-.lh .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
-td.p{color:#fff}
-td.r2{box-shadow:inset 0 0 0 3px var(--l2)} td.r3{box-shadow:inset 0 0 0 3px #e45757} td.r4{box-shadow:inset 0 0 0 3px var(--l4)}
-td.u.lv1{background:var(--l1);color:var(--l1-ink)} td.u.lv2{background:var(--l2);color:var(--l2-ink)}
-td.u.lv3{background:var(--l3);color:var(--l3-ink)} td.u.lv4{background:var(--l4);color:#fff}
-td.u.lv0{color:#aab}
-td.sel{outline:2px solid var(--navy);outline-offset:-2px}
+table.cal td.w{background:var(--wish);color:#fff}
+table.cal td.lv1{background:var(--l1);color:var(--l1-ink)} table.cal td.lv2{background:var(--l2);color:var(--l2-ink)}
+table.cal td.lv3{background:var(--l3);color:var(--l3-ink)} table.cal td.lv4{background:var(--l4);color:#fff}
+table.cal tr.sum td.lh{font-weight:700;color:var(--navy)}
+table.cal tr.sum td{border-bottom:2px solid #c6cee0}
+table.cal td.sel{outline:2px solid var(--navy);outline-offset:-2px}
 
-/* Konflikte */
-.conf-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
-.conf-head .note{color:var(--muted);font-size:13px}
-.lvsec h3{margin:18px 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
-.card{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;break-inside:avoid}
-.card.lv2b{border-left-color:#f2c200} .card.lv3b{border-left-color:#e45757} .card.lv4b{border-left-color:var(--l4)}
-.card .t{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
-.card .unit{font-weight:700;font-size:15px}
-.card .unit small{font-weight:600;color:var(--muted);font-size:12px;margin-right:4px}
-.card .when{color:var(--ink)}
-.card .size{color:var(--muted)}
-.card table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
-.card th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);padding:4px 6px}
-.card td{padding:5px 6px;border-bottom:1px solid #f0f2f6;vertical-align:top}
-.card .ask{margin-top:8px;font-size:13px;background:#f6f8fc;border-radius:8px;padding:6px 10px}
-.flex{font-size:11.5px;border-radius:6px;padding:1px 7px;font-weight:600;white-space:nowrap}
-.flex.ja{background:#d9efdc;color:#1e6b2e} .flex.etwas{background:#fff1c2;color:#7a5600}
-.flex.nein{background:#f3d0d0;color:#8a1010} .flex.leer{background:#eceef3;color:#5b6475}
-.empty{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted)}
+/* Liste der Wünsche */
+table.list{width:100%;border-collapse:collapse;font-size:13px}
+table.list th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);padding:5px 8px}
+table.list td{padding:5px 8px;border-bottom:1px solid #f0f2f6}
+.pill{display:inline-block;border-radius:999px;padding:0 8px;font-size:11.5px;font-weight:600}
+.pill.lv2{background:var(--l2);color:var(--l2-ink)} .pill.lv3{background:var(--l3);color:var(--l3-ink)} .pill.lv4{background:var(--l4);color:#fff}
 
-/* Tabellen */
-table.list{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
-table.list th{background:#f8f9fc;text-align:left;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
-table.list th.sort{cursor:pointer;user-select:none}
-table.list th.sort:hover{color:var(--navy)}
-table.list th.sort::after{content:" ↕";opacity:.35}
-table.list th.asc::after{content:" ▲";opacity:1;color:var(--navy)}
-table.list th.desc::after{content:" ▼";opacity:1;color:var(--navy)}
-table.list td{padding:7px 10px;border-bottom:1px solid #eef0f4;vertical-align:top}
-table.list td.num,table.list th.num{text-align:right;font-variant-numeric:tabular-nums}
-.plink{color:var(--navy);font-weight:600;cursor:pointer;text-decoration:none;border-bottom:1px dotted var(--navy-2)}
-.wchip{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;font-size:12px;white-space:nowrap}
-.wchip.c3{border-color:#e45757;background:#fdeeee} .wchip.c4{border-color:var(--l4);background:#fbe3e6} .wchip.c2{border-color:#f2c200;background:#fff8dc}
-.neg{color:#b00020;font-weight:700}
-.tz{font-size:11px;border-radius:6px;padding:1px 6px;background:#e8eefb;color:var(--navy);font-weight:600;white-space:nowrap}
-.warnlist li{margin:4px 0}
-h2.sec{font-size:15px;color:var(--navy);margin:22px 0 8px}
-.pfbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:13px}
-
-/* Übersicht (Startseite) */
-.status{display:flex;gap:16px;align-items:center;border-radius:14px;padding:18px 20px;margin-bottom:14px;border:1px solid var(--line);background:var(--card)}
-.status .big{font-size:22px;font-weight:700;line-height:1.2}
-.status .icon{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex:none}
-.status.ok{border-left:8px solid #2e8b47} .status.ok .icon{background:var(--l1);color:var(--l1-ink)}
-.status.warn{border-left:8px solid #f2c200} .status.warn .icon{background:var(--l2);color:var(--l2-ink)}
-.status.bad{border-left:8px solid var(--l4)} .status.bad .icon{background:var(--l4);color:#fff}
-.status.none{border-left:8px solid #9aa3b5} .status.none .icon{background:#eceef3;color:var(--muted)}
-.hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
-.hgrid > .panel{margin-bottom:0}
-ul.ulist{list-style:none;margin:0;padding:0}
-ul.ulist li{display:grid;grid-template-columns:96px 1fr auto;gap:4px 10px;align-items:center;padding:8px 6px;border-bottom:1px solid #eef0f4;cursor:pointer;border-radius:8px}
-ul.ulist li:hover{background:#f6f8fc}
-ul.ulist li .nm{font-weight:600}
-ul.ulist li .info{font-size:12.5px;color:var(--muted)}
-ul.ulist li .go{color:var(--navy-2);font-size:13px;white-space:nowrap}
-ul.todo{list-style:none;margin:0;padding:0}
-ul.todo li{display:flex;gap:10px;align-items:center;padding:7px 6px;border-bottom:1px solid #eef0f4;cursor:pointer;border-radius:8px}
-ul.todo li:hover{background:#f6f8fc}
-ul.todo li .n{min-width:34px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
-.st{display:inline-block;text-align:center;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700}
-.st.s0,.st.s1{background:var(--l1);color:var(--l1-ink)} .st.s2{background:var(--l2);color:var(--l2-ink)}
-.st.s3{background:var(--l3);color:var(--l3-ink)} .st.s4{background:var(--l4);color:#fff} .st.sx{background:#eceef3;color:var(--muted)}
-.localnote{background:#eef3ff;border:1px solid #b9c8ea;color:var(--navy);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
-
-/* Startseite: Ampel links + Klartext rechts */
-.homegrid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start}
-.homegrid aside{position:sticky;top:12px}
-.homemain{max-width:900px}
-@media (max-width:860px){.homegrid{grid-template-columns:1fr}.homegrid aside{position:static}}
-.ampelbox{background:var(--card);border-radius:18px;box-shadow:0 2px 10px rgba(20,30,60,.06);border:1px solid var(--line);padding:26px 18px;text-align:center}
-.ampel{display:inline-flex;flex-direction:column;gap:12px;background:#2b2f3a;border-radius:26px;padding:16px 20px}
-.lamp{width:78px;height:78px;border-radius:50%;border:0;cursor:pointer;padding:0;transition:transform .1s}
-.lamp:hover{transform:scale(1.05)} .lamp:focus-visible{outline:3px solid #fff;outline-offset:3px}
-.lamp.r{background:#5a3a3f} .lamp.y{background:#5a5236} .lamp.g{background:#33463a}
-.lamp.r.on{background:#d63a3a;box-shadow:0 0 28px #d63a3a} .lamp.y.on{background:#e8b400;box-shadow:0 0 28px #e8b400} .lamp.g.on{background:#2fa352;box-shadow:0 0 28px #2fa352}
-.ampelbox .at{font-size:23px;font-weight:700;margin-top:18px;line-height:1.2}
-.ampelbox .as{color:var(--muted);font-size:14.5px;margin-top:4px}
-.ampelbox .al{display:flex;flex-direction:column;gap:3px;align-items:flex-start;margin:14px auto 0;width:max-content;font-size:12.5px;color:var(--muted)}
-.ampelbox .al i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
-.ampelbox .al i.r{background:#d63a3a} .ampelbox .al i.y{background:#e8b400} .ampelbox .al i.g{background:#2fa352}
-.hcard{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(20,30,60,.06);border:1px solid var(--line);padding:22px 26px}
-.hcard.lead p{font-size:22px;line-height:1.45;margin:10px 0 8px} .red{color:#c43c3c} .green{color:#2e8b47}
-h3.hh{font-size:18px;margin:26px 0 10px;color:var(--ink)}
-.pcard{display:flex;gap:16px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-left:8px solid #c43c3c;border-radius:14px;padding:16px 20px;margin-bottom:12px;cursor:pointer;box-shadow:0 2px 8px rgba(20,30,60,.05)}
-.pcard:hover{border-color:var(--navy-2)} .pcard.pk4{border-left-color:var(--l4)} .pcard.pk3{border-left-color:#e45757} .pcard.pk2{border-left-color:#e2b400}
-.pico{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;background:#fde3e3;color:#c43c3c}
-.pcard.pk2 .pico{background:#fff4c4;color:#a07a00}
-.pcard .pt{font-weight:700;font-size:17px} .pcard .px{font-size:15.5px;margin-top:2px} .plinkx{color:var(--navy-2);font-weight:600;font-size:14px;margin-top:6px}
-.pmore{color:var(--navy-2);font-weight:600;cursor:pointer;margin:0 0 12px 6px}
-.hcard.offen{padding:14px 22px} .tline{padding:6px 0;font-size:16px;cursor:pointer} .tline:hover .lk{text-decoration:underline} .tline.nolink{cursor:default}
-.tline .lk{color:var(--navy-2);font-weight:600;font-size:14px;margin-left:6px}
-
-/* Regeln & Ampel: eingeklappte Abschnitte */
-details.sec{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
-details.sec > summary{cursor:pointer;padding:12px 14px;font-weight:650;color:var(--navy);font-size:15px;list-style:none;display:flex;gap:10px;align-items:center}
-details.sec > summary::-webkit-details-marker{display:none}
-details.sec > summary::before{content:"▸";color:var(--muted);transition:transform .15s}
-details.sec[open] > summary::before{transform:rotate(90deg)}
-details.sec > summary .hint{font-weight:400;font-size:12.5px;color:var(--muted)}
-details.sec > .body{padding:0 14px 14px}
-.amp input{width:62px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit;text-align:right}
-.amp input.set{border-color:var(--navy-2);background:#eef3ff;font-weight:700}
-.amp td{vertical-align:middle}
-.stdform{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;margin:6px 0 14px}
-.stdform label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
-.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
-.src{font-size:11px;color:var(--muted)} .src.lokal{color:var(--navy-2);font-weight:700}
-
-/* Personenansicht */
-.phead{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:12px}
-.phead h2{margin:0;color:var(--navy);font-size:19px}
-.pkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
-
-/* Detail-Panel */
-aside.detail{position:fixed;top:0;right:0;height:100vh;width:min(440px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(20,30,60,.12);padding:16px 18px;overflow:auto;z-index:50;transform:translateX(105%);transition:transform .18s}
+aside.detail{position:fixed;top:0;right:0;height:100vh;width:min(400px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(20,30,60,.12);padding:16px 18px;overflow:auto;z-index:50;transform:translateX(105%);transition:transform .18s}
 aside.detail.open{transform:none}
 aside.detail h3{margin:0 0 4px;color:var(--navy);padding-right:26px}
-aside.detail h4{margin:14px 0 4px;font-size:13.5px}
 aside.detail .x{position:absolute;top:10px;right:12px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
 aside.detail ul{padding-left:18px;margin:4px 0}
 aside.detail li{margin:3px 0}
-.banner{background:#fff6d6;border:1px solid #f0d78a;color:#6b5000;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
 
-@media (max-width:700px){
-  main{padding:12px}
-  table.cal .lh{min-width:150px;max-width:150px}
-  .filters input[type=search]{width:140px}
-  table.heat{font-size:8.5px;border-spacing:1px}
-  table.heat th.ml{width:40px}
-  table.bars th.gl{width:110px}
-  .panel{overflow-x:auto}
-}
-
-/* ===== Druckansicht A4 quer ===== */
 @page{size:A4 landscape;margin:9mm}
 @media print{
-  header.top .btn, .filters, .tabs, aside.detail, .conf-head .btn, .noprint{display:none!important}
+  header.top .btn, .filters, aside.detail, .noprint{display:none!important}
   html,body{background:#fff;font-size:11px}
   main{padding:0}
   header.top{background:#fff;color:#000;border-bottom:2px solid #000;padding:0 0 4px}
@@ -314,23 +130,11 @@ aside.detail li{margin:3px 0}
   header.top .logo{height:32px;padding:0}
   header.top .file{opacity:1;font-size:10px}
   .printinfo{display:block;font-size:10px;color:#333;margin:4px 0 6px}
-  .kpis{grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px}
-  .kpi{padding:6px 8px;border-radius:6px}
-  .kpi .v{font-size:17px}
-  .panel{padding:6px 8px;margin-bottom:6px;border-radius:6px}
-  .panel h2{font-size:12.5px}
-  .panel .sub{font-size:10px;margin-bottom:4px}
-  .dgrid{grid-template-columns:minmax(0,1fr) 72mm;gap:6px}
+  .panel{padding:6px 8px;margin-bottom:6px;border-radius:6px;break-inside:avoid}
   table.heat{font-size:8.5px;border-spacing:1px}
   table.heat td{height:15px}
-  table.heat th.ml{width:44px;font-size:9.5px}
-  ol.top li{padding:3px 2px}
-  .bc{height:30px}
-  .bars-panel{break-before:page}
-  details.sec > .body{display:block} details.sec{break-inside:avoid}
   .calwrap{max-height:none;overflow:visible;border:0}
-  .card{border-color:#999}
-  table.list{font-size:10px} table.list td,table.list th{padding:3px 5px}
+  .cal-panel,.list-panel{break-before:page}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
@@ -338,67 +142,45 @@ aside.detail li{margin:3px 0}
 <body>
 <header class="top">
   <img class="logo" alt="PP.rt – Klinik für Psychiatrie und Psychosomatik Reutlingen" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBMb2dvIFBQLnJ0LCBRdWVsbGU6IGh0dHBzOi8vd3d3LnBwcnQuZGUgKGFiZ2VydWZlbiAwOC4xMC4yMDI2KSwgUmFuZCBiZXNjaG5pdHRlbi4gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyMi4wLjEsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4KPHN2ZyB2ZXJzaW9uPSIxLjEiIGlkPSJFYmVuZV8xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCIKCSB2aWV3Qm94PSIxMiA2LjUgMzk4IDI4OCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNDIwLjkgMjk3LjY7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7Y2xpcC1wYXRoOnVybCgjU1ZHSURfMl8pO2ZpbGw6I0Q1MEUzMTt9Cgkuc3Qxe2NsaXAtcGF0aDp1cmwoI1NWR0lEXzRfKTtmaWxsOiMwNjY5QjI7fQoJLnN0MntjbGlwLXBhdGg6dXJsKCNTVkdJRF82Xyk7ZmlsbDojMDY2OUIyO30KCS5zdDN7Y2xpcC1wYXRoOnVybCgjU1ZHSURfOF8pO2ZpbGw6I0Q1MEUzMTt9Cgkuc3Q0e2NsaXAtcGF0aDp1cmwoI1NWR0lEXzEwXyk7ZmlsbDojMDY2OUIyO30KCS5zdDV7Y2xpcC1wYXRoOnVybCgjU1ZHSURfMTJfKTtmaWxsOiMwNjY5QjI7fQoJLnN0NntlbmFibGUtYmFja2dyb3VuZDpuZXcgICAgO30KCS5zdDd7ZmlsbDojMDY2OUIyO30KCS5zdDh7Y2xpcC1wYXRoOnVybCgjU1ZHSURfMTRfKTt9Cgkuc3Q5e2ZpbGw6bm9uZTt9Cjwvc3R5bGU+CjxnPgoJPGc+CgkJPGc+CgkJCTxnPgoJCQkJPGc+CgkJCQkJPGRlZnM+CgkJCQkJCTxyZWN0IGlkPSJTVkdJRF8xXyIgeD0iMTQuNCIgeT0iOC44Ii8+CgkJCQkJPC9kZWZzPgoJCQkJCTxjbGlwUGF0aCBpZD0iU1ZHSURfMl8iPgoJCQkJCQk8dXNlIHhsaW5rOmhyZWY9IiNTVkdJRF8xXyIgIHN0eWxlPSJvdmVyZmxvdzp2aXNpYmxlOyIvPgoJCQkJCTwvY2xpcFBhdGg+CgkJCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE0LjQsMTE5LjFjMC02MC45LDk0LjEtMTEwLjMsMjEwLjItMTEwLjNjNzcuNywwLDE0NS41LDIyLjEsMTgxLjksNTVjLTM1LjEtMjkuNi05Ny42LTQ5LjMtMTY4LjktNDkuMwoJCQkJCQlDMTI3LjcsMTQuNSwzOC43LDYxLjMsMzguNywxMTlzODkuMSwxMDQuNSwxOTguOSwxMDQuNWM3MS41LDAsMTM0LjItMTkuOCwxNjkuMi00OS42Yy0zNi4zLDMzLjEtMTA0LjMsNTUuMy0xODIuMyw1NS4zCgkJCQkJCUMxMDguNSwyMjkuNCwxNC40LDE4MCwxNC40LDExOS4xIi8+CgkJCQk8L2c+CgkJCTwvZz4KCQk8L2c+CgkJPGc+CgkJCTxnPgoJCQkJPGc+CgkJCQkJPGRlZnM+CgkJCQkJCTxyZWN0IGlkPSJTVkdJRF8zXyIgeD0iMTQuNCIgeT0iOC44IiB3aWR0aD0iMzkyLjQiIGhlaWdodD0iMjg0LjkiLz4KCQkJCQk8L2RlZnM+CgkJCQkJPGNsaXBQYXRoIGlkPSJTVkdJRF80XyI+CgkJCQkJCTx1c2UgeGxpbms6aHJlZj0iI1NWR0lEXzNfIiAgc3R5bGU9Im92ZXJmbG93OnZpc2libGU7Ii8+CgkJCQkJPC9jbGlwUGF0aD4KCQkJCQk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTE5LDEwNy45Yy0yLDIuNC0zLjksNC41LTUuNiw2LjNjLTUuOSw0LjEtOS40LDYuNi0xMC41LDhjLTEuMywwLjctMy4zLDEuOS02LDMuMgoJCQkJCQljLTAuMi0xLjktMC42LTMuOS0xLTUuN2MwLTAuOCwwLjEtMS40LDAuMi0ybC0wLjQtMS40bDAuMi0xLjFsLTAuNi01LjFsMC40LTFjMC42LTYuNSwwLjEtMTAuNCwyLjctMTIuNgoJCQkJCQljMC42LTAuMiwxLTAuNiwxLjMtMS4xYzAtMC4xLTAuMS0wLjQtMC4xLTAuNWMwLTIuMSwzLjgtNC40LDExLjEtOGwwLjctMWwwLjgsMC4xYzAuNywwLDEuNS0wLjIsMi0wLjloMC42CgkJCQkJCWMxLDAsMS44LTAuMiwyLjctMC4yYzMuOSwwLDYuNSwzLjIsNi41LDlDMTI0LjEsOTguMywxMjIuNCwxMDIuOCwxMTksMTA3LjkgTTE0My4xLDg4LjJsLTAuNy0xLjJjMC40LTAuNSwwLjYtMSwwLjYtMS40CgkJCQkJCWMwLTAuMSwwLTAuNC0wLjEtMC41bC0wLjEtMS40Yy0yLjMtNi43LTYtOS4zLTEzLjYtMTEuN2wtMC43LDAuNWMtMC41LTAuMS0xLTAuMi0xLjUtMC4ycy0xLDAuMS0xLjUsMC4yCgkJCQkJCWMtMC45LTAuMS0xLjctMC4yLTIuNi0wLjJjLTAuNCwwLjEtMC43LDAuMi0xLDAuMmMtMC4yLDAtMC40LTAuMS0wLjYtMC4xbC0yLDAuNmgtMC45bC0yLjIsMS40bC0xLjMtMC4xCgkJCQkJCWMtNS4xLDItOS45LDQuNS0xNC40LDcuN2MtMS4zLDEuMi0yLjEsMS45LTIuNCwxLjljLTAuMiwwLTAuNC0wLjEtMC42LTAuNWMtMC4yLTAuNS0wLjQtMS0wLjQtMS41di0wLjUKCQkJCQkJQzk3LDgxLjEsOTcsODAuOSw5Nyw4MC42YzAtMC4yLDAtMC41LDAuMS0wLjdjLTEuNy00LTMuNy02LTYtNmMtMy4yLDAtMTAuNSw0LjktMTIuNSwxMC43bDAuNSwwLjRsMC40LDMuOWwxLjEsMS43aDAuMgoJCQkJCQljMC40LDAsMC42LDAuMiwwLjYsMC41cy0wLjEsMC42LTAuNCwxaDAuMWMwLjQsMCwxLjEsMiwzLjMsNS4xYy0wLjIsMS4yLTAuNCwyLjYtMC41LDQuMWMwLjEsMSwwLjYsMS45LDEuMiwyLjZsLTAuNywyLjkKCQkJCQkJYzAuNSwwLjQsMC43LDAuNywxLDEuMmMwLjIsMC40LDAuNCwwLjcsMC40LDEuMXYwLjRsMC41LDAuOWMtMC4xLDAuNi0wLjIsMS4xLTAuNSwxLjVjMC4yLDIsMSwzLjUsMSw0LjcKCQkJCQkJYzAsMC45LTAuMiwxLjUtMC4yLDIuMWMwLDEuNSwwLjQsMy40LDEuMSw1LjhsMC45LDAuN2MtMC4yLDAuMi0wLjQsMC41LTAuNCwwLjdjMCwwLjEsMC4xLDAuMiwwLjEsMC40CgkJCQkJCWMtMC4yLDAuNS0wLjQsMC45LTAuNCwxLjJjMCwwLjUsMC4yLDEsMC4yLDEuMmMwLDEuMi0yLjIsMi43LTYuMiwyLjdoLTIuNGMtMy4zLDAtNS41LDAuMS01LjcsMS45bC0wLjksMQoJCQkJCQljMC4yLDAuOCwxLjEsMS4yLDIuOCwxLjdjMy40LDEuNiw2LjYsMi4yLDguMiwyLjJjMC44LDAsMS43LTAuOSwzLjEtMWMxLjEtMC4yLDEuOC0wLjYsMi4zLTAuOGMwLjEsMS41LDAuMiwzLjEsMC40LDQuNgoJCQkJCQljMC4xLDAuNSwwLjIsMC45LDAuNywxLjJjMC45LDExLjgsMi40LDE4LjIsMy40LDE4LjhjLTAuMSwwLjMtMC4yLDAuNS0wLjIsMC45YzAsMS4yLDEsMi45LDIuOCw0LjZsMC4xLDAuMQoJCQkJCQljMC41LDAsMS42LTEuNiwzLjItNC42bC0wLjYtMTMuM2wtMC42LTMuMmMwLjEtMC4yLDAuMS0wLjcsMC4xLTEuMmMwLTItMC42LTUuNS0wLjktMTAuOGMyLjQtMS4yLDQuOS0yLjUsNy40LTMuOQoJCQkJCQljMC43LTEsMS42LTEuNiwyLjgtMS45YzEuMS0wLjcsMi4xLTEuNiwzLjItMi42aDAuNGMwLjUsMCwxLTAuMiwxLjYtMC41bDQuNi0zLjJjMC45LTAuNSwxLjgtMS4yLDIuOS0yYzAtMC42LDAuNC0wLjksMS0xCgkJCQkJCWMxLjMsMCwwLjYtMS43LDIuNC0xLjljMC42LTAuNCwxLjEtMC43LDEuNS0xLjFsMC42LTAuMWMwLjYtMS42LDMuMi0yLjEsNS00LjdsMC43LTAuMmMyLjYtMi4yLDQuNi00LjYsNi4zLTcuM2wwLjUtMC4zCgkJCQkJCWMxLjUtMi43LDIuMy01LjYsMi42LTguN2MwLjYtMS41LDEuMS0yLjQsMS4xLTNjMC0wLjIsMC0wLjQtMC4xLTAuNUMxNDIuOSw5MCwxNDMuMSw4OS4xLDE0My4xLDg4LjIiLz4KCQkJCTwvZz4KCQkJPC9nPgoJCTwvZz4KCQk8Zz4KCQkJPGc+CgkJCQk8Zz4KCQkJCQk8ZGVmcz4KCQkJCQkJPHJlY3QgaWQ9IlNWR0lEXzVfIiB4PSIxNC40IiB5PSI4LjgiIHdpZHRoPSIzOTIuNCIgaGVpZ2h0PSIyODQuOSIvPgoJCQkJCTwvZGVmcz4KCQkJCQk8Y2xpcFBhdGggaWQ9IlNWR0lEXzZfIj4KCQkJCQkJPHVzZSB4bGluazpocmVmPSIjU1ZHSURfNV8iICBzdHlsZT0ib3ZlcmZsb3c6dmlzaWJsZTsiLz4KCQkJCQk8L2NsaXBQYXRoPgoJCQkJCTxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik0xOTEuMiwxMDcuOWMtMiwyLjQtMy45LDQuNS01LjYsNi4zYy01LjksNC4xLTkuNCw2LjYtMTAuNSw4Yy0xLjMsMC43LTMuMywxLjktNiwzLjIKCQkJCQkJYy0wLjItMS45LTAuNi0zLjktMS01LjdjMC0wLjgsMC4xLTEuNCwwLjItMmwtMC40LTEuNGwwLjItMS4xbC0wLjYtNS4xbDAuNC0xYzAuNi02LjUsMC4xLTEwLjQsMi43LTEyLjYKCQkJCQkJYzAuNi0wLjIsMS0wLjYsMS4zLTEuMWMwLTAuMS0wLjEtMC40LTAuMS0wLjVjMC0yLjEsMy44LTQuNCwxMS4xLThsMC43LTFsMC45LDAuMWMwLjcsMCwxLjUtMC4yLDItMC45aDAuNgoJCQkJCQljMSwwLDEuOC0wLjIsMi43LTAuMmMzLjksMCw2LjUsMy4yLDYuNSw5QzE5Ni4zLDk4LjMsMTk0LjYsMTAyLjgsMTkxLjIsMTA3LjkgTTIxNS4yLDg4LjJsLTAuNy0xLjJjMC40LTAuNSwwLjYtMSwwLjYtMS40CgkJCQkJCWMwLTAuMSwwLTAuNC0wLjEtMC41bC0wLjEtMS40Yy0yLjMtNi43LTYtOS4zLTEzLjYtMTEuN2wtMC43LDAuNWMtMC41LTAuMS0xLTAuMi0xLjUtMC4ycy0xLDAuMS0xLjUsMC4yCgkJCQkJCWMtMC45LTAuMS0xLjctMC4yLTIuNi0wLjJjLTAuNCwwLjEtMC43LDAuMi0xLDAuMmMtMC4yLDAtMC40LTAuMS0wLjYtMC4xbC0yLDAuNmgtMC45bC0yLjIsMS40bC0xLjMtMC4xCgkJCQkJCWMtNS4xLDItOS45LDQuNS0xNC40LDcuN2MtMS4zLDEuMi0yLjEsMS45LTIuNCwxLjljLTAuMiwwLTAuNC0wLjEtMC42LTAuNWMtMC4yLTAuNS0wLjQtMS0wLjQtMS41di0wLjUKCQkJCQkJYy0wLjEtMC4yLTAuMS0wLjUtMC4xLTAuOGMwLTAuMiwwLTAuNSwwLjEtMC43Yy0xLjctNC0zLjctNi02LTZjLTMuMiwwLTEwLjUsNC45LTEyLjUsMTAuN2wwLjUsMC40bDAuNCwzLjlsMS4xLDEuN2gwLjIKCQkJCQkJYzAuNCwwLDAuNiwwLjIsMC42LDAuNXMtMC4xLDAuNi0wLjQsMWgwLjFjMC40LDAsMS4xLDIsMy4zLDUuMWMtMC4yLDEuMi0wLjQsMi42LTAuNSw0LjFjMC4xLDEsMC42LDEuOSwxLjIsMi42bC0wLjcsMi45CgkJCQkJCWMwLjUsMC40LDAuNywwLjcsMSwxLjJjMC4yLDAuNCwwLjQsMC43LDAuNCwxLjF2MC40bDAuNSwwLjljLTAuMSwwLjYtMC4yLDEuMS0wLjUsMS41YzAuMiwyLDEsMy41LDEsNC43CgkJCQkJCWMwLDAuOS0wLjIsMS41LTAuMiwyLjFjMCwxLjUsMC40LDMuNCwxLjEsNS44bDAuOSwwLjdjLTAuMiwwLjItMC40LDAuNS0wLjQsMC43YzAsMC4xLDAuMSwwLjIsMC4xLDAuNAoJCQkJCQljLTAuMiwwLjUtMC40LDAuOS0wLjQsMS4yYzAsMC41LDAuMiwxLDAuMiwxLjJjMCwxLjItMi4yLDIuNy02LjIsMi43aC0yLjRjLTMuMywwLTUuNSwwLjEtNS43LDEuOWwtMC45LDEKCQkJCQkJYzAuMiwwLjgsMS4xLDEuMiwyLjgsMS43YzMuNCwxLjYsNi42LDIuMiw4LjIsMi4yYzAuOSwwLDEuNy0wLjksMy4xLTFjMS4xLTAuMiwxLjgtMC42LDIuMy0wLjhjMC4xLDEuNSwwLjIsMy4xLDAuNCw0LjYKCQkJCQkJYzAuMSwwLjUsMC4yLDAuOSwwLjcsMS4yYzAuOSwxMS44LDIuNCwxOC4yLDMuNCwxOC44Yy0wLjEsMC4zLTAuMiwwLjUtMC4yLDAuOWMwLDEuMiwxLDIuOSwyLjgsNC42bDAuMSwwLjEKCQkJCQkJYzAuNSwwLDEuNi0xLjYsMy4yLTQuNmwtMC42LTEzLjNsLTAuNi0zLjJjMC4xLTAuMiwwLjEtMC43LDAuMS0xLjJjMC0yLTAuNi01LjUtMC45LTEwLjhjMi40LTEuMiw0LjktMi41LDcuNC0zLjkKCQkJCQkJYzAuNy0xLDEuNi0xLjYsMi44LTEuOWMxLjEtMC43LDIuMS0xLjYsMy4yLTIuNmgwLjRjMC41LDAsMS0wLjIsMS42LTAuNWw0LjYtMy4yYzAuOS0wLjUsMS44LTEuMiwyLjktMmMwLTAuNiwwLjQtMC45LDEtMQoJCQkJCQljMS4zLDAsMC42LTEuNywyLjQtMS45YzAuNi0wLjQsMS4xLTAuNywxLjUtMS4xbDAuNi0wLjFjMC42LTEuNiwzLjItMi4xLDUtNC43bDAuNy0wLjJjMi42LTIuMiw0LjYtNC42LDYuNC03LjNsMC41LTAuMwoJCQkJCQljMS41LTIuNywyLjMtNS42LDIuNi04LjdjMC42LTEuNSwxLjEtMi40LDEuMS0zYzAtMC4yLDAtMC40LTAuMS0wLjVDMjE1LjEsOTAsMjE1LjIsODkuMSwyMTUuMiw4OC4yIi8+CgkJCQk8L2c+CgkJCTwvZz4KCQk8L2c+CgkJPGc+CgkJCTxnPgoJCQkJPGc+CgkJCQkJPGRlZnM+CgkJCQkJCTxyZWN0IGlkPSJTVkdJRF83XyIgeD0iMTQuNCIgeT0iOC44IiB3aWR0aD0iMzkyLjQiIGhlaWdodD0iMjg0LjkiLz4KCQkJCQk8L2RlZnM+CgkJCQkJPGNsaXBQYXRoIGlkPSJTVkdJRF84XyI+CgkJCQkJCTx1c2UgeGxpbms6aHJlZj0iI1NWR0lEXzdfIiAgc3R5bGU9Im92ZXJmbG93OnZpc2libGU7Ii8+CgkJCQkJPC9jbGlwUGF0aD4KCQkJCQk8cGF0aCBjbGFzcz0ic3QzIiBkPSJNMjE0LjEsMTUwLjNsLTAuMi0xLjZsMC4yLTEuN2MtMC41LTEuOS0xLjYtMy4yLTMuMi00LjJjLTAuOS0wLjMtMS41LTAuNC0yLTAuNGMtMC42LDAtMS4yLDAuMi0yLjEsMC45CgkJCQkJCWMtNC44LDAuOS04LjMsNS4xLTguMyw5LjhjMCwxLjEsMC4yLDEuNywxLjEsMi4xYzEsMC40LDAuNiwxLjksMS42LDIuMWMwLjIsMC4yLDAuNiwwLjQsMSwwLjRzMC42LDAsMS0wLjEKCQkJCQkJYzAuOSwwLjQsMS4zLDAuOSwxLjUsMS41YzAuNywwLjYsMS41LDEsMi4yLDFjMC4yLDAsMC40LTAuMSwwLjYtMC4xYzIuOC0wLjcsNC4zLTEuMiw0LjQtMS4yYzAsMC4xLDAsMC4xLTAuMSwwLjFsMC40LTEKCQkJCQkJYzAuMi0xLjUsMS43LTIuMiwyLTMuN2MtMC40LTEtMC41LTEuOS0wLjUtMi41QzIxMy42LDE1MSwyMTMuOCwxNTAuNSwyMTQuMSwxNTAuMyIvPgoJCQkJPC9nPgoJCQk8L2c+CgkJPC9nPgoJCTxnPgoJCQk8Zz4KCQkJCTxnPgoJCQkJCTxkZWZzPgoJCQkJCQk8cmVjdCBpZD0iU1ZHSURfOV8iIHg9IjE0LjQiIHk9IjguOCIgd2lkdGg9IjM5Mi40IiBoZWlnaHQ9IjI4NC45Ii8+CgkJCQkJPC9kZWZzPgoJCQkJCTxjbGlwUGF0aCBpZD0iU1ZHSURfMTBfIj4KCQkJCQkJPHVzZSB4bGluazpocmVmPSIjU1ZHSURfOV8iICBzdHlsZT0ib3ZlcmZsb3c6dmlzaWJsZTsiLz4KCQkJCQk8L2NsaXBQYXRoPgoJCQkJCTxwYXRoIGNsYXNzPSJzdDQiIGQ9Ik0yNzguOCwxMDUuOXYtMC42bC0wLjYtMC40bC0wLjItMC41Yy0wLjksMC0xLjYtMC4xLTIuNC0wLjRjLTAuNC0wLjQtMC43LTAuNS0xLjItMC41CgkJCQkJCWMtMC4yLDAtMS41LDAuMS0zLjUsMC4ybC0wLjItMC4xYy0xLjUsMC4xLTIuNywwLjQtMy44LDAuNmwtMC42LDAuMmMtMC41LDAtMS0wLjEtMS41LTAuNGwtMS4zLDAuOWwtMC42LTAuMmwtMC42LDAuNQoJCQkJCQljLTEuOCwwLTIuNiwxLjctNC41LDIuMmwtMC42LDAuNmwtMS4xLDAuNmwtMS4xLDAuNWMtMC4yLDAuMS0wLjYsMC40LTEuMiwxbC0wLjksMC40bC0wLjksMC45bC0wLjYsMC4xCgkJCQkJCWMtMC40LDAuMi0wLjYsMC41LTAuOSwwLjZsLTEuNSwwLjRjLTAuOSwwLjktMS44LDEuNC0yLjksMS42Yy0xLDAuNy0xLjksMS42LTIuNywyLjVsLTAuNywwLjJjLTAuNywxLTEuNSwxLjktMi4zLDIuNmgtMC41CgkJCQkJCWMtMC45LTIuNS0yLjEtNC43LTMuOC02LjdjLTAuMS0wLjQtMC40LTAuNi0wLjctMWMtMC45LTEuNC0xLjgtMi0zLjEtMmMtMi4zLDAtNC40LDEuOS03LjksNS41bC0wLjQsMC40bC0yLjQsMy42CgkJCQkJCWMtMC4xLDAuNi0wLjIsMS4yLTAuNiwxLjd2MC42bC0wLjEsMC41YzAsMS4xLDEuMSwyLjQsMi45LDQuMmwwLjQsMWwwLjUsMC41YzAuNCwwLjcsMC45LDEuNCwxLjMsMmMwLjQsMC40LDAuNiwwLjcsMC43LDEuMgoJCQkJCQljMC45LDAuNCwxLjUsMSwxLjYsMnYwLjJsLTAuMiwwLjRsMC4xLDEuMWwwLjksMC41bC0wLjEsMC40bDAuNCwwLjdsLTAuMiwwLjdoMC45djAuNmMwLDAuMi0wLjEsMS4xLTAuMiwyLjZsMC4yLDFsMC4yLDAuMgoJCQkJCQljMC4yLDEuMiwwLjUsMiwwLjUsMi4xbDAuNywxbDAuNCwwLjlsLTAuMSwwLjdjLTAuNCwwLjQtMC41LDAuNy0wLjUsMS4xYzAsMC41LDAuMSwxLDAuMiwxLjZsLTAuMSwxYzAuMSwxLDAuNSwxLjcsMC41LDIuNHYxCgkJCQkJCWMwLDAuNSwwLjEsMS4xLDAuNSwxLjljLTAuMSwxLjUtMC4yLDIuNC0wLjIsMi42djAuNGwxLDAuNGwwLjUtMC4ybDAuOSwwLjZjMSwwLjEsMS43LDAuMiwyLjMsMC42bDAuOSwxaDAuMgoJCQkJCQljMC4yLDAsMC41LDAuMSwwLjYsMC40bDEuNS0wLjNsMC41LDAuOWMwLjIsMC41LDEsMC45LDEuOCwwLjljMS44LDAsMi45LTEsMi45LTIuMmMwLTAuMi0wLjItMC45LTAuNC0xLjlsLTAuNC0wLjUKCQkJCQkJYy0wLjEtMC45LTAuMi0xLjYtMC4yLTIuMWMwLTAuNiwwLjEtMS4xLDAuNC0xLjRjLTAuMS01LjktMC40LTkuMS0wLjQtOS43YzAtMC42LDAuMS0yLjEsMC4xLTQuNWMtMC4xLTAuNi0wLjItMS4xLTAuNC0xLjcKCQkJCQkJbDAuNC0wLjZsLTEuMS04LjNsMC4xLTAuN2wxLTAuOWwxLjMtMi4ybDAuNiwwLjJsMC4xLTAuNWwwLjUtMC40bDAuMS0wLjJsMC45LTAuNGMwLjQtMC40LDAuOS0wLjcsMS4zLTEuMgoJCQkJCQljMS4yLTAuMSwyLjEtMC43LDIuNi0xLjlsLTAuMS0wLjJjMS42LTAuNSwyLjEtMS45LDMuMy0yLjFsMC40LTAuN2wwLjYtMC4xVjExOGMwLTAuOSwyLjgtMC45LDYuNi01LjFsMC42LDAuMmwxLjctMC42CgkJCQkJCWwwLjYsMC4yYzAuNC0wLjUsMS0wLjcsMS44LTFjMC41LTAuNSwwLjctMS4xLDAuNy0xLjVWMTEwYzAuNiwwLDEuMSwwLDEuNy0wLjFsMC40LDAuMWwwLjUtMC4xaDAuOWwwLjItMC42CgkJCQkJCWMxLjEtMC43LDIuMS0xLjYsMy0yLjRsMC40LTAuMWwyLTAuNWgxLjJMMjc4LjgsMTA1Ljl6Ii8+CgkJCQk8L2c+CgkJCTwvZz4KCQk8L2c+CgkJPGc+CgkJCTxnPgoJCQkJPGc+CgkJCQkJPGRlZnM+CgkJCQkJCTxyZWN0IGlkPSJTVkdJRF8xMV8iIHg9IjE0LjQiIHk9IjguOCIgd2lkdGg9IjM5Mi40IiBoZWlnaHQ9IjI4NC45Ii8+CgkJCQkJPC9kZWZzPgoJCQkJCTxjbGlwUGF0aCBpZD0iU1ZHSURfMTJfIj4KCQkJCQkJPHVzZSB4bGluazpocmVmPSIjU1ZHSURfMTFfIiAgc3R5bGU9Im92ZXJmbG93OnZpc2libGU7Ii8+CgkJCQkJPC9jbGlwUGF0aD4KCQkJCQk8cGF0aCBjbGFzcz0ic3Q1IiBkPSJNMzQ4LDEwNy45bC0wLjEtMS4ybC0xLTAuN2MtMS42LTAuNy0yLjktMS4yLTQuMi0xLjJjLTIuMSwwLTMuNCwwLjItNC40LDAuMmMtMi4zLDAtNC4zLTAuMi01LjktMC4yCgkJCQkJCWMtMS4xLDAtNS4yLDAuMi0xMi41LDAuMmwtMC42LTAuMnYtMC4xYzAtMC43LDItNSw1LjItMTMuMmwwLjQtMC40YzIuMi01LjUsMy43LTksMy43LTEwLjdWODBsMC4xLTAuM0wzMjksNzkKCQkJCQkJYy0wLjItMS42LTEuMS0yLjktMi42LTMuN2wtMC43LTAuMWMtMi42LDAuMi00LjIsMC41LTUuNSwyLjJsLTEuMiwwLjRjLTAuMiwwLjEtMy4zLDEuOS00LjUsMy42bC0wLjYsMC40CgkJCQkJCWMtMS4xLDEuMi0xLjgsMi42LTIuMyw0Yy0wLjEsMC42LTAuMSwxLjItMC4xLDEuNmwtMC4xLDAuNXYwLjJjMCwwLjYtMC4yLDEuMS0wLjksMS43Yy0wLjEsMC41LTAuMSwxLjItMC4yLDIuMVY5MwoJCQkJCQljMCwwLjctMC4xLDEuMS0wLjYsMS4ybDAuMSwwLjdjLTAuNSwwLjktMC45LDEuNi0xLjIsMi41djAuMWMwLDEtMS42LDMuNy0zLjIsOS4xbC0wLjYsMC4zYy00LDAuNC03LjgsMC45LTExLjQsMS42bC0wLjUtMC4yCgkJCQkJCWMtMC40LDAuMS0wLjksMC4yLTEuNSwwLjRsLTEtMC4xYy0wLjcsMC0xLjUsMC4xLTIuMywwLjFjLTAuNywwLjEtMS42LDAuMS0yLjQsMC4ybC0xLjEtMC4yYy0wLjksMC0xLjYsMC4xLTIuMywwLjVsLTAuNywwLjYKCQkJCQkJYy0yLjMsMS4xLTQuMiwyLjUtNC4zLDIuN2wtMC41LDAuN2wtMS4xLDAuNWMtMC42LDAuNi0xLjEsMS0xLjMsMS4yYzEsMi41LDMuNCwzLDQuNCw0LjZjMC4xLDAuNiwwLjEsMS4yLDAuMSwxLjYKCQkJCQkJYzAuOSwwLjIsMS42LDAuNSwyLjIsMC42YzEsMC4yLDIsMC40LDIuNywwLjRjMi4zLDAsMy41LTAuOSwzLjktMC45aDAuNGMwLjIsMCwwLjYtMC4xLDAuOS0wLjVjMC42LTAuMSwxLjMtMC40LDItMC41aDAuNwoJCQkJCQljMC43LDAsMS41LTAuMSwyLjEtMC40bDEuMi0xYzAuNywwLjEsMS42LDAuMSwyLjQsMC4ybDAuNS0wLjVsMi4zLTAuMWgxLjJjMCwwLjUtMC4yLDAuOS0wLjUsMS40YzAsMC42LTAuMSwxLjQtMC40LDIuMQoJCQkJCQlsLTAuMiwwLjRjLTAuMiwxLjEtMC41LDEuNy0wLjUsMmwtMC4xLDEuMmwtMC40LDAuNWwtMC40LDEuMWMwLDEtMC4yLDEuOS0wLjYsMi43djAuNWMtMC42LDItMS4yLDMuNy0xLjcsNS4ybC0wLjQsMS43CgkJCQkJCWMtMC4xLDEuMS0xLjEsMi45LTEuNSw2Yy0wLjksMS40LTEsMy42LTEuNyw2LjVsLTEuMSw0bC0wLjIsMS4ybDAuNCwwLjVsMC41LDAuN2wxLjItMC42YzEuMiwwLjEsMS43LDAuNywxLjcsMgoJCQkJCQljMCwxLjEsMCwyLjItMC4xLDMuNWwtMC42LDJsMC4yLDEuMmMtMC4xLDAuNi0wLjQsMS40LTAuNSwyYzAuMSwwLjUsMC41LDAuOSwxLDEuMmMwLjcsMS41LDEuMywyLjksMS44LDQuMWwtMC4xLDAuOWwwLjUsMC4xCgkJCQkJCXYyLjdsMC4xLDAuOWwwLjIsMC4yYzAsMC43LDAuMiwxLjUsMC45LDIuMWwwLjIsMC4xbDAuMiwwLjhsMC40LDAuMWMwLjktMC4xLDEuMy0wLjUsMS42LTEuNGMtMC4xLTAuMi0wLjEtMC40LTAuMS0wLjYKCQkJCQkJYzAtMC40LDAuMS0wLjcsMC4yLTEuMWMtMC41LTUuNC0wLjktOS0wLjktMTAuOGMwLTAuNSwwLjctMy42LDEuNy0xMC43YzAtMC40LDAuNy0zLjQsMS43LTUuN3YtMC40YzIuMy03LjMsMy40LTEzLjcsNS40LTE4LjMKCQkJCQkJYzAuNC0xLjksMS4xLTQuMSwxLjktNi44bDAuNC0wLjRjMS44LTUuMywyLTcsNS43LTdsMC40LDAuMWMxLjMtMC41LDIuNC0wLjksMy40LTEuMWwwLjcsMC4xYzAuNy0wLjIsMS41LTAuNiwyLjMtMC45bDAuOS0wLjEKCQkJCQkJYzIuMi0wLjksNC42LTEuMiw3LTEuOWMyLjEtMC42LDIuOC0zLjIsNS45LTMuMmwwLjQtMC4yYzAuNy0wLjMsMS41LTAuNCwyLjMtMC40bDAuNSwwLjJjMS4zLDAuMSwyLjYsMC4yLDMuNywwLjIKCQkJCQkJQzM0NS42LDEwOS42LDM0Ni43LDEwOSwzNDgsMTA3LjkiLz4KCQkJCTwvZz4KCQkJPC9nPgoJCTwvZz4KCTwvZz4KCTxnIGNsYXNzPSJzdDYiPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0xNy4zLDI0Mi4ydjE2LjJoLTEuOXYtMTYuMkwxNy4zLDI0Mi4yTDE3LjMsMjQyLjJ6IE0yNi4xLDI0Mi4ybC02LjYsNy42bDcuMyw4LjVoLTIuNWwtNi45LTguNWw2LjYtNy43aDIuMQoJCQlWMjQyLjJ6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTMwLjUsMjQydjE2LjNoLTEuOFYyNDJIMzAuNXoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMzYuMSwyNDMuMWMwLDAuNy0wLjUsMS4yLTEuMywxLjJjLTAuNywwLTEuMy0wLjUtMS4zLTEuMnMwLjYtMS4zLDEuMy0xLjNDMzUuNywyNDEuOSwzNi4xLDI0Mi40LDM2LjEsMjQzLjEKCQkJeiBNMzUuOCwyNDYuOHYxMS41SDM0di0xMS41TDM1LjgsMjQ2LjhMMzUuOCwyNDYuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNNDAuNywyNDYuOGMwLjEsMC41LDAuMiwwLjksMC4yLDEuNmMwLjgtMS4zLDItMiwzLjUtMmMxLjUsMCwyLjgsMC43LDMuMywxLjljMC40LDAuNywwLjQsMS4xLDAuNCwzLjR2Ni42CgkJCWgtMS44di02LjZjMC0xLjgsMC0yLjEtMC4yLTIuN2MtMC40LTAuNy0xLjEtMS4yLTItMS4yYy0xLjEsMC0yLDAuNS0yLjUsMS40Yy0wLjQsMC42LTAuNiwxLjQtMC42LDIuNnY2LjRoLTEuOHYtNy42CgkJCWMwLTIuNywwLTIuOC0wLjItMy45TDQwLjcsMjQ2LjhMNDAuNywyNDYuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNNTMuOCwyNDMuMWMwLDAuNy0wLjUsMS4yLTEuMywxLjJjLTAuNywwLTEuMy0wLjUtMS4zLTEuMnMwLjYtMS4zLDEuMy0xLjNDNTMuMiwyNDEuOSw1My44LDI0Mi40LDUzLjgsMjQzLjEKCQkJeiBNNTMuNSwyNDYuOHYxMS41aC0xLjh2LTExLjVMNTMuNSwyNDYuOEw1My41LDI0Ni44eiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik01OC43LDI0MnYxNi4zSDU3VjI0Mkg1OC43eiBNNjUuNiwyNDYuOGwtNC44LDUuMmw1LjIsNi4zaC0yLjNsLTQuOS02LjJsNC44LTUuM0g2NS42eiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik03OS42LDI0Ni44djEuNGgtMi44djEwLjFINzV2LTEwLjFoLTEuNnYtMS40SDc1di0wLjdjMC0xLjgsMC4xLTIuMywwLjUtMi45YzAuNS0wLjgsMS40LTEuMywyLjYtMS4zCgkJCWMwLjYsMCwxLjIsMC4xLDEuOSwwLjR2MS41Yy0wLjYtMC40LTEuMS0wLjUtMS42LTAuNWMtMC43LDAtMS4yLDAuNC0xLjQsMC45Yy0wLjEsMC40LTAuMSwwLjktMC4xLDEuOHYwLjhMNzkuNiwyNDYuOEw3OS42LDI0Ni44CgkJCXoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNODMuMywyNDYuOHY3YzAsMS4zLDAuMSwxLjksMC40LDIuM2MwLjQsMC42LDEuMiwwLjksMiwwLjljMS4xLDAsMS44LTAuNSwyLjMtMS4zYzAuNC0wLjYsMC41LTEuMywwLjUtMi41CgkJCXYtNi42aDEuOHY4YzAsMi41LDAsMi43LDAuMiwzLjVoLTEuNmMtMC4xLTAuNS0wLjItMC45LTAuMi0xLjVjLTAuNywxLjMtMS41LDEuOS0zLDEuOWMtMS41LDAtMi43LTAuNy0zLjQtMS44CgkJCWMtMC40LTAuNy0wLjUtMS40LTAuNS0zdi03TDgzLjMsMjQ2LjhMODMuMywyNDYuOHogTTg1LjEsMjQzLjJjMCwwLjctMC42LDEuMy0xLjMsMS4zYy0wLjcsMC0xLjMtMC42LTEuMy0xLjMKCQkJYzAtMC43LDAuNi0xLjMsMS4zLTEuM0M4NC41LDI0MS45LDg1LjEsMjQyLjUsODUuMSwyNDMuMnogTTg5LjMsMjQzLjJjMCwwLjctMC42LDEuMy0xLjMsMS4zcy0xLjMtMC42LTEuMy0xLjMKCQkJYzAtMC43LDAuNi0xLjMsMS4zLTEuM0M4OC43LDI0MS45LDg5LjMsMjQyLjUsODkuMywyNDMuMnoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNOTUuMSwyNDYuOGMwLjEsMC42LDAuMiwxLjIsMC4yLDEuOHYwLjdjMC44LTEuOSwxLjgtMi44LDIuOS0yLjhjMC41LDAsMC45LDAuMSwxLjQsMC40djEuOAoJCQljLTAuOC0wLjQtMS4xLTAuNS0xLjUtMC41Yy0wLjksMC0xLjgsMC43LTIuMiwxLjhjLTAuNCwwLjgtMC41LDEuOC0wLjUsMy4zdjUuMmgtMS44di03LjVjMC0yLjcsMC0yLjgtMC4yLTRIOTUuMXoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMTEwLjcsMjQyLjJjMi41LDAsMy41LDAuMSw0LjQsMC41YzEuOCwwLjYsMi44LDIuMiwyLjgsNC40YzAsMi0wLjksMy41LTIuNiw0LjJjLTEuMSwwLjUtMiwwLjYtNC40LDAuNgoJCQloLTEuMnY2LjZIMTA4di0xNi4yaDIuN1YyNDIuMnogTTExMSwyNTAuMWMxLjYsMCwyLjIsMCwzLTAuMmMxLjQtMC40LDIuMS0xLjQsMi4xLTIuOWMwLTEuNC0wLjYtMi41LTEuNi0yLjkKCQkJYy0wLjgtMC40LTEuNC0wLjQtMy42LTAuNGgtMC45djYuNEgxMTF6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTEyNi41LDI0OS45Yy0wLjEtMS40LTAuOS0yLjEtMi4zLTIuMWMtMS4zLDAtMi4yLDAuNy0yLjIsMS44YzAsMC45LDAuNSwxLjMsMi43LDJjMS45LDAuNiwyLjYsMC44LDMsMS40CgkJCWMwLjUsMC42LDAuNywxLjIsMC43LDJjMCwyLjItMS42LDMuNi00LjIsMy42Yy0yLjgsMC00LjMtMS40LTQuMy0zLjloMS42YzAuMSwxLjYsMS4xLDIuNSwyLjcsMi41YzEuNSwwLDIuNS0wLjgsMi41LTIKCQkJYzAtMC42LTAuMi0xLjEtMC43LTEuM2MtMC41LTAuMi0wLjYtMC40LTIuNi0wLjljLTIuMi0wLjctMy0xLjUtMy0zLjJjMC0yLDEuNi0zLjMsNC0zLjNjMi41LDAsMy45LDEuMyw0LDMuNWgtMS44VjI0OS45eiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0xMzEuNiwyNDYuOGwzLjIsOS42bDMuMy05LjZoMS44bC0zLjcsMTAuN2MtMS4xLDMtMS4zLDMuNS0yLDQuM2MtMC44LDAuOS0zLDIuNC00LjQsMi40Yy0wLjEsMC0wLjQsMC0wLjYsMAoJCQlsMS0yLjVjMi4yLDAsMi44LTAuNSwzLjctMy4ybC00LTExLjZoMS44VjI0Ni44eiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0xNDguMSwyNTAuNWMtMC40LTEuOS0xLjEtMi42LTIuNS0yLjZjLTEuOSwwLTMsMS44LTMsNC42czEuMiw0LjYsMy4yLDQuNmMxLjUsMCwyLjMtMC44LDIuNi0yLjhoMS44CgkJCWMtMC4yLDIuOC0xLjgsNC4yLTQuMiw0LjJjLTIuOSwwLTQuOS0yLjMtNC45LTZjMC0zLjcsMS45LTYuMSw0LjktNi4xYzIuNSwwLDMuOSwxLjQsNC4xLDQuMUwxNDguMSwyNTAuNUwxNDguMSwyNTAuNXoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMTU0LjQsMjQydjYuMWMwLjgtMS4yLDEuOS0xLjYsMy4zLTEuNmMxLjQsMCwyLjYsMC42LDMuMiwxLjVjMC41LDAuNywwLjYsMS40LDAuNiwzLjd2Ni42aC0xLjh2LTYuNgoJCQljMC0xLjYtMC4xLTIuMS0wLjQtMi43Yy0wLjQtMC43LTEuMS0xLjItMi0xLjJjLTEuMSwwLTEuOSwwLjUtMi41LDEuNGMtMC40LDAuNi0wLjYsMS40LTAuNiwyLjZ2Ni4zaC0xLjh2LTE2LjNoMS45VjI0MnoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMTY3LDI0My4xYzAsMC43LTAuNSwxLjItMS4zLDEuMmMtMC43LDAtMS4zLTAuNS0xLjMtMS4yczAuNi0xLjMsMS4zLTEuM0MxNjYuNSwyNDEuOSwxNjcsMjQyLjQsMTY3LDI0My4xegoJCQkgTTE2Ni43LDI0Ni44djExLjVoLTEuOHYtMTEuNUwxNjYuNywyNDYuOEwxNjYuNywyNDYuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMTcwLDI0OS44YzAuMi0yLjEsMS44LTMuMyw0LjMtMy4zYzEuOSwwLDMuMywwLjcsMy43LDEuOWMwLjIsMC42LDAuMiwxLjIsMC4yLDIuNnY0LjNjMCwxLjksMCwyLjIsMC40LDMKCQkJSDE3N2MtMC4xLTAuNi0wLjItMC44LTAuMi0xLjVjLTAuNywxLjMtMS44LDEuOS0zLjQsMS45Yy0yLjIsMC0zLjctMS4zLTMuNy0zLjNjMC0xLjYsMC45LTIuOCwyLjctMy40YzEuMi0wLjUsMi4yLTAuNyw0LjMtMS4xCgkJCXYtMC41YzAtMS44LTAuNy0yLjMtMi4zLTIuM2MtMS41LDAtMi4zLDAuNi0yLjYsMS45SDE3MFYyNDkuOHogTTE3Ni41LDI1Mi4xYy0zLjksMC43LTUuMywxLjUtNS4zLDNjMCwxLjIsMC45LDIsMi4yLDIKCQkJYzEuMSwwLDItMC41LDIuNi0xLjRjMC40LTAuNiwwLjUtMS40LDAuNS0yLjZMMTc2LjUsMjUyLjFMMTc2LjUsMjUyLjF6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTE4Ni44LDI0Ni44djEuNGgtMi43bC0wLjEsNS45djEuMmMwLDEuNCwwLjIsMS45LDEuMywxLjljMC41LDAsMS4yLTAuMSwxLjYtMC41djEuNWMtMC44LDAuMi0xLjMsMC40LTIsMC40CgkJCWMtMS4yLDAtMi0wLjQtMi4zLTEuMWMtMC4yLTAuNC0wLjQtMC44LTAuNC0xLjZjMC0wLjIsMC0wLjYsMC0wLjljMC0wLjUsMC0wLjgsMC0wLjlsMC4xLTUuN2gtMS44di0xLjRoMS44bDAuMS0zLjNoMS42djMuMwoJCQlMMTg2LjgsMjQ2LjhMMTg2LjgsMjQ2Ljh6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTE5MC44LDI0Ni44YzAuMSwwLjYsMC4yLDEuMiwwLjIsMS44djAuN2MwLjgtMS45LDEuOC0yLjgsMi45LTIuOGMwLjUsMCwwLjksMC4xLDEuNCwwLjR2MS44CgkJCWMtMC44LTAuNC0xLjEtMC41LTEuNS0wLjVjLTAuOSwwLTEuOCwwLjctMi4yLDEuOGMtMC40LDAuOC0wLjUsMS44LTAuNSwzLjN2NS4yaC0xLjh2LTcuNWMwLTIuNywwLTIuOC0wLjItNEgxOTAuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMTk5LjYsMjQzLjFjMCwwLjctMC41LDEuMi0xLjMsMS4yYy0wLjcsMC0xLjMtMC41LTEuMy0xLjJzMC42LTEuMywxLjMtMS4zCgkJCUMxOTkuMSwyNDEuOSwxOTkuNiwyNDIuNCwxOTkuNiwyNDMuMXogTTE5OS4yLDI0Ni44djExLjVoLTEuOHYtMTEuNUwxOTkuMiwyNDYuOEwxOTkuMiwyNDYuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMjAzLjksMjUyLjhjMC4xLDIuOCwxLjMsNC4zLDMuMyw0LjNjMS4zLDAsMi0wLjUsMi43LTEuOGwxLjUsMC4yYy0wLjcsMi0yLjEsMy00LjIsM2MtMywwLTUtMi4zLTUtNgoJCQljMC0zLjcsMi02LjIsNC45LTYuMmMyLjgsMCw0LjcsMi4zLDQuNyw1LjljMCwwLjEsMCwwLjIsMCwwLjVIMjAzLjl6IE0yMTAsMjUxLjVjLTAuMi0yLjMtMS4zLTMuNi0yLjktMy42cy0yLjcsMS4zLTMsMy42SDIxMHoiCgkJCS8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTIyMi4zLDI0Ni44djdjMCwxLjMsMC4xLDEuOSwwLjQsMi4zYzAuNCwwLjYsMS4yLDAuOSwyLDAuOWMwLjksMCwxLjgtMC41LDIuMy0xLjNjMC40LTAuNiwwLjUtMS4zLDAuNS0yLjUKCQkJdi02LjZoMS44djhjMCwyLjUsMCwyLjcsMC4yLDMuNWgtMS42Yy0wLjEtMC41LTAuMi0wLjktMC4yLTEuNWMtMC43LDEuMy0xLjUsMS45LTMsMS45cy0yLjctMC43LTMuNC0xLjhjLTAuNC0wLjctMC41LTEuNC0wLjUtMwoJCQl2LTdMMjIyLjMsMjQ2LjhMMjIyLjMsMjQ2Ljh6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTIzNC4xLDI0Ni44YzAuMSwwLjUsMC4yLDAuOSwwLjIsMS42YzAuOC0xLjMsMi0yLDMuNS0yczIuOCwwLjcsMy4zLDEuOWMwLjQsMC43LDAuNCwxLjEsMC40LDMuNHY2LjZoLTEuOAoJCQl2LTYuNmMwLTEuOCwwLTIuMS0wLjItMi43Yy0wLjQtMC43LTEuMS0xLjItMi0xLjJjLTEuMSwwLTIsMC41LTIuNSwxLjRjLTAuNCwwLjYtMC42LDEuNC0wLjYsMi42djYuNGgtMS44di03LjYKCQkJYzAtMi43LDAtMi44LTAuMi0zLjlMMjM0LjEsMjQ2LjhMMjM0LjEsMjQ2Ljh6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTI1My44LDI1NC45YzAsMiwwLDIuNywwLjIsMy40aC0xLjZjLTAuMS0wLjUtMC4xLTAuOC0wLjEtMS4zYzAtMC4xLDAtMC4yLDAtMC41Yy0wLjgsMS40LTEuOCwyLTMuMywyCgkJCWMtMi44LDAtNC42LTIuMy00LjYtNmMwLTMuNiwxLjktNi4yLDQuNi02LjJjMS41LDAsMi41LDAuNiwzLjMsMnYtNi40aDEuOHYxM0gyNTMuOHogTTI0Ni4xLDI1Mi42YzAsMi44LDEuMiw0LjYsMyw0LjYKCQkJczMtMS44LDMtNC42YzAtMi44LTEuMi00LjYtMy00LjZDMjQ3LjMsMjQ3LjksMjQ2LjEsMjQ5LjcsMjQ2LjEsMjUyLjZ6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTI2Ni4zLDI0Mi4yYzIuNSwwLDMuNSwwLjEsNC40LDAuNWMxLjgsMC42LDIuOCwyLjIsMi44LDQuNGMwLDItMC45LDMuNS0yLjYsNC4yYy0xLjEsMC41LTIsMC42LTQuNCwwLjYKCQkJaC0xLjJ2Ni42aC0xLjZ2LTE2LjJoMi42VjI0Mi4yeiBNMjY2LjcsMjUwLjFjMS42LDAsMi4yLDAsMy0wLjJjMS40LTAuNCwyLjEtMS40LDIuMS0yLjljMC0xLjQtMC42LTIuNS0xLjYtMi45CgkJCWMtMC44LTAuNC0xLjQtMC40LTMuNi0wLjRoLTAuOXY2LjRIMjY2Ljd6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTI4Mi4yLDI0OS45Yy0wLjEtMS40LTAuOS0yLjEtMi4zLTIuMWMtMS4zLDAtMi4yLDAuNy0yLjIsMS44YzAsMC45LDAuNSwxLjMsMi43LDJjMS45LDAuNiwyLjYsMC44LDMsMS40CgkJCXMwLjcsMS4yLDAuNywyYzAsMi4yLTEuNiwzLjYtNC4yLDMuNmMtMi44LDAtNC4zLTEuNC00LjMtMy45aDEuNmMwLjEsMS42LDEuMSwyLjUsMi43LDIuNWMxLjUsMCwyLjUtMC44LDIuNS0yCgkJCWMwLTAuNi0wLjItMS4xLTAuNy0xLjNjLTAuNS0wLjItMC42LTAuNC0yLjYtMC45Yy0yLjItMC43LTMtMS41LTMtMy4yYzAtMiwxLjYtMy4zLDQtMy4zYzIuNSwwLDMuOSwxLjMsNCwzLjVoLTEuOFYyNDkuOXoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMjg3LjIsMjQ2LjhsMy4yLDkuNmwzLjMtOS42aDEuOGwtMy43LDEwLjdjLTEuMSwzLTEuMywzLjUtMiw0LjNjLTAuOCwwLjktMywyLjQtNC40LDIuNGMtMC4xLDAtMC40LDAtMC42LDAKCQkJbDEtMi41YzIuMiwwLDIuOC0wLjUsMy43LTMuMmwtNC0xMS42aDEuOFYyNDYuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMzAzLjgsMjUwLjVjLTAuNC0xLjktMS4xLTIuNi0yLjUtMi42Yy0xLjksMC0zLDEuOC0zLDQuNnMxLjIsNC42LDMuMiw0LjZjMS41LDAsMi4zLTAuOCwyLjYtMi44aDEuOAoJCQljLTAuMiwyLjgtMS44LDQuMi00LjIsNC4yYy0yLjksMC00LjktMi4zLTQuOS02YzAtMy43LDEuOS02LjEsNC45LTYuMWMyLjUsMCwzLjksMS40LDQuMSw0LjFMMzAzLjgsMjUwLjVMMzAzLjgsMjUwLjV6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTMxMCwyNDJ2Ni4xYzAuOC0xLjIsMS45LTEuNiwzLjMtMS42YzEuNCwwLDIuNiwwLjYsMy4yLDEuNWMwLjUsMC43LDAuNiwxLjQsMC42LDMuN3Y2LjZoLTEuOHYtNi42CgkJCWMwLTEuNi0wLjEtMi4xLTAuNC0yLjdjLTAuNC0wLjctMS4xLTEuMi0yLTEuMmMtMS4xLDAtMS45LDAuNS0yLjUsMS40Yy0wLjQsMC42LTAuNiwxLjQtMC42LDIuNnY2LjNoLTEuOHYtMTYuM2gxLjlWMjQyeiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0zMjkuOSwyNTIuNmMwLDMuNS0yLjEsNi4xLTUsNi4xYy0zLDAtNS0yLjUtNS02LjFjMC0zLjUsMi4xLTYsNS02QzMyNy44LDI0Ni41LDMyOS45LDI0OSwzMjkuOSwyNTIuNnoKCQkJIE0zMjEuNiwyNTIuNWMwLDIuOCwxLjMsNC43LDMuMyw0LjdjMiwwLDMuMy0xLjksMy4zLTQuNmMwLTIuNy0xLjMtNC42LTMuMy00LjZDMzIyLjksMjQ3LjksMzIxLjYsMjQ5LjgsMzIxLjYsMjUyLjV6Ii8+CgkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTMzOC43LDI0OS45Yy0wLjEtMS40LTAuOS0yLjEtMi4zLTIuMWMtMS4zLDAtMi4yLDAuNy0yLjIsMS44YzAsMC45LDAuNSwxLjMsMi43LDJjMS45LDAuNiwyLjYsMC44LDMsMS40CgkJCXMwLjcsMS4yLDAuNywyYzAsMi4yLTEuNiwzLjYtNC4yLDMuNmMtMi44LDAtNC4zLTEuNC00LjMtMy45aDEuNmMwLjEsMS42LDEuMSwyLjUsMi43LDIuNWMxLjUsMCwyLjUtMC44LDIuNS0yCgkJCWMwLTAuNi0wLjItMS4xLTAuNy0xLjNjLTAuNS0wLjItMC42LTAuNC0yLjYtMC45Yy0yLjItMC43LTMtMS41LTMtMy4yYzAtMiwxLjYtMy4zLDQtMy4zYzIuNSwwLDMuOSwxLjMsNCwzLjVoLTEuOFYyNDkuOXoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMzUyLjgsMjUyLjZjMCwzLjUtMi4xLDYuMS01LDYuMWMtMywwLTUtMi41LTUtNi4xYzAtMy41LDIuMS02LDUtNkMzNTAuNywyNDYuNSwzNTIuOCwyNDksMzUyLjgsMjUyLjZ6CgkJCSBNMzQ0LjQsMjUyLjVjMCwyLjgsMS4zLDQuNywzLjMsNC43YzIsMCwzLjMtMS45LDMuMy00LjZjMC0yLjctMS4zLTQuNi0zLjMtNC42QzM0NS45LDI0Ny45LDM0NC40LDI0OS44LDM0NC40LDI1Mi41eiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0zNTcuMSwyNDYuOGMwLjEsMC41LDAuMiwwLjksMC4yLDEuNWMwLjctMS4zLDEuOC0xLjksMy40LTEuOWMxLjYsMCwyLjYsMC42LDMuMiwyYzAuOC0xLjQsMS45LTIsMy41LTIKCQkJYzEuNCwwLDIuNSwwLjYsMi45LDEuNWMwLjQsMC43LDAuNSwxLjIsMC41LDMuM3Y3SDM2OXYtN2MwLTEuNCwwLTEuOS0wLjQtMi4zYy0wLjQtMC42LTEuMS0wLjktMS45LTAuOWMtMC45LDAtMS44LDAuNS0yLjIsMS4yCgkJCWMtMC40LDAuNi0wLjUsMS4yLTAuNSwyLjJ2Ni44aC0xLjh2LTYuOGMwLTEuOCwwLTItMC4yLTIuNWMtMC40LTAuNy0xLjEtMS4xLTItMS4xYy0xLjEsMC0xLjksMC41LTIuMywxLjMKCQkJYy0wLjQsMC42LTAuNSwxLjMtMC41LDIuM3Y2LjdoLTEuOHYtOGMwLTIuMywwLTIuNi0wLjItMy41aDEuOFYyNDYuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMzc0LDI0OS44YzAuMi0yLjEsMS44LTMuMyw0LjMtMy4zYzEuOSwwLDMuMywwLjcsMy43LDEuOWMwLjIsMC42LDAuMiwxLjIsMC4yLDIuNnY0LjNjMCwxLjksMCwyLjIsMC40LDMKCQkJaC0xLjhjLTAuMS0wLjYtMC4yLTAuOC0wLjItMS41Yy0wLjcsMS4zLTEuOCwxLjktMy40LDEuOWMtMi4yLDAtMy43LTEuMy0zLjctMy4zYzAtMS42LDAuOS0yLjgsMi43LTMuNGMxLjItMC41LDIuMi0wLjcsNC4zLTEuMQoJCQl2LTAuNWMwLTEuOC0wLjctMi4zLTIuMy0yLjNjLTEuNSwwLTIuMywwLjYtMi42LDEuOUgzNzRWMjQ5Ljh6IE0zODAuNSwyNTIuMWMtMy45LDAuNy01LjMsMS41LTUuMywzYzAsMS4yLDAuOSwyLDIuMiwyCgkJCWMxLjEsMCwyLTAuNSwyLjYtMS40YzAuNC0wLjYsMC41LTEuNCwwLjUtMi42VjI1Mi4xeiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0zOTAuOCwyNDYuOHYxLjRoLTIuN2wtMC4xLDUuOXYxLjJjMCwxLjQsMC4yLDEuOSwxLjMsMS45YzAuNSwwLDEuMi0wLjEsMS42LTAuNXYxLjVjLTAuOCwwLjItMS4zLDAuNC0yLDAuNAoJCQljLTEuMiwwLTItMC40LTIuMy0xLjFjLTAuMi0wLjQtMC40LTAuOC0wLjQtMS42YzAtMC4yLDAtMC42LDAtMC45YzAtMC41LDAtMC44LDAtMC45bDAuMS01LjdoLTEuOHYtMS40aDEuOGwwLjEtMy4zaDEuNnYzLjMKCQkJTDM5MC44LDI0Ni44TDM5MC44LDI0Ni44eiIvPgoJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0zOTUuNSwyNDMuMWMwLDAuNy0wLjUsMS4yLTEuMywxLjJjLTAuNywwLTEuMy0wLjUtMS4zLTEuMnMwLjYtMS4zLDEuMy0xLjMKCQkJQzM5NSwyNDEuOSwzOTUuNSwyNDIuNCwzOTUuNSwyNDMuMXogTTM5NS4yLDI0Ni44djExLjVoLTEuOHYtMTEuNUwzOTUuMiwyNDYuOEwzOTUuMiwyNDYuOHoiLz4KCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNNDAwLjQsMjQydjE2LjNoLTEuOFYyNDJINDAwLjR6IE00MDcuNCwyNDYuOGwtNC44LDUuMmw1LjIsNi4zaC0yLjNsLTQuOS02LjJsNC44LTUuM0g0MDcuNHoiLz4KCTwvZz4KCTxnPgoJCTxnPgoJCQk8Zz4KCQkJCTxnPgoJCQkJCTxkZWZzPgoJCQkJCQk8cmVjdCBpZD0iU1ZHSURfMTNfIiB4PSIxNC40IiB5PSI4LjgiIHdpZHRoPSIzOTIuNCIgaGVpZ2h0PSIyODQuOSIvPgoJCQkJCTwvZGVmcz4KCQkJCQk8Y2xpcFBhdGggaWQ9IlNWR0lEXzE0XyI+CgkJCQkJCTx1c2UgeGxpbms6aHJlZj0iI1NWR0lEXzEzXyIgIHN0eWxlPSJvdmVyZmxvdzp2aXNpYmxlOyIvPgoJCQkJCTwvY2xpcFBhdGg+CgkJCQkJPGcgY2xhc3M9InN0OCI+CgkJCQkJCTxnIGNsYXNzPSJzdDYiPgoJCQkJCQkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTE2NC40LDI3MS4yYzIuNSwwLDMuNCwwLjEsNC40LDAuNWMxLjYsMC42LDIuNiwyLjEsMi42LDQuMWMwLDIuMS0xLjIsMy42LTMuMyw0LjRsNC4yLDcuM2gtMi4yCgkJCQkJCQkJbC00LjEtNi45aC0yLjh2Ni45aC0xLjl2LTE2LjJoM1YyNzEuMnogTTE2NC41LDI3OC45YzIsMCwyLjYsMCwzLjMtMC40YzEuMi0wLjUsMS45LTEuNCwxLjktMi44YzAtMS4zLTAuNi0yLjItMS41LTIuNgoJCQkJCQkJCWMtMC43LTAuNC0xLjMtMC40LTMuNi0wLjRoLTEuMXY2LjFMMTY0LjUsMjc4LjlMMTY0LjUsMjc4Ljl6Ii8+CgkJCQkJCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMTc1LjYsMjgyYzAuMSwyLjgsMS4zLDQuMywzLjMsNC4zYzEuMywwLDItMC41LDIuNy0xLjhsMS41LDAuMmMtMC43LDItMi4xLDMtNC4yLDNjLTMsMC01LTIuMy01LTYKCQkJCQkJCQljMC0zLjcsMi02LjIsNC45LTYuMmMyLjgsMCw0LjcsMi4zLDQuNyw1LjljMCwwLjEsMCwwLjIsMCwwLjVMMTc1LjYsMjgyTDE3NS42LDI4MnogTTE4MS43LDI4MC43Yy0wLjItMi4zLTEuMy0zLjYtMi45LTMuNgoJCQkJCQkJCWMtMS42LDAtMi43LDEuMy0zLDMuNkgxODEuN3oiLz4KCQkJCQkJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0xODgsMjc1Ljl2N2MwLDEuMywwLjEsMS45LDAuNCwyLjNjMC40LDAuNiwxLjIsMC45LDIsMC45YzEuMSwwLDEuOC0wLjUsMi4zLTEuMwoJCQkJCQkJCWMwLjQtMC42LDAuNS0xLjMsMC41LTIuNXYtNi42aDEuOHY4YzAsMi41LDAsMi43LDAuMiwzLjVoLTEuNmMtMC4xLTAuNS0wLjItMC45LTAuMi0xLjVjLTAuNywxLjMtMS41LDEuOS0zLDEuOQoJCQkJCQkJCXMtMi43LTAuNy0zLjQtMS44Yy0wLjQtMC43LTAuNS0xLjQtMC41LTN2LTdMMTg4LDI3NS45TDE4OCwyNzUuOXoiLz4KCQkJCQkJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0yMDMuNSwyNzUuOXYxLjRoLTIuN2wtMC4xLDUuOXYxLjJjMCwxLjQsMC4yLDEuOSwxLjMsMS45YzAuNSwwLDEuMi0wLjEsMS42LTAuNXYxLjUKCQkJCQkJCQljLTAuOCwwLjItMS4zLDAuNC0yLDAuNGMtMS4yLDAtMi0wLjQtMi4zLTEuMWMtMC4yLTAuNC0wLjQtMC44LTAuNC0xLjZjMC0wLjIsMC0wLjYsMC0wLjljMC0wLjUsMC0wLjgsMC0wLjlsMC4xLTUuN2gtMS44CgkJCQkJCQkJdi0xLjRoMS44bDAuMS0zLjNoMS42djMuM0wyMDMuNSwyNzUuOUwyMDMuNSwyNzUuOXoiLz4KCQkJCQkJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0yMDcuOCwyNzEuMnYxNi4zSDIwNnYtMTYuM0gyMDcuOHoiLz4KCQkJCQkJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0yMTMuNSwyNzIuM2MwLDAuNy0wLjUsMS4yLTEuMywxLjJjLTAuNywwLTEuMy0wLjUtMS4zLTEuMnMwLjYtMS4zLDEuMy0xLjMKCQkJCQkJCQlDMjEyLjksMjcxLDIxMy41LDI3MS42LDIxMy41LDI3Mi4zeiBNMjEzLjIsMjc1Ljl2MTEuNWgtMS44di0xMS41SDIxMy4yeiIvPgoJCQkJCQkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTIxOC4xLDI3NS45YzAuMSwwLjUsMC4yLDAuOSwwLjIsMS42YzAuOC0xLjMsMi0yLDMuNS0yYzEuNSwwLDIuOCwwLjcsMy4zLDEuOWMwLjQsMC43LDAuNCwxLjEsMC40LDMuNAoJCQkJCQkJCXY2LjZoLTEuOHYtNi42YzAtMS44LDAtMi4xLTAuMi0yLjdjLTAuNC0wLjctMS4xLTEuMi0yLTEuMmMtMS4xLDAtMiwwLjUtMi41LDEuNGMtMC40LDAuNi0wLjYsMS40LTAuNiwyLjZ2Ni40aC0xLjh2LTcuNgoJCQkJCQkJCWMwLTIuNywwLTIuOC0wLjItMy45TDIxOC4xLDI3NS45TDIxOC4xLDI3NS45eiIvPgoJCQkJCQkJPHBhdGggY2xhc3M9InN0NyIgZD0iTTIzOC40LDI3Ny4ySDIzNmMwLjYsMC42LDEuMSwxLjUsMS4xLDIuN2MwLDEuMS0wLjUsMi0xLjIsMi42Yy0wLjUsMC40LTEuMywwLjctMi43LDAuOQoJCQkJCQkJCWMtMS4yLDAuMi0xLjQsMC40LTEuOCwwLjVjLTAuNSwwLjItMC43LDAuNS0wLjcsMC44YzAsMC41LDAuMiwwLjYsMi4zLDAuOGMyLjIsMC4yLDIuOCwwLjQsMy42LDAuN2MwLjksMC41LDEuNSwxLjUsMS41LDIuNwoJCQkJCQkJCWMwLDIuMi0yLDMuNS01LjMsMy41Yy0zLjIsMC01LjItMS4zLTUuMi0zLjNjMC0xLjQsMC43LTIuMiwyLjUtMi44Yy0wLjktMC40LTEuMy0wLjctMS4zLTEuM2MwLTAuOCwwLjYtMS4zLDIuMS0xLjkKCQkJCQkJCQljLTEuNS0wLjYtMi4zLTEuOC0yLjMtMy4zYzAtMi4zLDEuNi00LDQuMi00YzAuNiwwLDEuMiwwLjEsMS44LDAuMmwzLjUtMC4xdjEuMkgyMzguNHogTTIyOS41LDI4OWMwLDEuMiwxLjQsMiwzLjYsMgoJCQkJCQkJCWMyLjIsMCwzLjUtMC44LDMuNS0yYzAtMS4zLTEuMy0yLTMuNi0yQzIzMC43LDI4NywyMjkuNSwyODcuNywyMjkuNSwyODl6IE0yMzAuNSwyNzkuNmMwLDEuNCwwLjksMi4zLDIuNSwyLjMKCQkJCQkJCQlzMi41LTAuOSwyLjUtMi4zcy0xLjEtMi42LTIuMy0yLjZDMjMxLjQsMjc3LjIsMjMwLjUsMjc4LjEsMjMwLjUsMjc5LjZ6Ii8+CgkJCQkJCQk8cGF0aCBjbGFzcz0ic3Q3IiBkPSJNMjQxLjUsMjgyYzAuMSwyLjgsMS4zLDQuMywzLjMsNC4zYzEuMywwLDItMC41LDIuNy0xLjhsMS41LDAuMmMtMC43LDItMi4xLDMtNC4yLDNjLTMsMC01LTIuMy01LTYKCQkJCQkJCQljMC0zLjcsMi02LjIsNC45LTYuMmMyLjgsMCw0LjcsMi4zLDQuNyw1LjljMCwwLjEsMCwwLjIsMCwwLjVMMjQxLjUsMjgyTDI0MS41LDI4MnogTTI0Ny42LDI4MC43Yy0wLjItMi4zLTEuMy0zLjYtMi45LTMuNgoJCQkJCQkJCWMtMS42LDAtMi43LDEuMy0zLDMuNkgyNDcuNnoiLz4KCQkJCQkJCTxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0yNTMuNiwyNzUuOWMwLjEsMC41LDAuMiwwLjksMC4yLDEuNmMwLjgtMS4zLDItMiwzLjUtMnMyLjgsMC43LDMuMywxLjljMC40LDAuNywwLjQsMS4xLDAuNCwzLjR2Ni42CgkJCQkJCQkJaC0xLjh2LTYuNmMwLTEuOCwwLTIuMS0wLjItMi43Yy0wLjQtMC43LTEuMS0xLjItMi0xLjJjLTEuMSwwLTIsMC41LTIuNSwxLjRjLTAuNCwwLjYtMC42LDEuNC0wLjYsMi42djYuNGgtMS44di03LjYKCQkJCQkJCQljMC0yLjcsMC0yLjgtMC4yLTMuOUwyNTMuNiwyNzUuOUwyNTMuNiwyNzUuOXoiLz4KCQkJCQkJPC9nPgoJCQkJCTwvZz4KCQkJCTwvZz4KCQkJPC9nPgoJCTwvZz4KCTwvZz4KCTxyZWN0IHg9Ii05NS41IiB5PSItNzkuNyIgY2xhc3M9InN0OSIgd2lkdGg9IjY0MS41IiBoZWlnaHQ9IjQ1My42Ii8+CjwvZz4KPC9zdmc+Cg==">
-  <h1>Urlaubsplanung Kreativtherapie</h1>
+  <h1>Teamurlaubsplanung Kreativtherapie</h1>
   <div class="file" id="fileinfo">Keine Datei geladen</div>
   <button class="btn primary" id="btnLoad">Excel-Datei laden</button>
   <button class="btn hidden" id="btnReload" title="Dieselbe Datei erneut einlesen (nach neuen Einträgen)">Neu laden</button>
-  <button class="btn hidden" id="btnPrint" title="Druckt die gerade geöffnete Registerkarte – eingestellt auf A4 quer">Drucken (A4 quer)</button>
+  <button class="btn hidden" id="btnPrint" title="Druckt die Ansicht – eingestellt auf A4 quer">Drucken (A4 quer)</button>
   <input type="file" id="fileInput" accept=".xlsx,.xlsm" class="hidden">
 </header>
 
 <main>
   <section class="drop" id="drop">
-    <h2>Excel-Datei mit den Urlaubswünschen öffnen</h2>
-    <p>Datei <b>Urlaubswuensche_2027.xlsx</b> (oder die Makro-Fassung <b>.xlsm</b>) hier hineinziehen oder auswählen.</p>
+    <h2>Wer ist wann im Urlaub?</h2>
+    <p>Datei <b>Urlaubswuensche_2027.xlsx</b> (oder <b>.xlsm</b>) hier hineinziehen oder auswählen.</p>
     <p>Alles bleibt auf diesem Rechner. Die Excel-Datei wird nur gelesen, nicht verändert.</p>
-    <button class="btn primary" id="btnLoad2" style="background:var(--navy);color:#fff;border-color:var(--navy)">Excel-Datei auswählen</button>
+    <button class="btn" id="btnLoad2" style="background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600">Excel-Datei auswählen</button>
     <div id="lastFile"></div>
     <ol>
       <li>Liegt die Datei in Teams/SharePoint: über den synchronisierten OneDrive-Ordner im Explorer auswählen oder vorher herunterladen.</li>
-      <li>Nach neuen Einträgen in Excel: speichern, dann hier auf »Neu laden«.</li>
       <li>Passiert beim Klick nichts: die Excel-Datei aus dem Explorer einfach in dieses Fenster ziehen.</li>
-      <li>Diese Seite per Doppelklick im Browser (Edge/Chrome) öffnen – nicht in einer Vorschau (Teams, Outlook, Claude-App), dort sind Dateidialoge gesperrt.</li>
+      <li>Eigene Wünsche trägst du wie gewohnt in der Excel-Datei ein (Blatt »Mein Urlaub« oder »Wünsche«), dann speichern und hier »Neu laden«.</li>
     </ol>
   </section>
 
   <section id="app" class="hidden">
-    <div id="banner"></div>
     <div class="printinfo" id="printinfo"></div>
-    <div class="kpis" id="kpis"></div>
-
     <div class="filters" id="filters">
-      <div class="fgroup"><label>Fachrichtung</label><div class="chips" id="fFach"></div></div>
-      <div class="fgroup"><label>Station</label><div class="chips" id="fStat"></div></div>
-      <div class="fgroup"><label>Person</label><input type="search" id="fQ" placeholder="Name suchen …"></div>
+      <div class="fgroup"><label>Fachteam</label><div class="chips" id="fFach"></div></div>
+      <div class="fgroup"><label>Einsatzort</label><div class="chips" id="fOrt"></div></div>
       <div class="fgroup"><label>Zeitraum</label>
         <div style="display:flex;gap:6px;align-items:center"><select id="fM0"></select><span>bis</span><select id="fM1"></select></div>
       </div>
       <div class="fgroup"><label>Kalender-Raster</label>
         <div class="seg" id="fView"><button data-v="w">Wochen</button><button data-v="d">Tage</button></div>
       </div>
-      <div class="fgroup"><label>&nbsp;</label>
-        <label style="font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:400"><input type="checkbox" id="fOnly"> nur Personen mit Wünschen</label>
-        <button class="reset" id="fReset">Filter zurücksetzen</button>
-      </div>
     </div>
 
-    <nav class="tabs" id="tabs">
-      <button class="tab" data-t="home">Übersicht</button>
-      <button class="tab" data-t="dash">Auswertung</button>
-      <button class="tab" data-t="cal">Kalender</button>
-      <button class="tab" data-t="conf">Konflikte <span class="count" id="confCount"></span></button>
-      <button class="tab" data-t="pers">Personen</button>
-      <button class="tab" data-t="one">Personenansicht</button>
-      <button class="tab" data-t="rules">Regeln &amp; Ampel <span class="count" id="warnCount"></span></button>
-    </nav>
-
-    <section id="t-home"></section>
-    <section id="t-dash" class="hidden"></section>
-    <section id="t-cal" class="hidden"></section>
-    <section id="t-conf" class="hidden"></section>
-    <section id="t-pers" class="hidden"></section>
-    <section id="t-one" class="hidden"></section>
-    <section id="t-rules" class="hidden"></section>
+    <div class="panel"><p class="lage" id="lage"></p></div>
+    <div class="panel" id="p-heat"></div>
+    <div class="panel cal-panel" id="p-cal"></div>
+    <div class="panel list-panel" id="p-list"></div>
   </section>
 </main>
 
@@ -675,75 +457,55 @@ function build(wb, opt = {}) {
 }
 
 
-/* ===================== Zustand ===================== */
-let M = null, fileHandle = null, lastFile = null, lastWb = null;
-const openSec = new Set();   // im Reiter »Regeln« aufgeklappte Abschnitte (nur für diese Sitzung)
-const S = Object.assign({ fach: [], stat: [], q: "", m0: null, m1: null, view: "w", only: false, tab: "dash", gelb: true,
-  bars: "fach", sort: { k: "fach", dir: 1 }, pf: "", person: "" }, lsGet("urlaubsansicht.state", {}));
-const save = () => lsSet("urlaubsansicht.state", { fach: S.fach, stat: S.stat, view: S.view, only: S.only, tab: S.tab, gelb: S.gelb, bars: S.bars, sort: S.sort, person: S.person });
-const TABS = ["home", "dash", "cal", "conf", "pers", "one", "rules"];
-if (!TABS.includes(S.tab)) S.tab = "home";
+/* ===================== Zustand =====================
+   sel = gewähltes Team: "" = alle · "fach:<Name>" = Fachteam · "stat:<Name>" = Einsatzort (intern heißen Einsatzorte »stat«). */
+let M = null, fileHandle = null;
+const KEY = "teamansicht.state";   // eigener Schlüssel, getrennt von der Leitungsansicht
+const S = Object.assign({ sel: "", view: "w", m0: null, m1: null }, lsGet(KEY, {}));
+const save = () => lsSet(KEY, { sel: S.sel, view: S.view });
 
-function visible() {
-  const q = S.q.trim().toLowerCase();
-  const ps = M.persons.map((p, i) => i).filter((i) => {
-    const p = M.persons[i];
-    if (S.fach.length && !S.fach.includes(p.fach)) return false;
-    if (S.stat.length && !p.st.some((s) => S.stat.includes(s))) return false;
-    if (q && !p.name.toLowerCase().includes(q)) return false;
-    if (S.only && !p.wishes.length) return false;
-    return true;
-  });
-  const pset = new Set(ps);
-  const unitsVis = M.units.filter((u) => {
-    if (u.type === "stat") return S.stat.length ? S.stat.includes(u.name) : u.members.some((m) => pset.has(m)) || (!q && !S.fach.length && !S.only);
-    return S.fach.length ? S.fach.includes(u.name) : u.members.some((m) => pset.has(m)) || (!q && !S.stat.length && !S.only);
-  });
-  // Tagesbereich aus Monatsfilter
+/* Gewähltes Team → Personen, Bereich (für die Ampel) und Tageswerte */
+function auswahl() {
+  const u = S.sel ? M.units.find((x) => ukey(x) === S.sel) : null;
+  const ps = u ? u.members.slice() : M.persons.map((p, i) => i);
+  ps.sort((a, b) => M.persons[a].name.localeCompare(M.persons[b].name, "de"));
   let i0 = 0, i1 = M.N - 1;
   if (S.m0 != null) while (i0 < M.N - 1 && monthKey(M.ser[i0]) < S.m0) i0++;
   if (S.m1 != null) while (i1 > 0 && monthKey(M.ser[i1]) > S.m1) i1--;
-  // Tageslage über alle sichtbaren Bereiche: höchste Ampelstufe und Zahl der abwesenden (sichtbaren) Personen
-  const dayLv = new Uint8Array(M.N), dayAbs = new Uint8Array(M.N);
+  // Je Tag: wie viele aus dem Team fehlen und welche Ampelstufe gilt.
+  // Ein Team: dessen Ampel (Regeln aus Excel). Alle: höchste Stufe aller Bereiche.
+  const lv = new Uint8Array(M.N), abs = new Uint8Array(M.N);
   for (let i = 0; i < M.N; i++) {
     let a = 0; for (const pi of ps) a += M.persons[pi].abs[i];
-    let l = 0; for (const u of unitsVis) l = Math.max(l, u.lv[i]);
-    dayAbs[i] = a; dayLv[i] = l || (a ? 1 : 0);
+    let l = 0;
+    if (u) l = u.lv[i]; else for (const x of M.units) l = Math.max(l, x.lv[i]);
+    abs[i] = a; lv[i] = l || (a ? 1 : 0);
   }
-  return { ps, pset, units: unitsVis, uset: new Set(unitsVis.map((u) => u.ui)), i0, i1, q, dayLv, dayAbs };
+  return { u, ps, i0, i1, lv, abs, name: u ? u.name : "alle Teams" };
 }
 
 /* ===================== Datei laden ===================== */
 const IDB = {
-  open() { return new Promise((res, rej) => { const r = indexedDB.open("urlaubsansicht", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  open() { return new Promise((res, rej) => { const r = indexedDB.open("teamansicht", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
   async put(v) { try { const db = await this.open(); db.transaction("h", "readwrite").objectStore("h").put(v, "file"); } catch (e) {} },
   async get() { try { const db = await this.open(); return await new Promise((res) => { const r = db.transaction("h").objectStore("h").get("file"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch (e) { return null; } }
 };
-/* Datei auswählen: immer der einfache Dateidialog (<input type="file">). Er funktioniert in jedem Browser.
-   Der moderne Dialog (showOpenFilePicker) wurde bewusst entfernt: Ist er per Richtlinie gesperrt, blockiert der
-   Browser den Ersatzdialog stillschweigend – »Klick, und nichts passiert« (Fehler gemeldet am 08.10.2026). */
 function pickFile() { $("fileInput").click(); }
 async function reload() {
-  // Datei per Ziehen-und-Ablegen geöffnet (Edge/Chrome)? Dann ohne Dialog neu einlesen.
   if (fileHandle) {
     try {
       if (fileHandle.queryPermission && (await fileHandle.queryPermission({ mode: "read" })) !== "granted") await fileHandle.requestPermission({ mode: "read" });
       await loadFile(await fileHandle.getFile()); return;
-    } catch (e) {
-      alert("Die Datei konnte nicht erneut gelesen werden.\n\nBitte auf »Andere Datei« klicken und die Excel-Datei neu auswählen.");
-      return;
-    }
+    } catch (e) { alert("Die Datei konnte nicht erneut gelesen werden.\n\nBitte auf »Andere Datei« klicken und die Excel-Datei neu auswählen."); return; }
   }
   pickFile();
 }
 async function loadFile(file) {
   try {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array", cellFormula: false, cellHTML: false, cellText: false });
-    M = build(wb);
-    lastFile = file; lastWb = wb; S.tab = "home";
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellFormula: false, cellHTML: false, cellText: false });
+    M = build(wb, { nurExcel: true });   // Ampel nur nach den Regeln in Excel – nie nach Einstellungen in diesem Browser
     const d = new Date(file.lastModified);
-    $("fileinfo").textContent = `${file.name} · gespeichert ${d.toLocaleDateString("de-DE")} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · eingelesen ${new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+    $("fileinfo").textContent = `${file.name} · Stand ${d.toLocaleDateString("de-DE")} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
     $("drop").classList.add("hidden"); $("app").classList.remove("hidden");
     $("btnReload").classList.remove("hidden"); $("btnPrint").classList.remove("hidden");
     $("btnLoad").textContent = "Andere Datei";
@@ -753,653 +515,163 @@ async function loadFile(file) {
   }
 }
 
-/* ===================== Filter ===================== */
+/* ===================== Auswahl oben ===================== */
 function setupFilters() {
-  S.fach = S.fach.filter((f) => M.fachIdx.has(f));
-  S.stat = S.stat.filter((s) => M.stats.some((x) => x.name === s));
-  $("fFach").innerHTML = M.fachs.map((f, i) => `<span class="chip${S.fach.includes(f.name) ? " on" : ""}" data-f="${esc(f.name)}"><span class="dot" style="background:${FACH_FARBEN[i % 10]}"></span>${esc(f.name)}</span>`).join("");
-  $("fStat").innerHTML = M.stats.map((s) => `<span class="chip${S.stat.includes(s.name) ? " on" : ""}" data-s="${esc(s.name)}">${esc(s.name)}</span>`).join("");
+  if (S.sel && !M.units.some((u) => ukey(u) === S.sel)) S.sel = "";
+  const chip = (key, label) => `<span class="chip${S.sel === key ? " on" : ""}" data-sel="${esc(key)}">${esc(label)}</span>`;
+  // Nur Bereiche mit Personen anbieten (leere Zeilen der Einstellungen-Liste sind für Kolleg:innen ohne Nutzen)
+  $("fFach").innerHTML = chip("", "alle") + M.units.filter((u) => u.type === "fach" && u.n).map((u) => chip(ukey(u), u.name)).join("");
+  $("fOrt").innerHTML = M.units.filter((u) => u.type === "stat" && u.n).map((u) => chip(ukey(u), u.name)).join("");
   const months = []; for (let i = 0; i < M.N; i++) { const k = monthKey(M.ser[i]); if (!months.includes(k)) months.push(k); }
   const opt = (k) => `<option value="${k}">${MON_L[k % 12]} ${Math.floor(k / 12)}</option>`;
   $("fM0").innerHTML = months.map(opt).join(""); $("fM1").innerHTML = months.map(opt).join("");
   if (S.m0 == null || !months.includes(S.m0)) S.m0 = months[0];
   if (S.m1 == null || !months.includes(S.m1)) S.m1 = months[Math.min(11, months.length - 1)];
   $("fM0").value = S.m0; $("fM1").value = S.m1;
-  $("fQ").value = S.q; $("fOnly").checked = S.only;
-  syncSeg();
 }
-function syncSeg() {
+function syncChips() {
+  document.querySelectorAll("#filters .chip").forEach((c) => c.classList.toggle("on", c.dataset.sel === S.sel));
   document.querySelectorAll("#fView button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.view));
-  document.querySelectorAll("#tabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.t === S.tab));
-  TABS.forEach((t) => $("t-" + t).classList.toggle("hidden", t !== S.tab));
-  // Übersicht = Komplettübersicht ohne Filter und ohne Kennzahlen-Leiste
-  $("filters").classList.toggle("hidden", S.tab === "home" || S.tab === "rules"); $("kpis").classList.toggle("hidden", S.tab === "home");
 }
 
-/* ===================== Darstellung: Bausteine ===================== */
-const fachColor = (fi) => (fi >= 0 ? FACH_FARBEN[fi % 10] : "#9aa3b5");
-const unitLabel = (u) => (u.type === "stat" ? "Station" : "Fachteam");
-/* "Station 1A" nicht als "Station Station 1A" anzeigen */
-const unitTitle = (u) => (u.name.toLowerCase().startsWith(unitLabel(u).toLowerCase()) ? u.name : unitLabel(u) + " " + u.name);
-const thText = (u) => {
-  const t = u.th, parts = [];
-  if (t.g != null) parts.push(`G ${t.g}`); if (t.h != null) parts.push(`H ${t.h}`); if (t.d != null) parts.push(`D ${t.d}`);
-  return parts.length ? parts.join(" · ") : "ohne Ampel";
-};
-const ampText = (u) => { const t = thText(u); return t === "ohne Ampel" ? t : "Ampel " + t; };
-const flexBadge = (f) => `<span class="flex ${f || "leer"}">${f ? "verschiebbar: " + f : "verschiebbar: k. A."}</span>`;
-const dot = (fi) => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${fachColor(fi)};margin-right:6px"></span>`;
-const daysText = (p) => (p.tz ? ["Mo", "Di", "Mi", "Do", "Fr"].filter((d, k) => p.wk[k]).join(" ") : "Mo–Fr");
-const tzBadge = (p) => (p.tz ? `<span class="tz" title="Teilzeit – arbeitet nur an diesen Tagen">TZ ${daysText(p)}</span>` : "");
-const lvPill = (l) => (l >= 2 ? `<span class="pill lv${l}">${LV_NAME[l]}</span>` : "");
-const plink = (pi) => `<a class="plink" data-person="${pi}">${esc(M.persons[pi].name)}</a>`;
-function monthsInRange(V) { const ks = []; for (let i = V.i0; i <= V.i1; i++) { const k = monthKey(M.ser[i]); if (ks[ks.length - 1] !== k) ks.push(k); } return ks; }
+/* ===================== Darstellung ===================== */
+const LV_TXT = ["", "weg, unkritisch", "knapp", "eng", "niemand mehr da"];
+const pill = (l) => (l >= 2 ? `<span class="pill lv${l}">${LV_TXT[l]}</span>` : "");
+const proseName = (n) => { const m = String(n).match(/^([^,]+),\s*(.+)$/); return m ? m[2] + " " + m[1] : n; };
 function idxOf(y, m, d) { const dt = new Date(Date.UTC(y, m - 1, d)); if (dt.getUTCMonth() !== m - 1) return -1; const i = date2ser(y, m, d) - M.start; return i >= 0 && i < M.N ? i : -1; }
 
 function render() {
   if (!M) return;
-  const V = visible();
-  syncSeg();
-  renderBanner(); renderKpis(V); renderPrintInfo(V);
-  if (S.tab === "home") renderHome();
-  if (S.tab === "dash") renderDash(V);
-  if (S.tab === "cal") renderCal(V);
-  if (S.tab === "conf") renderConf(V);
-  if (S.tab === "pers") renderPers(V);
-  if (S.tab === "one") renderOne(V);
-  if (S.tab === "rules") renderRules(V);
-  const cs = confVisible(V);
-  $("confCount").innerHTML = cs.length ? `<span class="pill ${cs.some((c) => c.maxLv === 4) ? "lv4" : cs.some((c) => c.maxLv === 3) ? "lv3" : "lv2"}">${cs.length}</span>` : "";
-  $("warnCount").innerHTML = M.warn.length ? `<span class="pill lv2">${M.warn.length}</span>` : "";
-}
-function renderBanner() {
-  $("banner").innerHTML = M.example ? `<div class="banner">Die Datei enthält noch <b>Beispieldaten</b> (Namen mit »Beispiel«). Vor dem Start im Excel löschen – siehe Blatt Anleitung.</div>` : "";
-}
-function renderPrintInfo(V) {
-  const f = [];
-  if (S.fach.length) f.push("Fachrichtung: " + S.fach.join(", "));
-  if (S.stat.length) f.push("Station: " + S.stat.join(", "));
-  if (S.q.trim()) f.push("Name enthält »" + S.q.trim() + "«");
-  if (S.only) f.push("nur Personen mit Wünschen");
-  $("printinfo").textContent = `Zeitraum ${fmtY(M.ser[V.i0])} – ${fmtY(M.ser[V.i1])} · Filter: ${f.join(" · ") || "keine"} · gedruckt ${new Date().toLocaleDateString("de-DE")} · nur Wünsche, keine Genehmigung`;
-}
-function confVisible(V) {
-  const a = M.ser[V.i0], b = M.ser[V.i1];
-  return M.conflicts.filter((c) => V.uset.has(c.u) && c.to >= a && c.from <= b && (S.gelb || c.maxLv >= 3) &&
-    (!V.q || c.people.some((x) => M.persons[x.p].name.toLowerCase().includes(V.q))));
+  const A = auswahl();
+  syncChips();
+  $("printinfo").textContent = `Team: ${A.name} · ${MON_L[S.m0 % 12]} ${Math.floor(S.m0 / 12)} – ${MON_L[S.m1 % 12]} ${Math.floor(S.m1 / 12)} · gedruckt ${new Date().toLocaleDateString("de-DE")}`;
+  renderLage(A); renderHeat(A); renderCal(A); renderList(A);
 }
 
-/* ===================== Kennzahlen-Leiste ===================== */
-function renderKpis(V) {
-  const a = M.ser[V.i0], b = M.ser[V.i1];
-  const ws = M.wishes.filter((w) => V.pset.has(w.p) && w.bis >= a && w.von <= b);
-  const without = V.ps.filter((i) => !M.persons[i].wishes.length).length;
-  const lvDays = [0, 0, 0, 0, 0];
-  for (let i = V.i0; i <= V.i1; i++) if (M.work[i]) lvDays[V.dayLv[i]]++;
-  const eng = lvDays[2] + lvDays[3] + lvDays[4];
-  const withA = V.ps.map((i) => M.persons[i]).filter((p) => p.anspruch != null);
-  const rest = withA.reduce((s, p) => s + p.rest, 0), over = withA.filter((p) => p.rest < 0).length, noA = V.ps.length - withA.length;
-  $("kpis").innerHTML = `
-    <div class="kpi click" data-go="pers" data-pf="" title="Zur Personentabelle"><div class="v">${ws.length}</div><div class="l">Urlaubswünsche im Zeitraum</div><div class="s">${ws.reduce((s, w) => s + w.wd, 0)} Arbeitstage gewünscht</div></div>
-    <div class="kpi click${without ? " warn" : ""}" data-go="pers" data-pf="none" title="Liste der Personen ohne Wunsch"><div class="v">${without} <small>/ ${V.ps.length}</small></div><div class="l">Personen ohne Wunsch</div><div class="s">${without ? "→ nachfragen" : "alle haben eingetragen"}</div></div>
-    <div class="kpi click${lvDays[4] || lvDays[3] ? " bad" : eng ? " warn" : ""}" data-go="conf" title="Zur Konfliktliste"><div class="v">${eng}</div><div class="l">Engpasstage (Arbeitstage ab Gelb)</div><div class="row"><span class="pill lv4">${lvDays[4]} dunkelrot</span><span class="pill lv3">${lvDays[3]} hellrot</span><span class="pill lv2">${lvDays[2]} gelb</span></div></div>
-    <div class="kpi click${over ? " bad" : ""}" data-go="pers" data-pf="rest" title="Resturlaub = Anspruch (Team, Spalte G) minus gewünschte Arbeitstage"><div class="v">${withA.length ? rest : "–"} <small>${withA.length ? "Tage" : ""}</small></div><div class="l">Resturlaub (noch nicht verplant)</div><div class="s">${over ? `<span class="neg">${over} überzogen</span> · ` : ""}${noA ? `${noA} ohne Anspruch` : "alle mit Anspruch"}</div></div>
-    <div class="kpi click" data-go="rules" title="Zu Regeln & Hinweise"><div class="v">${M.warn.length}</div><div class="l">Hinweise zu den Daten</div></div>`;
+/* Ein Satz zur Lage: wie viele Wünsche, wie viele Tage knapp/eng */
+function renderLage(A) {
+  let wishes = 0; for (const pi of A.ps) wishes += M.persons[pi].wishes.filter((w) => w.bis >= M.ser[A.i0] && w.von <= M.ser[A.i1]).length;
+  let knapp = 0, eng = 0;
+  for (let i = A.i0; i <= A.i1; i++) if (M.work[i]) { if (A.lv[i] === 2) knapp++; else if (A.lv[i] >= 3) eng++; }
+  const wer = A.u ? `Im Team <b>${esc(A.name)}</b> (${plural(A.ps.length, "Person", "Personen")})` : `In allen Teams (${plural(A.ps.length, "Person", "Personen")})`;
+  let t = `${wer} sind im gewählten Zeitraum ${plural(wishes, "Urlaubswunsch", "Urlaubswünsche")} eingetragen. `;
+  if (A.u && A.u.th.g == null && A.u.th.h == null && A.u.th.d == null) t += "Für dieses Team ist keine Ampel hinterlegt – grün heißt hier nur »jemand ist weg«.";
+  else if (!knapp && !eng) t += "Es gibt noch <b>keine knappen Tage</b>.";
+  else t += `${eng ? `An <b>${plural(eng, "Arbeitstag", "Arbeitstagen")}</b> wird es <b>eng</b> (rot)` : ""}${eng && knapp ? ", an " : knapp ? "An " : ""}${knapp ? `<b>${plural(knapp, "Arbeitstag", "Arbeitstagen")}</b> ist es <b>knapp</b> (gelb)` : ""}. Bitte für neue Wünsche möglichst andere Zeiten wählen oder vorher im Team absprechen.`;
+  $("lage").innerHTML = t;
 }
 
-/* ===================== Übersicht (Startseite, ohne Filter) ===================== */
-const ST_TXT = ["OK", "OK", "Gelb", "Hellrot", "Dunkelrot"];
-function unitStatus(u) {
-  const cs = M.conflicts.filter((c) => c.u === u.ui), today = todaySer();
-  const worst = cs.reduce((a, c) => Math.max(a, c.maxLv), 0);
-  const next = cs.filter((c) => c.to >= today).sort((a, b) => a.from - b.from)[0] || cs.slice().sort((a, b) => a.from - b.from)[0];
-  const noAmp = u.type === "fach" && u.th.g == null && u.th.h == null && u.th.d == null;
-  return { cs, worst, next, noAmp };
-}
-/* Texthilfen für die Klartext-Startseite */
-const proseName = (n) => { const m = String(n).match(/^([^,]+),\s*(.+)$/); return m ? m[2] + " " + m[1] : n; };   // »Nachname, Vorname« → »Vorname Nachname«
-const andList = (xs) => (xs.length <= 1 ? xs.join("") : xs.slice(0, -1).join(", ") + " und " + xs[xs.length - 1]);
-function spanText(a, b) {   // 9.–20. August · 28. Juli – 3. August · 4. Januar
-  const d1 = ser2date(a), d2 = ser2date(b), m1 = d1.getUTCMonth(), m2 = d2.getUTCMonth();
-  if (a === b) return `${d1.getUTCDate()}. ${MON_L[m1]}`;
-  if (m1 === m2 && d1.getUTCFullYear() === d2.getUTCFullYear()) return `${d1.getUTCDate()}.–${d2.getUTCDate()}. ${MON_L[m1]}`;
-  return `${d1.getUTCDate()}. ${MON_L[m1]} – ${d2.getUTCDate()}. ${MON_L[m2]}`;
-}
-/* Eine Engpass-Karte in Klartext */
-function prosaCard(c) {
-  const u = M.units[c.u], names = c.people.map((x) => proseName(M.persons[x.p].name));
-  const shown = names.length > 4 ? names.slice(0, 4).concat(`${names.length - 4} weitere`) : names;
-  const present = c.peakOn - c.peak;
-  const lage = present <= 0 ? (u.type === "stat" ? "die Station wäre unbesetzt" : "das Team wäre nicht besetzt") : `nur noch ${present} von ${c.peakOn} da`;
-  const flex = c.people.filter((x) => x.flex === "ja" || x.flex === "etwas").map((x) => proseName(M.persons[x.p].name));
-  const flexTxt = flex.length ? `<b>${esc(andList(flex))} ${flex.length === 1 ? "hat" : "haben"} »verschiebbar« angegeben.</b>` : "Niemand hat »verschiebbar« angegeben.";
-  const wer = names.length === 1 ? `${esc(shown[0])} ist im Urlaub` : `${esc(andList(shown))} sind gleichzeitig im Urlaub`;
-  return `<div class="pcard pk${c.maxLv}" data-unitconf="${c.u}" title="Zur Konfliktliste für ${esc(unitTitle(u))}">
-    <span class="pico">!</span><div><div class="pt">${esc(u.name)}, ${spanText(c.from, c.to)}</div>
-    <div class="px">${wer} – ${lage}. ${flexTxt}</div><div class="plinkx">Wer ist betroffen? →</div></div></div>`;
-}
-function renderHome() {
-  const all = M.conflicts, worst = all.reduce((a, c) => Math.max(a, c.maxLv), 0);
-  const crit = all.filter((c) => c.maxLv >= 3).sort((a, b) => b.maxLv - a.maxLv || a.from - b.from);
-  const gelb = all.filter((c) => c.maxLv === 2).sort((a, b) => a.from - b.from);
-  const noWish = M.persons.filter((p) => !p.wishes.length).length;
-  const over = M.persons.filter((p) => p.rest != null && p.rest < 0).length;
-  const zahl = (n) => (n <= 12 ? ["keine", "einer", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"][n] : String(n));
-  const zahlF = (n) => (n <= 12 ? ["keine", "eine", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"][n] : String(n));
-
-  // Ampel: welche Lampe leuchtet (0 = keine, 1 = grün, 2 = gelb, 3 = rot)
-  const lamp = !M.wishes.length ? 0 : worst >= 3 ? 3 : worst === 2 ? 2 : 1;
-  const ampTitle = ["Noch keine Wünsche", "Alles im grünen Bereich", "Fast alles im Lot", "Es gibt Probleme"][lamp];
-  const ampSub = [
-    "Sobald Wünsche in Excel stehen: speichern und oben »Neu laden«.",
-    "Keine Station und kein Team ist zu dünn besetzt.",
-    `${plural(gelb.length, "Zeitraum ist", "Zeiträume sind")} knapp, nichts Kritisches.`,
-    `${plural(crit.length, "Engpass sollte", "Engpässe sollten")} besprochen werden${gelb.length ? `, ${plural(gelb.length, "weiterer Zeitraum ist", "weitere Zeiträume sind")} knapp` : ""}.`
-  ][lamp];
-  const L = (n, cls, go, tip, gelb) => `<button class="lamp ${cls}${lamp === n ? " on" : ""}" data-go="${go}"${gelb != null ? ` data-gelb="${gelb}"` : ""} title="${tip}" aria-label="${tip}"></button>`;
-  const ampel = `<div class="ampelbox">
-      <div class="ampel">${L(3, "r", "conf", "Rot: kritische Engpässe anzeigen", 0)}${L(2, "y", "conf", "Gelb: alle Engpässe einschließlich knapper Zeiträume anzeigen", 1)}${L(1, "g", "dash", "Grün: ausführliche Auswertung öffnen")}</div>
-      <div class="at">${ampTitle}</div><div class="as">${ampSub}</div>
-      <div class="al"><span><i class="r"></i>zu viele gleichzeitig weg</span><span><i class="y"></i>knapp</span><span><i class="g"></i>gut besetzt</span></div>
-      <div class="as" style="margin-top:10px;font-size:12px">Lampe anklicken = Details</div></div>`;
-
-  // Kernaussage in Klartext
-  let lead;
-  if (!M.wishes.length) lead = `<b>Es sind noch keine Urlaubswünsche eingetragen.</b>`;
-  else if (crit.length) lead = `<b>${crit.length <= 2 ? "Im Großen und Ganzen passt die Urlaubsplanung." : "Die Urlaubsplanung braucht Aufmerksamkeit."}</b> An <b class="red">${zahl(crit.length)} Stelle${crit.length === 1 ? "" : "n"}</b> fehlen zu viele Leute gleichzeitig${gelb.length ? `, an ${zahl(gelb.length)} weiteren wird es knapp` : ""}.`;
-  else if (gelb.length) lead = `<b>Die Urlaubsplanung passt.</b> An ${zahl(gelb.length)} Stelle${gelb.length === 1 ? "" : "n"} wird es knapp, aber nirgends kritisch.`;
-  else lead = `<b>Die Urlaubsplanung passt.</b> Keine Station und kein Team ist zu dünn besetzt.`;
-  if (noWish && M.wishes.length) lead += ` <b>${noWish === 1 ? "Eine Person hat" : zahlF(noWish).replace(/^./, (x) => x.toUpperCase()) + " Kolleg:innen haben"}</b> noch keinen Wunsch abgegeben.`;
-
-  // Darum kümmern: kritische Engpässe einzeln, gelbe zusammengefasst
-  const MAXK = 6;
-  let care = crit.slice(0, MAXK).map(prosaCard).join("");
-  if (crit.length > MAXK) care += `<div class="pmore" data-go="conf">… und ${crit.length - MAXK} weitere kritische Engpässe → Konfliktliste</div>`;
-  if (gelb.length) {
-    const grp = new Map(); for (const c of gelb) { const k = M.units[c.u].name; if (!grp.has(k)) grp.set(k, new Set()); grp.get(k).add(MON_L[ser2date(c.from).getUTCMonth()]); }
-    const txt = [...grp.entries()].map(([n, ms]) => `${esc(n)} im ${andList([...ms])}`).join(" · ");
-    care += `<div class="pcard pk2" data-go="conf" title="Zur Konfliktliste"><span class="pico">~</span><div><div class="pt">${txt}</div><div class="px">Knapp, aber machbar. Im Blick behalten.</div><div class="plinkx">Wer ist betroffen? →</div></div></div>`;
-  }
-
-  // Noch offen
-  const okUnits = M.units.filter((u) => u.n > 0 && !all.some((c) => c.u === u.ui) && unitStatus(u).noAmp === false && u.type === "stat").map((u) => esc(u.name));
-  const todo = [
-    [noWish, `✉️ ${noWish === 1 ? "1 Person" : noWish + " Personen"} nachfragen, ob sie Urlaub planen`, "pers", "none"],
-    [over, `⚖️ ${over === 1 ? "1 Person hat" : over + " Personen haben"} mehr Tage gewünscht als zustehen`, "pers", "rest"],
-    [M.warn.length, `🔎 ${plural(M.warn.length, "Hinweis", "Hinweise")} zu den Daten in Excel prüfen`, "rules", ""]
-  ].filter((t) => t[0] > 0);
-  const offen = todo.map((t) => `<div class="tline" data-go="${t[2]}" data-pf="${t[3]}">${t[1]} <span class="lk">Liste →</span></div>`).join("") +
-    (okUnits.length && M.wishes.length ? `<div class="tline nolink">✅ ${all.length ? "Alle anderen Stationen" : "Alle Stationen"}: <b class="green">alles in Ordnung</b> <span class="muted" style="font-size:13px">(${okUnits.join(", ")})</span></div>` : "");
-
-  const unitList = (type) => {
-    const us = M.units.filter((u) => u.type === type && u.n > 0).map((u) => ({ u, ...unitStatus(u) }))
-      .sort((a, b) => (a.noAmp - b.noAmp) || b.worst - a.worst || b.cs.length - a.cs.length || a.u.name.localeCompare(b.u.name, "de"));
-    return `<ul class="ulist">${us.map((x) => {
-      const st = x.noAmp ? `<span class="st sx">ohne Ampel</span>` : `<span class="st s${x.worst}">${ST_TXT[x.worst]}</span>`;
-      const info = x.cs.length ? `${plural(x.cs.length, "Engpass", "Engpässe")} · ${x.next.to >= todaySer() ? "nächster" : "erster"}: ${spanText(x.next.from, x.next.to)}` : x.noAmp ? "keine Ampelwerte eingetragen" : "keine Engpässe";
-      return `<li data-unit="${x.u.ui}">${st}<div><div class="nm">${esc(x.u.name)} <span class="muted" style="font-weight:400;font-size:12px">${x.u.n} P.</span></div><div class="info">${info}</div></div><span class="go">Details →</span></li>`;
-    }).join("")}</ul>`;
-  };
-
-  $("t-home").innerHTML = `
-    ${M.localCount ? `<div class="localnote">Hinweis: In diesem Browser sind <b>${plural(M.localCount, "eigener Ampelwert", "eigene Ampelwerte")}</b> eingestellt (Reiter »Regeln &amp; Ampel«). Andere sehen sie nicht.</div>` : ""}
-    <div class="homegrid">
-      <aside>${ampel}</aside>
-      <div class="homemain">
-        <div class="hcard lead"><div class="muted" style="font-size:14.5px">Die Lage für ${ser2date(M.ser[0]).getUTCFullYear()}${M.wishes.length ? " in Kürze" : ""}:</div><p>${lead}</p>
-          <div class="muted" style="font-size:12.5px">${plural(M.persons.length, "Person", "Personen")} · ${plural(M.wishes.length, "Wunsch", "Wünsche")} · Planungszeitraum ${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])}</div></div>
-        ${care ? `<h3 class="hh">Darum sollten wir uns kümmern</h3>${care}` : ""}
-        ${offen ? `<h3 class="hh">Noch offen</h3><div class="hcard offen">${offen}</div>` : ""}
-        <details class="sec" data-sec="homeunits" style="margin-top:22px"${openSec.has("homeunits") ? " open" : ""}><summary>Alle Stationen und Teams im Überblick <span class="hint">Klick auf eine Zeile = ausführliche Auswertung</span></summary>
-          <div class="body"><div class="hgrid"><div><h4 style="margin:6px 0">Stationen</h4>${unitList("stat")}</div><div><h4 style="margin:6px 0">Fachteams</h4>${unitList("fach")}</div></div></div></details>
-      </div>
-    </div>`;
-  const d = $("t-home").querySelector("details.sec"); d.addEventListener("toggle", () => { d.open ? openSec.add("homeunits") : openSec.delete("homeunits"); });
-}
-/* von der Übersicht in die ausführlichen Seiten springen: Filter passend setzen */
-function focusUnit(ui, tab) {
-  const u = M.units[ui];
-  S.fach = u.type === "fach" ? [u.name] : []; S.stat = u.type === "stat" ? [u.name] : [];
-  S.q = ""; S.only = false; S.pf = ""; S.tab = tab;
-  setupFilters(); save(); render(); window.scrollTo(0, 0);
-}
-
-/* ===================== Dashboard ===================== */
-function renderDash(V) {
-  $("t-dash").innerHTML = `
-    <div class="dgrid">
-      <div class="panel"><h2>Jahresübersicht</h2>
-        <p class="sub">Farbe = höchste Ampelstufe der gefilterten Stationen/Fachteams · Zahl = wie viele Personen an dem Tag fehlen (Teilzeit-freie Tage zählen nicht) · <b>Klick auf einen Tag = wer fehlt</b></p>
-        ${heatLegend()}${heatTable(V, (i) => heatCell(V, i))}</div>
-      <div class="panel"><h2>Top 5 kritische Wochen</h2>
-        <p class="sub">Rangfolge: höchste Stufe, dann Punkte (je Arbeitstag und Bereich: Gelb ${WOCHEN_PUNKTE[2]} · Hellrot ${WOCHEN_PUNKTE[3]} · Dunkelrot ${WOCHEN_PUNKTE[4]}). Klick = Details.</p>
-        ${topWeeks(V)}</div>
-    </div>
-    <div class="panel bars-panel" style="margin-top:14px"><div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">
-      <h2>Urlaub je Monat</h2>
-      <div class="seg noprint" id="barSeg"><button data-b="fach" class="${S.bars === "fach" ? "on" : ""}">je Fachrichtung</button><button data-b="stat" class="${S.bars === "stat" ? "on" : ""}">je Station</button></div></div>
-      <p class="sub">Balken = Anteil Urlaub an den Soll-Arbeitstagen des Bereichs im Monat (gleiche Skala für alle Zeilen, Zahl = Urlaubs-Arbeitstage). Strich darunter = höchste Ampelstufe im Monat (<span style="color:#b38f00">gelb</span>/<span style="color:#c43c3c">hellrot</span>/<span style="color:var(--l4)">dunkelrot</span>). Eine Person mit mehreren Stationen zählt auf jeder.</p>
-      ${monthBars(V)}</div>`;
-  $("barSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.bars = b.dataset.b; save(); render(); };
-}
-function heatLegend() {
+function legend() {
   return `<div class="legend">
     <span><span class="sw" style="background:#f3f5f9"></span>niemand weg</span>
-    <span><span class="sw" style="background:var(--l1)"></span>weg, unkritisch</span>
-    <span><span class="sw" style="background:var(--l2)"></span>gelb</span>
-    <span><span class="sw" style="background:var(--l3)"></span>hellrot</span>
-    <span><span class="sw" style="background:var(--l4)"></span>dunkelrot</span>
+    <span><span class="sw" style="background:var(--l1)"></span>jemand weg, noch Platz</span>
+    <span><span class="sw" style="background:var(--l2)"></span>knapp – keiner mehr dazu</span>
+    <span><span class="sw" style="background:var(--l3)"></span>eng</span>
+    <span><span class="sw" style="background:var(--l4)"></span>niemand mehr da</span>
     <span><span class="sw" style="background:var(--we)"></span>Wochenende</span>
     <span><span class="sw" style="background:var(--hol)"></span>Feiertag/frei</span>
     <span><span class="sw" style="background:#fff;border:2px solid #ED7D31"></span>heute</span></div>`;
 }
-/* Raster Monate (Zeilen) × Tage 1–31 (Spalten); cellFn(i) liefert {cls, txt, title} für Tag-Index i */
-function heatTable(V, cellFn) {
+
+/* Jahresübersicht: Zeile = Monat, Spalte = Tag 1–31, Zahl = so viele aus dem Team weg */
+function renderHeat(A) {
   const today = todaySer();
+  const ks = []; for (let i = A.i0; i <= A.i1; i++) { const k = monthKey(M.ser[i]); if (ks[ks.length - 1] !== k) ks.push(k); }
   let h = `<table class="heat"><thead><tr><th class="ml"></th>${Array.from({ length: 31 }, (_, d) => `<th>${d + 1}</th>`).join("")}</tr></thead><tbody>`;
-  for (const k of monthsInRange(V)) {
+  for (const k of ks) {
     const y = Math.floor(k / 12), m = (k % 12) + 1;
     h += `<tr><th class="ml">${MON[m - 1]} ${String(y).slice(2)}</th>`;
     for (let d = 1; d <= 31; d++) {
       const i = idxOf(y, m, d);
       if (i < 0) { h += `<td class="na"></td>`; continue; }
-      if (i < V.i0 || i > V.i1) { h += `<td class="out"></td>`; continue; }
-      const c = cellFn(i);
+      if (i < A.i0 || i > A.i1) { h += `<td class="out"></td>`; continue; }
+      const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear();
       const extra = (wday(M.ser[i]) === 1 ? " mo" : "") + (M.ser[i] === today ? " today" : "");
-      h += `<td class="${c.cls}${extra}" data-d="${i}" title="${esc(c.title)}">${c.txt}</td>`;
+      if (!M.work[i]) { h += `<td class="${M.hol[i] ? "hol" : "we"}${extra}" data-d="${i}" title="${esc(when + " · " + (M.hol[i] || "Wochenende"))}"></td>`; continue; }
+      const a = A.abs[i], l = A.lv[i];
+      h += `<td class="lv${l}${extra}" data-d="${i}" title="${esc(`${when} · ${a} weg${l >= 2 ? " · " + LV_TXT[l] : ""} – klicken: wer?`)}">${a || ""}</td>`;
     }
     h += "</tr>";
   }
-  return h + "</tbody></table>";
-}
-function heatCell(V, i) {
-  const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear();
-  if (!M.work[i]) return { cls: M.hol[i] ? "hol" : "we", txt: "", title: `${when} · ${M.hol[i] || "Wochenende"}` };
-  const a = V.dayAbs[i], l = V.dayLv[i];
-  return { cls: "lv" + l, txt: a || "", title: `${when} · ${a} weg${l >= 2 ? " · " + LV_NAME[l] : ""} – klicken für Details` };
-}
-function weekList(V) {
-  const weeks = [], mon0 = -((wday(M.ser[0]) + 6) % 7);
-  for (let a = mon0; a < M.N; a += 7) {
-    const lo = Math.max(a, V.i0, 0), hi = Math.min(a + 6, V.i1, M.N - 1);
-    if (lo > hi) continue;
-    let pts = 0, maxLv = 0, peak = 0; const uLv = new Map();
-    for (let i = lo; i <= hi; i++) {
-      if (!M.work[i]) continue;
-      peak = Math.max(peak, V.dayAbs[i]);
-      for (const u of V.units) { const l = u.lv[i]; pts += WOCHEN_PUNKTE[l]; if (l >= 2) uLv.set(u.ui, Math.max(uLv.get(u.ui) || 0, l)); maxLv = Math.max(maxLv, l); }
-    }
-    weeks.push({ lo, hi, mon: M.start + a, pts, maxLv, peak, uLv });
-  }
-  return weeks;
-}
-function topWeeks(V) {
-  const top = weekList(V).filter((w) => w.pts > 0).sort((x, y) => y.maxLv - x.maxLv || y.pts - x.pts || y.peak - x.peak || x.lo - y.lo).slice(0, 5);
-  if (!top.length) return `<div class="empty" style="padding:16px">Keine Woche mit Engpass (ab Gelb) im gewählten Zeitraum und Filter.</div>`;
-  return `<ol class="top">${top.map((w) => {
-    const us = [...w.uLv.entries()].sort((x, y) => y[1] - x[1]).map(([ui, l]) => `<span class="pill lv${l}" style="margin:1px 3px 1px 0">${esc(M.units[ui].name)}</span>`).join("");
-    return `<li data-w="${w.lo}:${w.hi}"><div><div class="w">KW ${isoWeek(w.mon)} ${lvPill(w.maxLv)}</div>
-      <div class="d">${fmtW(M.ser[w.lo])} – ${fmtW(M.ser[w.hi])} · bis zu ${plural(w.peak, "Person", "Personen")} weg · ${w.pts} Punkte</div>
-      <div class="u">${us}</div></div></li>`;
-  }).join("")}</ol>`;
-}
-function monthBars(V) {
-  const units = V.units.filter((u) => u.type === S.bars && u.n > 0);
-  if (!units.length) return `<div class="empty" style="padding:16px">Keine ${S.bars === "fach" ? "Fachrichtungen" : "Stationen"} im Filter.</div>`;
-  const ks = monthsInRange(V);
-  const data = units.map((u) => ks.map((k) => {
-    let abs = 0, soll = 0, lv = 0;
-    for (let i = V.i0; i <= V.i1; i++) { if (monthKey(M.ser[i]) !== k || !M.work[i]) continue; abs += u.cnt[i]; soll += u.nday[i]; lv = Math.max(lv, u.lv[i]); }
-    return { abs, soll, lv, q: soll ? abs / soll : 0 };
-  }));
-  const maxQ = Math.max(0.1, ...data.flat().map((x) => x.q));   // mind. 10 % als Skala, damit kleine Werte nicht riesig wirken
-  let h = `<table class="bars"><thead><tr><th class="gl">${S.bars === "fach" ? "Fachrichtung" : "Station"}</th>${ks.map((k) => `<th>${MON[k % 12]}</th>`).join("")}<th style="width:56px">Summe</th></tr></thead><tbody>`;
-  units.forEach((u, r) => {
-    const sum = data[r].reduce((s, x) => s + x.abs, 0);
-    h += `<tr><td class="gl" title="${esc(unitTitle(u))} – ${u.n} Personen">${u.type === "fach" ? dot(M.fachIdx.get(u.name)) : ""}${esc(u.name)}<span class="meta">${u.n} P.</span></td>`;
-    data[r].forEach((x, c) => {
-      const hp = Math.round((x.q / maxQ) * 34);
-      h += `<td><div class="bc" title="${esc(`${u.name} · ${MON_L[ks[c] % 12]}: ${x.abs} Urlaubs-Arbeitstage von ${x.soll} Soll-Arbeitstagen (${Math.round(x.q * 100)} %)${x.lv >= 2 ? " · höchste Stufe " + LV_NAME[x.lv] : ""}`)}">
-        <span class="bv">${x.abs || ""}</span><div class="b" style="height:${hp}px"></div><div class="mk${x.lv >= 2 ? " lv" + x.lv : ""}"></div></div></td>`;
-    });
-    h += `<td class="num" style="text-align:right;vertical-align:middle;font-weight:600">${sum}</td></tr>`;
-  });
-  return h + "</tbody></table>";
+  $("p-heat").innerHTML = `<h2>Jahresübersicht – wann ist es schon eng?</h2>
+    <div class="sub">Zahl = so viele aus ${A.u ? "dem Team" : "allen Teams"} haben an dem Tag Urlaub gewünscht. Ein Klick auf einen Tag zeigt, wer weg ist.</div>
+    ${legend()}${h}</tbody></table>`;
 }
 
-/* ===================== Kalender ===================== */
-function columns(V) {
+/* Kalender: oben das Team gesamt (Ampel), darunter je Person ihre Wünsche */
+function columns(A) {
   const cols = [];
-  if (S.view === "d") {
-    for (let i = V.i0; i <= V.i1; i++) cols.push({ a: i, b: i, day: true });
-  } else {
-    const mon0 = -((wday(M.ser[0]) + 6) % 7);
-    for (let a = mon0; a < M.N; a += 7) {
-      const lo = Math.max(a, V.i0, 0), hi = Math.min(a + 6, V.i1, M.N - 1);
-      if (lo > hi) continue;
-      cols.push({ a: lo, b: hi, day: false, mon: M.start + a });
-    }
+  if (S.view === "d") { for (let i = A.i0; i <= A.i1; i++) cols.push({ a: i, b: i }); return cols; }
+  const mon0 = -((wday(M.ser[0]) + 6) % 7);
+  for (let a = mon0; a < M.N; a += 7) {
+    const lo = Math.max(a, A.i0, 0), hi = Math.min(a + 6, A.i1, M.N - 1);
+    if (lo <= hi) cols.push({ a: lo, b: hi, mon: M.start + a });
   }
   return cols;
 }
-function renderCal(V) {
-  const cols = columns(V), day = S.view === "d";
-  const todayS = todaySer();
+function renderCal(A) {
+  const day = S.view === "d", cols = columns(A), todayS = todaySer();
   const colCls = cols.map((c) => {
     let k = "";
     if (day) { if (M.hol[c.a]) k += " hol"; else if (!M.work[c.a]) k += " we"; if (ser2date(M.ser[c.a]).getUTCDate() === 1) k += " mstart"; }
     if (M.ser[c.a] <= todayS && todayS <= M.ser[c.b]) k += " today";
     return k;
   });
-  // Monatszeile
-  let mrow = `<th class="lh">${day ? "Tag" : "Kalenderwoche"}</th>`, cur = null, span = 0, ms = "";
+  let mrow = `<th class="lh">${day ? "Tag" : "Kalenderwoche"}</th>`, cur = null, span = 0;
   const mk = (c) => monthKey(day ? M.ser[c.a] : c.mon + 3);
-  cols.forEach((c, j) => { const k = mk(c); if (k !== cur) { if (span) mrow += `<th colspan="${span}" class="${ms}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`; cur = k; span = 0; ms = j ? "mstart" : ""; } span++; });
-  if (span) mrow += `<th colspan="${span}" class="${ms}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`;
+  cols.forEach((c) => { const k = mk(c); if (k !== cur) { if (span) mrow += `<th colspan="${span}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`; cur = k; span = 0; } span++; });
+  if (span) mrow += `<th colspan="${span}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`;
   const crow = `<th class="lh"></th>` + cols.map((c, j) => day
     ? `<th class="${colCls[j]}" title="${esc(M.hol[c.a] || "")}">${ser2date(M.ser[c.a]).getUTCDate()}<br><span style="font-weight:400">${WD[wday(M.ser[c.a])]}</span></th>`
     : `<th class="${colCls[j]}" title="Woche ab ${fmtY(c.mon)}">${isoWeek(c.mon)}<br><span style="font-weight:400;font-size:9.5px">${fmt(c.mon).slice(0, 5)}</span></th>`).join("");
-  const ncol = cols.length + 1;
-  let body = "";
-
-  const unitRow = (u) => {
-    let h = `<tr><td class="lh" title="${esc(unitTitle(u) + " – " + u.n + " Personen – Ampel " + thText(u))}"><span class="nm">${esc(u.name)}</span><span class="meta">${u.n} Pers. · ${thText(u)}</span></td>`;
+  const plain = (j) => colCls[j].replace(/ (we|hol)/g, "");
+  // Zeile »Team gesamt«: höchste Stufe und meiste Abwesende in der Spalte
+  let body = `<tr class="sum"><td class="lh">${A.u ? "Team gesamt" : "alle Teams"}</td>`;
+  cols.forEach((c, j) => {
+    let n = 0, l = 0; for (let i = c.a; i <= c.b; i++) if (M.work[i]) { n = Math.max(n, A.abs[i]); l = Math.max(l, A.lv[i]); }
+    body += day && !M.work[c.a] ? `<td class="c${colCls[j]}"></td>` : `<td class="c lv${l}${plain(j)}" data-r="${c.a}:${c.b}">${n || ""}</td>`;
+  });
+  body += "</tr>";
+  for (const pi of A.ps) {
+    const p = M.persons[pi];
+    body += `<tr><td class="lh" title="${esc(p.name)}">${esc(p.name)}</td>`;
     cols.forEach((c, j) => {
-      let cnt = 0, lv = 0;
-      for (let i = c.a; i <= c.b; i++) { if (M.work[i] || day) cnt = Math.max(cnt, u.cnt[i]); lv = Math.max(lv, u.lv[i]); }
-      const cls = day && !M.work[c.a] ? colCls[j] : colCls[j].replace(/ (we|hol)/g, "");
-      h += `<td class="c u lv${lv}${cls}" data-k="u:${u.ui}:${c.a}:${c.b}">${cnt || ""}</td>`;
+      let n = 0, any = 0; for (let i = c.a; i <= c.b; i++) if (p.wish[i]) { any = 1; if (p.abs[i]) n++; }
+      const show = day ? any && (p.abs[c.a] || !M.work[c.a]) : n > 0;
+      body += show ? `<td class="c w${plain(j)}" data-r="${c.a}:${c.b}" ${day && !M.work[c.a] ? 'style="opacity:.45"' : ""}>${day ? "" : n}</td>` : `<td class="c${colCls[j]}" data-r="${c.a}:${c.b}"></td>`;
     });
-    return h + "</tr>";
-  };
-  const st = V.units.filter((u) => u.type === "stat"), fa = V.units.filter((u) => u.type === "fach");
-  if (st.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Station · Zahl = gleichzeitig weg</span></td></tr>`; st.forEach((u) => (body += unitRow(u))); }
-  if (fa.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Fachteam · Zahl = gleichzeitig weg</span></td></tr>`; fa.forEach((u) => (body += unitRow(u))); }
-  if (V.ps.length) {
-    body += `<tr class="sec"><td colspan="${ncol}"><span>Personen · ${day ? "farbig = Urlaubswunsch · schraffiert = Teilzeit-frei" : "Zahl = eigene Arbeitstage Urlaub in der Woche"} · roter Rahmen = Engpass</span></td></tr>`;
-    let lastF = null;
-    const sorted = V.ps.slice().sort((a, b) => (M.persons[a].fi < 0 ? 99 : M.persons[a].fi) - (M.persons[b].fi < 0 ? 99 : M.persons[b].fi) || a - b);
-    for (const pi of sorted) {
-      const p = M.persons[pi];
-      if (p.fach !== lastF) { body += `<tr class="sub"><td class="lh" style="position:sticky;left:0">${esc(p.fach || "ohne Fachrichtung")}</td><td colspan="${cols.length}"></td></tr>`; lastF = p.fach; }
-      const col = fachColor(p.fi);
-      body += `<tr><td class="lh" title="${esc(p.name + " – " + p.fach + " – " + p.st.join(", ") + (p.tz ? " – Teilzeit " + daysText(p) : ""))}"><span class="dot" style="background:${col}"></span><span class="nm">${esc(p.name)}</span><span class="meta">${p.tz ? "TZ " + daysText(p) + " · " : ""}${esc(p.st.join(", "))}</span></td>`;
-      cols.forEach((c, j) => {
-        let n = 0, any = 0, lv = 0;
-        for (let i = c.a; i <= c.b; i++) { if (p.wish[i]) { any = 1; if (p.abs[i]) n++; lv = Math.max(lv, p.lv[i]); } }
-        const show = day ? any : n > 0;
-        const ring = lv >= 2 ? " r" + lv : "";
-        const off = day && M.work[c.a] && !p.on[c.a] ? " pf" : "";
-        body += show
-          ? `<td class="c p${ring}${colCls[j].replace(/ (we|hol)/g, "")}" style="background:${col}${day && !p.abs[c.a] ? ";opacity:.45" : ""}" data-k="p:${pi}:${c.a}:${c.b}">${day ? "" : n}</td>`
-          : `<td class="c${colCls[j]}${off}" data-k="p:${pi}:${c.a}:${c.b}"></td>`;
-      });
-      body += "</tr>";
-    }
+    body += "</tr>";
   }
-  if (!V.ps.length && !V.units.length) body = `<tr><td class="lh">Keine Treffer für diesen Filter.</td></tr>`;
-
-  const legendF = M.fachs.map((f, i) => `<span><span class="sw" style="background:${FACH_FARBEN[i % 10]}"></span>${esc(f.name)}</span>`).join("");
-  $("t-cal").innerHTML = `
-    <div class="legend"><b>Ampel:</b>
-      <span><span class="sw" style="background:var(--l1)"></span>weg, unkritisch</span>
-      <span><span class="sw" style="background:var(--l2)"></span>gelb</span>
-      <span><span class="sw" style="background:var(--l3)"></span>hellrot</span>
-      <span><span class="sw" style="background:var(--l4)"></span>dunkelrot</span>
-      <span>· G/H/D = ab so vielen Abwesenden gelb/hellrot/dunkelrot</span>
-    </div>
-    <div class="legend"><b>Fachrichtung:</b> ${legendF} <span>· grau = Wochenende · lila = Feiertag · schraffiert = Teilzeit-frei · orange = heute · Klick auf ein Feld = Details</span></div>
+  $("p-cal").innerHTML = `<h2>Kalender – wer hat wann Urlaub gewünscht?</h2>
+    <div class="sub">Oberste Zeile = ${A.u ? "Team" : "alle"} gesamt (Farbe wie oben, Zahl = meiste gleichzeitig weg). Darunter je Person: ${day ? "blau = Urlaubswunsch" : "Zahl = Urlaubs-Arbeitstage in der Woche"}. Klick = wer ist weg.</div>
     <div class="calwrap"><table class="cal" style="--cw:${day ? "var(--cw-day)" : "var(--cw-week)"}"><thead><tr class="m">${mrow}</tr><tr class="c">${crow}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
-/* ===================== Konflikte ===================== */
-function personLine(x, withWish = true) {
-  const p = M.persons[x.p];
-  const wish = x.wishes.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}${w.bem ? " · " + esc(w.bem) : ""}`).join("<br>");
-  return `<tr><td>${dot(p.fi)}<b>${esc(p.name)}</b> ${tzBadge(p)}<div style="color:var(--muted);font-size:12px">${esc(p.fach)}</div></td>
-    <td>${fmt(x.from)}–${fmt(x.to)}<div style="color:var(--muted);font-size:12px">${x.days} Arbeitstag${x.days === 1 ? "" : "e"} im Engpass</div></td>
-    ${withWish ? `<td>${wish}</td>` : ""}<td>${flexBadge(x.flex)}</td></tr>`;
-}
-function confCard(c) {
-  const u = M.units[c.u];
-  const present = c.peakOn - c.peak;
-  const peakTxt = c.peakFrom === c.peakTo ? fmtW(c.peakFrom) : `${fmtW(c.peakFrom)} – ${fmtW(c.peakTo)}`;
-  const ask = c.people.filter((x) => x.flex === "ja" || x.flex === "etwas").map((x) => esc(M.persons[x.p].name));
-  const askTxt = ask.length ? `<b>Zuerst ansprechen:</b> ${ask.join(", ")} (als verschiebbar angegeben)` : `<b>Keiner hat »verschiebbar« angegeben</b> – Absprache mit allen Beteiligten bzw. Entscheidung durch die Leitung.`;
-  return `<div class="card lv${c.maxLv}b">
-    <div class="t"><span class="pill lv${c.maxLv}">${LV_NAME[c.maxLv]}</span>
-      <span class="unit">${esc(unitTitle(u))}</span>
-      <span class="when">${range(c.from, c.to)} · ${c.wd} Arbeitstag${c.wd === 1 ? "" : "e"}</span></div>
-    <div class="size" style="margin-top:4px">Am stärksten: <b style="color:var(--ink)">${c.peak} von ${u.n} weg</b>, noch ${present} im Dienst${c.peakOn < u.n ? ` (${u.n - c.peakOn} hat/haben Teilzeit-frei)` : ""} · ${peakTxt} · Ampel ${thText(u)}</div>
-    <table><thead><tr><th>Wer ist weg</th><th>Im Engpass</th><th>Eingetragener Wunsch</th><th>Flexibilität</th></tr></thead><tbody>${c.people.map((x) => personLine(x)).join("")}</tbody></table>
-    <div class="ask">${askTxt}</div></div>`;
-}
-function renderConf(V) {
-  const cs = confVisible(V);
-  let h = `<div class="conf-head"><div class="note">Jede Karte = ein zusammenhängender Zeitraum (nur Arbeitstage), in dem eine Station oder ein Fachteam mindestens »gelb« ist. Sortiert nach Schwere, dann Datum.</div>
-    <div style="display:flex;gap:8px;align-items:center"><label style="font-size:13px"><input type="checkbox" id="cGelb" ${S.gelb ? "checked" : ""}> gelbe anzeigen</label>
-    <button class="btn" id="cCopy">Liste kopieren</button></div></div>`;
-  if (!cs.length) h += `<div class="empty">Keine Engpässe im gewählten Zeitraum und Filter. 🎉</div>`;
-  for (const l of [4, 3, 2]) {
-    const g = cs.filter((c) => c.maxLv === l);
-    if (!g.length) continue;
-    h += `<div class="lvsec"><h3><span class="pill lv${l}">${LV_NAME[l]}</span> ${g.length} Engpass${g.length === 1 ? "" : "stellen"}</h3>${g.map(confCard).join("")}</div>`;
-  }
-  $("t-conf").innerHTML = h;
-  $("cGelb").onchange = (e) => { S.gelb = e.target.checked; save(); render(); };
-  $("cCopy").onclick = () => copyText(cs.map((c) => {
-    const u = M.units[c.u];
-    return `[${LV_NAME[c.maxLv]}] ${unitTitle(u)}: ${range(c.from, c.to)} (${c.wd} AT) – max. ${c.peak} von ${u.n} weg\n` +
-      c.people.map((x) => `   • ${M.persons[x.p].name}: ${fmt(x.from)}–${fmt(x.to)}, verschiebbar: ${x.flex || "k. A."}`).join("\n");
-  }).join("\n\n") || "Keine Engpässe.");
-}
-function copyText(t) {
-  const done = () => alert("Liste in die Zwischenablage kopiert – z. B. in eine E-Mail einfügen.");
-  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, () => fallback());
-  else fallback();
-  function fallback() { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { prompt("Bitte kopieren:", t); } ta.remove(); }
+/* Liste aller Wünsche im Team, nach Datum */
+function renderList(A) {
+  const rows = [];
+  for (const pi of A.ps) for (const w of M.persons[pi].wishes) if (w.bis >= M.ser[A.i0] && w.von <= M.ser[A.i1]) rows.push(w);
+  rows.sort((a, b) => a.von - b.von || M.persons[a.p].name.localeCompare(M.persons[b.p].name, "de"));
+  // Stufe des Wunsches = höchste Stufe des gewählten Teams an den Tagen, an denen die Person fehlt
+  const lvOf = (w) => { const p = M.persons[w.p]; let m = 0; for (let s = Math.max(w.von, M.start); s <= Math.min(w.bis, M.start + M.N - 1); s++) { const i = s - M.start; if (p.abs[i]) m = Math.max(m, A.lv[i]); } return m; };
+  $("p-list").innerHTML = `<h2>Alle Urlaubswünsche ${A.u ? "im Team " + esc(A.name) : ""} nach Datum</h2>
+    <div class="sub">Nur Wünsche – genehmigt wird später durch die Leitung.</div>
+    ${rows.length ? `<table class="list"><thead><tr><th>Von</th><th>Bis</th><th>Name</th><th>Arbeitstage</th><th>Lage im Team</th></tr></thead><tbody>${rows.map((w) => `<tr><td>${fmtW(w.von)}${ser2date(w.von).getUTCFullYear()}</td><td>${fmtW(w.bis)}${ser2date(w.bis).getUTCFullYear()}</td><td>${esc(M.persons[w.p].name)}</td><td>${w.wd}</td><td>${pill(lvOf(w))}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">Noch keine Wünsche in diesem Zeitraum.</p>`}`;
 }
 
-/* ===================== Personentabelle (sortierbar) ===================== */
-const PCOLS = [
-  { k: "name", t: "Name", v: (p) => p.name },
-  { k: "fach", t: "Fachrichtung", v: (p) => (p.fi < 0 ? "￿" : String(p.fi).padStart(3, "0")) + p.name },
-  { k: "st", t: "Stationen", v: (p) => p.st.join(", ") || "￿" },
-  { k: "tage", t: "Arbeitstage", v: (p) => p.wk.filter(Boolean).length },
-  { k: "n", t: "Wünsche", v: (p) => p.wishes.length, num: 1 },
-  { k: "total", t: "Gewünscht (AT)", v: (p) => p.total, num: 1 },
-  { k: "anspruch", t: "Anspruch", v: (p) => p.anspruch, num: 1 },
-  { k: "rest", t: "Rest", v: (p) => p.rest, num: 1 },
-  { k: "lv", t: "Engpass", v: (p) => p.maxLv, num: 1 }
-];
-const PF = { "": "alle", none: "ohne Wunsch", rest: "mit Anspruch / überzogen zuerst" };
-function renderPers(V) {
-  let ps = V.ps.slice();
-  if (S.pf === "none") ps = ps.filter((i) => !M.persons[i].wishes.length);
-  const col = PCOLS.find((c) => c.k === S.sort.k) || PCOLS[1], dir = S.sort.dir;
-  const cmp = (a, b) => {
-    const x = col.v(M.persons[a]), y = col.v(M.persons[b]);
-    if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;   // leere Werte immer unten
-    return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "de")) * dir || M.persons[a].name.localeCompare(M.persons[b].name, "de");
-  };
-  ps.sort(cmp);
-  const rows = ps.map((pi) => {
-    const p = M.persons[pi];
-    const chips = p.wishes.map((w) => `<span class="wchip${w.lv >= 2 ? " c" + w.lv : ""}" title="${esc((w.bem ? w.bem + " · " : "") + "verschiebbar: " + (w.flex || "k. A."))}">${fmt(w.von)}–${fmt(w.bis)} · ${w.wd} AT</span>`).join("") || `<span class="muted">noch keine Wünsche</span>`;
-    return `<tr><td style="white-space:nowrap">${dot(p.fi)}${plink(pi)}</td><td>${esc(p.fach)}</td><td>${esc(p.st.join(", "))}</td><td>${p.tz ? tzBadge(p) : "Mo–Fr"}</td>
-      <td class="num">${p.wishes.length}</td><td class="num">${p.total}</td><td class="num">${p.anspruch ?? ""}</td><td class="num ${p.rest != null && p.rest < 0 ? "neg" : ""}">${p.rest ?? ""}</td>
-      <td>${lvPill(p.maxLv)}</td><td>${chips}</td></tr>`;
-  }).join("");
-  $("t-pers").innerHTML = `<div class="pfbar noprint"><b>Anzeigen:</b> <div class="seg" id="pfSeg">${["", "none"].map((k) => `<button data-pf="${k}" class="${S.pf === k ? "on" : ""}">${PF[k]}</button>`).join("")}</div>
-      <span class="muted">${plural(ps.length, "Person", "Personen")} · Klick auf eine Spaltenüberschrift = sortieren · Klick auf einen Namen = Personenansicht</span></div>
-    <div class="legend">Wunsch-Kästchen mit farbigem Rand = liegt in einem Engpass · AT = eigene Arbeitstage (Teilzeit berücksichtigt) · TZ = Teilzeit</div>
-    <table class="list" id="ptable"><thead><tr>${PCOLS.map((c) => `<th class="sort${c.num ? " num" : ""}${c.k === col.k ? (dir > 0 ? " asc" : " desc") : ""}" data-sk="${c.k}">${c.t}</th>`).join("")}<th>Wünsche (Zeitraum · AT)</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="10">Keine Treffer.</td></tr>`}</tbody></table>`;
-  $("pfSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.pf = b.dataset.pf; render(); };
-  $("ptable").querySelector("thead").onclick = (e) => {
-    const th = e.target.closest("th[data-sk]"); if (!th) return;
-    const k = th.dataset.sk, numCol = PCOLS.find((c) => c.k === k).num;
-    S.sort = S.sort.k === k ? { k, dir: -S.sort.dir } : { k, dir: numCol ? -1 : 1 };   // Zahlen zuerst absteigend
-    save(); render();
-  };
-}
-
-/* ===================== Personenansicht ===================== */
-function renderOne(V) {
-  const list = (V.ps.length ? V.ps : M.persons.map((p, i) => i)).slice().sort((a, b) => M.persons[a].name.localeCompare(M.persons[b].name, "de"));
-  let pi = M.persons.findIndex((p) => p.name === S.person);
-  if (pi < 0 || !list.includes(pi)) pi = list[0];
-  const opts = list.map((i) => `<option value="${i}"${i === pi ? " selected" : ""}>${esc(M.persons[i].name)}</option>`).join("");
-  if (pi == null) { $("t-one").innerHTML = `<div class="empty">Keine Person im Filter.</div>`; return; }
-  const p = M.persons[pi];
-  const pcell = (i) => {
-    const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear();
-    if (!M.work[i]) return { cls: M.hol[i] ? "hol" : "we", txt: "", title: `${when} · ${M.hol[i] || "Wochenende"}` };
-    if (!p.on[i]) return { cls: "pf", txt: "", title: `${when} · arbeitet an diesem Wochentag nicht (Teilzeit)${p.wish[i] ? " – liegt im Wunsch, zählt aber nicht" : ""}` };
-    if (p.abs[i]) return { cls: p.lv[i] >= 2 ? "lv" + p.lv[i] : "pw", txt: "U", title: `${when} · Urlaubswunsch${p.lv[i] >= 2 ? " · Engpass " + LV_NAME[p.lv[i]] : ""}` };
-    return { cls: "pw0", txt: "", title: when + " · im Dienst" };
-  };
-  const wrows = p.wishes.map((w) => `<tr><td>${range(w.von, w.bis)}</td><td class="num">${w.wd}</td><td>${flexBadge(w.flex)}</td><td>${lvPill(w.lv) || '<span class="muted">–</span>'}</td>
-    <td>${esc(w.bem)}</td><td class="num muted">${w.row}</td></tr>`).join("");
-  $("t-one").innerHTML = `
-    <div class="phead noprint"><label>Person: <select class="sel" id="oneSel">${opts}</select></label><span class="muted">Liste folgt den Filtern oben</span></div>
-    <div class="panel"><div class="phead"><h2>${dot(p.fi)}${esc(p.name)}</h2><span>${esc(p.fach || "ohne Fachrichtung")}</span><span class="muted">${esc(p.st.join(", ") || "keine Station")}</span>${p.tz ? tzBadge(p) : '<span class="muted">Vollzeit Mo–Fr</span>'}</div>
-      <div class="pkpis">
-        <div class="kpi"><div class="v">${p.wishes.length}</div><div class="l">Wünsche</div></div>
-        <div class="kpi"><div class="v">${p.total}</div><div class="l">gewünschte Arbeitstage</div></div>
-        <div class="kpi"><div class="v">${p.anspruch ?? "–"}</div><div class="l">Anspruch${p.anspruch == null ? " (Team, Spalte G leer)" : ""}</div></div>
-        <div class="kpi${p.rest != null && p.rest < 0 ? " bad" : ""}"><div class="v${p.rest != null && p.rest < 0 ? " neg" : ""}">${p.rest ?? "–"}</div><div class="l">Rest</div></div>
-        <div class="kpi"><div class="v">${p.maxLv >= 2 ? lvPill(p.maxLv) : "–"}</div><div class="l">höchster Engpass</div></div>
-      </div>
-      <div class="legend"><span><span class="sw" style="background:#c9d6ee"></span>Urlaubswunsch (U)</span><span><span class="sw" style="background:var(--l2)"></span><span class="sw" style="background:var(--l3)"></span><span class="sw" style="background:var(--l4)"></span>Wunsch in Engpass</span>
-        <span><span class="sw" style="background:repeating-linear-gradient(135deg,#e4e9f3 0 3px,#f7f8fb 3px 6px)"></span>Teilzeit-frei</span><span><span class="sw" style="background:var(--we)"></span>Wochenende</span><span><span class="sw" style="background:var(--hol)"></span>Feiertag/frei</span></div>
-      ${heatTable(V, pcell).replace('<table class="heat"', '<table class="heat" id="oneHeat"')}</div>
-    <div class="panel"><h2>Wünsche</h2>
-      ${p.wishes.length ? `<table class="list"><thead><tr><th>Zeitraum</th><th class="num">AT</th><th>Verschiebbar</th><th>Engpass</th><th>Bemerkung</th><th class="num">Zeile</th></tr></thead><tbody>${wrows}</tbody></table>` : `<p class="muted">Noch keine Wünsche eingetragen.</p>`}
-      <h2 style="margin-top:14px">Lage in den eigenen Bereichen</h2>
-      <p>${p.units.map((ui) => { const u = M.units[ui]; const n = M.conflicts.filter((c) => c.u === ui && c.people.some((x) => x.p === pi)).length; return `${esc(unitTitle(u))} (${u.n} P., ${ampText(u)})${n ? ` – <b>${plural(n, "Engpass", "Engpässe")}</b> mit eigenem Wunsch` : ""}`; }).join("<br>") || "–"}</p></div>`;
-  $("oneSel").onchange = (e) => { S.person = M.persons[+e.target.value].name; save(); render(); };
-  S.person = p.name;
-}
-
-/* ===================== Regeln & Ampel ===================== */
-const secD = (id, title, hint, body) => `<details class="sec" data-sec="${id}"${openSec.has(id) ? " open" : ""}><summary>${title}${hint ? ` <span class="hint">${hint}</span>` : ""}</summary><div class="body">${body}</div></details>`;
-function renderRules(V) {
-  const std = M.std, tzs = M.persons.filter((p) => p.tz);
-  // Herkunft der Werte: »aus Standard« bzw. je Stufe, wenn gemischt (z. B. »G aus Excel · D hier eingestellt«)
-  const SRC_TXT = { lokal: "hier eingestellt", Excel: "aus Excel", Standard: "Standardregel" };
-  const srcInfo = (u) => {
-    const ks = ["g", "h", "d"].filter((k) => u.orig[k]); if (!ks.length) return "";
-    const same = ks.every((k) => u.orig[k] === u.orig[ks[0]]);
-    const tag = (o, t) => `<span class="src ${o === "lokal" ? "lokal" : ""}">${t}</span>`;
-    return same ? tag(u.orig[ks[0]], SRC_TXT[u.orig[ks[0]]]) : ks.map((k) => tag(u.orig[k], k.toUpperCase() + " " + SRC_TXT[u.orig[k]])).join(" · ");
-  };
-  const inp = (u, k) => {
-    const ph = u.excel[k] != null ? u.excel[k] : u.type === "stat" ? u.th[k] ?? "" : "";
-    return `<input type="number" min="1" max="99" step="1" data-u="${esc(ukey(u))}" data-k="${k}" value="${u.local[k] ?? ""}" placeholder="${ph}" class="${u.local[k] != null ? "set" : ""}" title="leer = ${u.excel[k] != null ? "Wert aus Excel (" + u.excel[k] + ")" : u.type === "stat" ? "Standardregel" : "keine Stufe"}">`;
-  };
-  const xl = (u) => ["g", "h", "d"].map((k) => u.excel[k] ?? "–").join(" / ");
-  const ampRow = (u) => `<tr><td><b>${esc(u.name)}</b></td><td>${unitLabel(u)}</td><td class="num">${u.n}</td><td class="muted">${xl(u)}</td>
-    ${["g", "h", "d"].map((k) => `<td>${inp(u, k)}</td>`).join("")}<td>${esc(ampText(u))}<br>${srcInfo(u)}</td></tr>`;
-  const stdIn = (k, label) => `<label>${label}<input type="number" min="1" max="99" step="1" data-std="${k}" value="${ampelGet().std[k] ?? ""}" placeholder="${STANDARD[k]}" class="${ampelGet().std[k] != null ? "set" : ""}"></label>`;
-
-  const ampBody = `
-    <p>Hier lässt sich die Ampel <b>direkt in der Ansicht</b> einstellen. Die Werte werden <b>nur in diesem Browser auf diesem PC</b> gespeichert, die Excel-Datei bleibt unverändert, und andere Personen sehen sie nicht. Damit alle dieselbe Ampel haben, die Werte mit »Für Excel kopieren« ins Blatt <i>Einstellungen</i> übernehmen und danach hier »Alle Werte hier löschen«.</p>
-    <p class="muted" style="font-size:12.5px">Vorrang je Wert: <b>hier eingestellt</b> &gt; Excel → Einstellungen &gt; Standardregel. Feld leer = nächste Stufe gilt (grauer Platzhalter). Eine Stufe abschalten: eine Zahl größer als die Personenzahl eintragen. Zahlen = »ab so vielen gleichzeitig Abwesenden«.</p>
-    <h3 style="margin:14px 0 4px;font-size:14px">Standardregel für Stationen ohne eigene Werte</h3>
-    <div class="stdform amp">${stdIn("gelbAb", "Gelb ab … weg")}${stdIn("hellrotWennNochDa", "Hellrot, wenn nur noch … da")}${stdIn("hellrotAbGroesse", "Hellrot nur bei Stationen ab … Personen")}<span class="muted" style="font-size:12.5px">Dunkelrot = alle weg (fest)</span></div>
-    <h3 style="margin:14px 0 4px;font-size:14px">Je Station und Fachteam</h3>
-    <div style="overflow-x:auto"><table class="list amp"><thead><tr><th>Name</th><th>Art</th><th class="num">Personen</th><th>Excel G/H/D</th><th>Gelb ab</th><th>Hellrot ab</th><th>Dunkelrot ab</th><th>Gilt jetzt</th></tr></thead>
-      <tbody>${M.units.filter((u) => u.type === "stat").map(ampRow).join("")}${M.units.filter((u) => u.type === "fach").map(ampRow).join("")}</tbody></table></div>
-    <div class="btnrow"><button class="btn" id="ampCopyS" title="Name + Gelb/Hellrot/Dunkelrot aller Stationen aus Excel – in Excel bei Einstellungen in Zelle H7 einfügen">Stationen für Excel kopieren</button>
-      <button class="btn" id="ampCopyF" title="Name + Gelb/Hellrot/Dunkelrot aller Fachrichtungen – in Excel bei Einstellungen in Zelle A7 einfügen">Fachteams für Excel kopieren</button>
-      <button class="btn" id="ampReset"${M.localCount ? "" : " disabled"}>Alle Werte hier löschen</button></div>
-    <p class="muted" style="font-size:12.5px">Einfügen in Excel: Blatt <i>Einstellungen</i> → Blattschutz ggf. aufheben → Stationen: Zelle <b>H7</b> anklicken, Strg+V (füllt Spalten H–K) · Fachteams: Zelle <b>A7</b> anklicken, Strg+V (füllt A–D). Die Namen werden mit überschrieben, damit die Zeilen sicher zusammenpassen. Leere Felder = Standardregel.</p>`;
-
-  const howBody = `
-    <p>Gezählt wird pro Arbeitstag, wie viele Mitglieder einer Station bzw. eines Fachteams einen Urlaubswunsch haben. Die Zahlen bedeuten: <b>ab so vielen gleichzeitig Abwesenden</b> gilt die Farbe. Die höchste erreichte Stufe zählt. Eine Person mit mehreren Stationen zählt auf jeder ihrer Stationen. Kürzel in der Ansicht: <b>G</b> = Gelb ab, <b>H</b> = Hellrot ab, <b>D</b> = Dunkelrot ab.</p>
-    <p><b>Standardregel für Stationen</b> (wenn nichts eingetragen ist): 1 weg = unkritisch · <span class="pill lv2">Gelb</span> ab ${std.gelbAb} weg · <span class="pill lv3">Hellrot</span>, wenn nur noch ${std.hellrotWennNochDa} da sind (nur bei Stationen ab ${std.hellrotAbGroesse} Personen) · <span class="pill lv4">Dunkelrot</span>, wenn alle weg sind. Fachteams haben nur eine Ampel, wenn Werte eingetragen sind. Fallen zwei Stufen auf dieselbe Zahl, gilt die höhere.</p>
-    <p><b>Teilzeit</b> (Blatt Team, Spalten L–P, »x« = Arbeitstag): Ein Urlaubswunsch zählt nur an den eigenen Arbeitstagen als »weg«. Bei der Standardregel beziehen sich »nur noch ${std.hellrotWennNochDa} da« und »alle weg« auf die Personen, die an dem Wochentag arbeiten würden (angezeigte Werte = Vollzeit-Wert). Fest eingetragene Werte gelten unverändert.
-      ${tzs.length ? `Teilzeit eingetragen: ${tzs.map((p) => `${esc(p.name)} (${daysText(p)})`).join(", ")}.` : "Zurzeit ist niemand als Teilzeit markiert."}</p>`;
-
-  const warnBody = M.warn.length ? `<ul class="warnlist">${M.warn.map((w) => `<li>${esc(w.t)}</li>`).join("")}</ul>` : `<p>Keine – die Daten sind vollständig.</p>`;
-  const hols = M.hol.map((h, i) => (h ? `${fmt(M.ser[i])} ${esc(h)}` : "")).filter(Boolean);
-  const perBody = `<p>${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} (Startdatum aus Excel → Einstellungen B3)</p><p>Feiertage/freie Tage: ${hols.length ? hols.join(" · ") : "keine eingetragen"}</p>`;
-
-  $("t-rules").innerHTML =
-    secD("amp", "Ampel einstellen", M.localCount ? `${plural(M.localCount, "eigener Wert", "eigene Werte")} in diesem Browser aktiv` : "Schwellen je Station/Team und Standardregel anpassen", ampBody) +
-    secD("how", "So rechnet die Ampel", "Erklärung, Standardregel, Teilzeit", howBody) +
-    secD("warn", `Hinweise zu den Daten (${M.warn.length})`, M.warn.length ? "z. B. fehlende Angaben in Excel" : "alles vollständig", warnBody) +
-    secD("per", "Planungszeitraum und Feiertage", `${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])}`, perBody);
-
-  $("t-rules").querySelectorAll("details.sec").forEach((d) => d.addEventListener("toggle", () => { d.open ? openSec.add(d.dataset.sec) : openSec.delete(d.dataset.sec); }));
-  const val = (el) => { const v = el.value.trim(); if (v === "") return null; const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 1 ? n : null; };
-  const apply = () => { M = build(lastWb); render(); };
-  $("t-rules").querySelectorAll("input[data-u]").forEach((el) => el.addEventListener("change", () => {
-    const a = ampelGet(), k = el.dataset.u, o = Object.assign({}, a.units[k]); const v = val(el);
-    if (v == null) delete o[el.dataset.k]; else o[el.dataset.k] = v;
-    if (Object.keys(o).length) a.units[k] = o; else delete a.units[k];
-    ampelSet(a); apply();
-  }));
-  $("t-rules").querySelectorAll("input[data-std]").forEach((el) => el.addEventListener("change", () => {
-    const a = ampelGet(), v = val(el); if (v == null) delete a.std[el.dataset.std]; else a.std[el.dataset.std] = v; ampelSet(a); apply();
-  }));
-  $("ampReset").onclick = () => { if (confirm("Alle hier eingestellten Ampelwerte löschen? Danach gelten wieder Excel und Standardregel.")) { ampelSet({}); apply(); } };
-  const copyUnits = (type) => copyText(M.units.filter((u) => u.type === type && u.inExcel).map((u) => [u.name, ...["g", "h", "d"].map((k) => u.custom[k] ?? "")].join("\t")).join("\n"));
-  $("ampCopyS").onclick = () => copyUnits("stat");
-  $("ampCopyF").onclick = () => copyUnits("fach");
-}
-
-/* ===================== Detail-Panel ===================== */
-function openDetail(h) { $("detailBody").innerHTML = h; $("detail").classList.add("open"); }
-/* Tag oder Woche aus Heatmap / Top-5: wer fehlt, welche Bereiche, wer hat ohnehin frei */
+/* Klick auf einen Tag / eine Woche: wer aus dem Team ist weg */
 function showRange(i0, i1) {
-  const V = visible();
+  const A = auswahl();
   const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
-  let lv = 0, peak = 0; for (let i = i0; i <= i1; i++) if (M.work[i]) { lv = Math.max(lv, V.dayLv[i]); peak = Math.max(peak, V.dayAbs[i]); }
-  const days = (p) => { let n = 0; for (let i = i0; i <= i1; i++) n += p.abs[i]; return n; };
-  const who = V.ps.filter((pi) => days(M.persons[pi]) > 0).sort((a, b) => M.persons[b].lv.slice(i0, i1 + 1).reduce((s, x) => Math.max(s, x), 0) - M.persons[a].lv.slice(i0, i1 + 1).reduce((s, x) => Math.max(s, x), 0) || M.persons[a].name.localeCompare(M.persons[b].name, "de"));
-  const units = V.units.map((u) => { let l = 0, c = 0, on = 0; for (let i = i0; i <= i1; i++) if (M.work[i]) { l = Math.max(l, u.lv[i]); if (u.cnt[i] >= c) { c = u.cnt[i]; on = u.nday[i]; } } return { u, l, c, on }; }).filter((x) => x.c > 0).sort((a, b) => b.l - a.l || b.c - a.c);
-  const off = i0 === i1 && M.work[i0] ? V.ps.filter((pi) => !M.persons[pi].on[i0]) : [];
-  let h = `<h3>${i0 === i1 ? "Wer fehlt am" : "Wer fehlt in der Woche"}</h3><div class="muted">${when}${i0 === i1 && M.hol[i0] ? " · " + esc(M.hol[i0]) : ""}</div>`;
-  if (i0 === i1 && !M.work[i0]) return openDetail(h + `<p>Kein Arbeitstag (${esc(M.hol[i0] || "Wochenende")}).</p>`);
-  h += `<p>${lvPill(lv)} ${i0 === i1 ? `<b>${who.length}</b> ${who.length === 1 ? "Person" : "Personen"} weg` : `bis zu <b>${peak}</b> gleichzeitig weg, insgesamt ${plural(who.length, "Person", "Personen")}`} (im aktuellen Filter)</p>`;
-  h += `<h4>Weg</h4>${who.length ? `<ul>${who.map((pi) => {
-    const p = M.persons[pi], ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]);
-    let pl = 0; for (let i = i0; i <= i1; i++) pl = Math.max(pl, p.lv[i]);
-    return `<li>${dot(p.fi)}${plink(pi)} ${lvPill(pl)} ${tzBadge(p)}<br><span class="muted">${esc(p.fach)} · ${esc(p.st.join(", "))}${i0 !== i1 ? ` · ${days(p)} AT` : ""}</span><br>${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)} ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}`).join("<br>")}</li>`;
-  }).join("")}</ul>` : "<p>niemand</p>"}`;
-  h += `<h4>Betroffene Bereiche</h4>${units.length ? `<ul>${units.map((x) => `<li>${esc(unitTitle(x.u))}: ${x.c} von ${x.on} im Dienst weg ${lvPill(x.l)} <span class="muted">· ${ampText(x.u)}</span></li>`).join("")}</ul>` : "<p>keine</p>"}`;
-  if (off.length) h += `<h4>Hat an diesem Wochentag ohnehin frei (Teilzeit)</h4><p>${off.map((pi) => esc(M.persons[pi].name)).join(", ")}</p>`;
+  let h = `<h3>${i0 === i1 ? "Wer ist weg am" : "Wer ist weg in der Woche"}</h3><div class="muted">${when} · ${esc(A.u ? "Team " + A.name : "alle Teams")}</div>`;
+  if (i0 === i1 && !M.work[i0]) { openDetail(h + `<p>Kein Arbeitstag (${esc(M.hol[i0] || "Wochenende")}).</p>`); return; }
+  let l = 0, peak = 0; for (let i = i0; i <= i1; i++) if (M.work[i]) { l = Math.max(l, A.lv[i]); peak = Math.max(peak, A.abs[i]); }
+  const who = A.ps.filter((pi) => { for (let i = i0; i <= i1; i++) if (M.persons[pi].abs[i]) return true; return false; });
+  h += `<p>${pill(l)} ${i0 === i1 ? plural(peak, "Person", "Personen") + " weg" : `bis zu ${peak} gleichzeitig weg`}</p>`;
+  h += who.length ? `<ul>${who.map((pi) => { const p = M.persons[pi]; const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]); return `<li><b>${esc(proseName(p.name))}</b><br><span class="muted">${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}`).join(", ")}</span></li>`; }).join("")}</ul>` : "<p>niemand</p>";
   openDetail(h);
 }
-/* Zelle im Kalender (Station/Fachteam oder Person) */
-function showDetail(k) {
-  const [t, idx, a, b] = k.split(":"); const i0 = +a, i1 = +b;
-  const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
-  let h = "";
-  if (t === "u") {
-    const u = M.units[+idx];
-    let lv = 0, cnt = 0; for (let i = i0; i <= i1; i++) { lv = Math.max(lv, u.lv[i]); if (M.work[i]) cnt = Math.max(cnt, u.cnt[i]); }
-    const who = u.members.filter((m) => { for (let i = i0; i <= i1; i++) if (M.persons[m].abs[i]) return true; return false; });
-    const free = i0 === i1 && M.work[i0] ? u.members.filter((m) => !who.includes(m) && !M.persons[m].on[i0]) : [];
-    h = `<h3>${esc(unitTitle(u))}</h3><div class="muted">${when}</div>
-      <p>${lv ? `<span class="pill lv${lv}">${LV_NAME[lv]}</span> ` : ""}höchstens <b>${cnt} von ${u.n}</b> gleichzeitig weg · ${ampText(u)}</p>
-      <b>Weg in diesem Zeitraum:</b>${who.length ? `<ul>${who.map((m) => { const p = M.persons[m]; const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]); return `<li>${plink(m)} (${esc(p.fach)}) ${tzBadge(p)}<br>${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)} ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}`).join("<br>")}</li>`; }).join("")}</ul>` : "<p>niemand</p>"}
-      <b>Anwesend:</b><p>${u.members.filter((m) => !who.includes(m) && !free.includes(m)).map((m) => esc(M.persons[m].name)).join(", ") || "niemand"}</p>
-      ${free.length ? `<b>Teilzeit-frei:</b><p>${free.map((m) => esc(M.persons[m].name)).join(", ")}</p>` : ""}`;
-  } else {
-    const p = M.persons[+idx];
-    const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]);
-    h = `<h3>${esc(p.name)}</h3><div class="muted">${esc(p.fach)} · ${esc(p.st.join(", "))} ${tzBadge(p)}</div><p class="muted">${when}</p>
-      <b>Wünsche in diesem Zeitraum:</b>${ws.length ? `<ul>${ws.map((w) => `<li>${fmt(w.von)}–${fmtY(w.bis)} · ${w.wd} AT ${flexBadge(w.flex)}${w.bem ? "<br><i>" + esc(w.bem) + "</i>" : ""}</li>`).join("")}</ul>` : "<p>keine</p>"}
-      <b>Lage in den eigenen Bereichen:</b><ul>${p.units.map((ui) => { const u = M.units[ui]; let lv = 0, c = 0; for (let i = i0; i <= i1; i++) { lv = Math.max(lv, u.lv[i]); if (M.work[i]) c = Math.max(c, u.cnt[i]); } return `<li>${esc(unitTitle(u))}: max. ${c} von ${u.n} weg ${lv >= 1 ? `<span class="pill lv${lv}">${LV_NAME[lv]}</span>` : ""}</li>`; }).join("")}</ul>
-      <p>Alle Wünsche: ${p.wishes.map((w) => `${fmt(w.von)}–${fmt(w.bis)}`).join(", ") || "–"} · gesamt ${p.total} AT${p.anspruch != null ? ` von ${p.anspruch}` : ""}</p>
-      <p><a class="plink" data-person="${+idx}">→ Personenansicht öffnen</a></p>`;
-  }
-  openDetail(h);
-}
-function goPerson(pi) { S.person = M.persons[pi].name; S.tab = "one"; $("detail").classList.remove("open"); save(); render(); window.scrollTo(0, 0); }
+function openDetail(h) { $("detailBody").innerHTML = h; $("detail").classList.add("open"); }
 
 /* ===================== Ereignisse ===================== */
 $("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = () => (fileHandle ? reload() : pickFile()); $("btnPrint").onclick = () => window.print();
@@ -1412,34 +684,15 @@ document.addEventListener("drop", async (e) => {
   if (it && it.getAsFileSystemHandle) { try { const h = await it.getAsFileSystemHandle(); if (h && h.kind === "file") { fileHandle = h; IDB.put(h); loadFile(await h.getFile()); return; } } catch (er) {} }
   const f = e.dataTransfer.files[0]; if (f) { fileHandle = null; loadFile(f); }
 });
-$("fFach").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return; const f = c.dataset.f; S.fach = S.fach.includes(f) ? S.fach.filter((x) => x !== f) : S.fach.concat(f); c.classList.toggle("on"); save(); render(); };
-$("fStat").onclick = (e) => { const c = e.target.closest(".chip"); if (!c) return; const s = c.dataset.s; S.stat = S.stat.includes(s) ? S.stat.filter((x) => x !== s) : S.stat.concat(s); c.classList.toggle("on"); save(); render(); };
-$("fQ").oninput = (e) => { S.q = e.target.value; render(); };
-$("fOnly").onchange = (e) => { S.only = e.target.checked; save(); render(); };
+$("filters").addEventListener("click", (e) => {
+  const c = e.target.closest(".chip"); if (c) { S.sel = c.dataset.sel; save(); render(); $("detail").classList.remove("open"); return; }
+  const b = e.target.closest("#fView button"); if (b) { S.view = b.dataset.v; save(); render(); }
+});
 $("fM0").onchange = (e) => { S.m0 = +e.target.value; if (S.m1 < S.m0) { S.m1 = S.m0; $("fM1").value = S.m1; } render(); };
 $("fM1").onchange = (e) => { S.m1 = +e.target.value; if (S.m0 > S.m1) { S.m0 = S.m1; $("fM0").value = S.m0; } render(); };
-$("fView").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.view = b.dataset.v; save(); render(); };
-$("fReset").onclick = () => { S.fach = []; S.stat = []; S.q = ""; S.only = false; S.m0 = null; S.m1 = null; S.pf = ""; setupFilters(); save(); render(); };
-$("tabs").onclick = (e) => { const b = e.target.closest(".tab"); if (!b) return; S.tab = b.dataset.t; save(); render(); };
-$("kpis").onclick = (e) => { const k = e.target.closest("[data-go]"); if (!k) return; S.tab = k.dataset.go; if (k.dataset.pf != null) { S.pf = k.dataset.pf === "rest" ? "" : k.dataset.pf; if (k.dataset.pf === "rest") S.sort = { k: "rest", dir: 1 }; } save(); render(); };
-$("t-home").onclick = (e) => {
-  const c = e.target.closest("[data-unitconf]"); if (c) { e.stopPropagation(); focusUnit(+c.dataset.unitconf, "conf"); return; }
-  const li = e.target.closest("li[data-unit]"); if (li) { focusUnit(+li.dataset.unit, "dash"); return; }
-  const t = e.target.closest("[data-go]"); if (!t) return;
-  S.fach = []; S.stat = []; S.q = ""; S.only = false; S.tab = t.dataset.go;
-  S.pf = t.dataset.pf === "rest" ? "" : t.dataset.pf || ""; if (t.dataset.pf === "rest") S.sort = { k: "rest", dir: 1 };
-  if (S.tab === "rules") openSec.add("warn");
-  if (t.dataset.gelb) S.gelb = t.dataset.gelb === "1";
-  setupFilters(); save(); render(); window.scrollTo(0, 0);
-};
-$("t-cal").onclick = (e) => { const td = e.target.closest("td[data-k]"); if (!td) return; document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); showDetail(td.dataset.k); };
-$("t-dash").onclick = (e) => {
-  const td = e.target.closest("table.heat td[data-d]");
-  if (td) { document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); const i = +td.dataset.d; showRange(i, i); return; }
-  const li = e.target.closest("li[data-w]"); if (li) { const [a, b] = li.dataset.w.split(":").map(Number); showRange(a, b); }
-};
-$("t-one").onclick = (e) => { const td = e.target.closest("table.heat td[data-d]"); if (td) { const i = +td.dataset.d; showRange(i, i); } };
-document.addEventListener("click", (e) => { const a = e.target.closest("[data-person]"); if (a) { e.preventDefault(); goPerson(+a.dataset.person); } });
+const markSel = (td) => { document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); };
+$("p-heat").onclick = (e) => { const td = e.target.closest("td[data-d]"); if (!td) return; markSel(td); showRange(+td.dataset.d, +td.dataset.d); };
+$("p-cal").onclick = (e) => { const td = e.target.closest("td[data-r]"); if (!td) return; markSel(td); const [a, b] = td.dataset.r.split(":").map(Number); showRange(a, b); };
 $("detailX").onclick = () => $("detail").classList.remove("open");
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
 

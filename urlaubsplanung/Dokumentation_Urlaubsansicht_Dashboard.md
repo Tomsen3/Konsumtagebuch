@@ -2,6 +2,8 @@
 
 Stand: 08.10.2026 · Verantwortlich: Tom · gehört zu `Urlaubswuensche_2027.xlsx` (siehe `Dokumentation_Mein_Urlaub.md`)
 
+> **Nur für die Leitung.** Für die Kolleg:innen gibt es seit 08.10.2026 die getrennte `Teamansicht.html` (siehe `Dokumentation_Teamansicht.md`). Die Urlaubsansicht bitte **nicht** in den Team-Ordner legen, sondern nur in einen Ordner, auf den die Leitung Zugriff hat.
+
 ## Worum geht es?
 `Urlaubsansicht.html` ist eine **einzelne Datei**, die man per Doppelklick im Browser (Edge/Chrome/Firefox) öffnet. Sie liest die Excel-Datei mit den Urlaubswünschen und zeigt auf einen Blick, **wann es eng wird, wer fehlt und wer noch nichts eingetragen hat**.
 
@@ -28,7 +30,7 @@ Einfache Komplettübersicht **ohne Filter und ohne Tabellen** über den ganzen P
 | **Ampel** (links, bleibt beim Scrollen sichtbar) | **Rot** = mindestens ein hellroter/dunkelroter Engpass · **Gelb** = nur knappe (gelbe) Zeiträume · **Grün** = keine Engpässe · keine Lampe = noch keine Wünsche. Darunter ein kurzer Satz zur Lage | rote Lampe = Konfliktliste nur rot · gelbe Lampe = Konfliktliste mit gelben · grüne Lampe = Auswertung |
 | **Die Lage in Kürze** | zwei, drei Sätze, automatisch aus den Daten: wie viele Stellen kritisch/knapp sind, wie viele Personen noch keinen Wunsch abgegeben haben | – |
 | **Darum sollten wir uns kümmern** | je kritischem Engpass eine Karte in Klartext: Bereich + Zeitraum (»Station 1, 9.–20. August«), wer gleichzeitig weg ist, »nur noch X von Y da« bzw. »unbesetzt«, wer »verschiebbar« angegeben hat. Höchstens 6 Karten, Rest als Link. Gelbe Zeiträume in einer Sammelkarte | Karte = Konfliktliste dieses Bereichs |
-| **Noch offen** | Personen ohne Wunsch, nicht in ATOSS übertragene Wünsche, überzogene Ansprüche, Datenhinweise; Stationen ohne Engpass als »alles in Ordnung« | »Liste →« = passende ausführliche Liste |
+| **Noch offen** | Personen ohne Wunsch, überzogene Ansprüche, Datenhinweise; Stationen ohne Engpass als »alles in Ordnung« | »Liste →« = passende ausführliche Liste |
 | **Alle Stationen und Teams im Überblick** | eingeklappt; Liste mit Status je Bereich | Zeile = Auswertung gefiltert auf diesen Bereich |
 
 Namen werden im Fließtext als »Vorname Nachname« geschrieben (aus »Nachname, Vorname« in Excel). Filterleiste und Kennzahlen-Leiste sind auf der Übersicht bewusst ausgeblendet. Sind im Browser eigene Ampelwerte eingestellt, erscheint ein blauer Hinweis.
@@ -37,8 +39,8 @@ Namen werden im Fließtext als »Vorname Nachname« geschrieben (aus »Nachname,
 
 | Bereich | Inhalt | Klick |
 |---|---|---|
-| **Kennzahlen-Leiste** (oben, auf allen Registerkarten außer Übersicht) | 1) Urlaubswünsche im Zeitraum + gewünschte Arbeitstage · 2) Personen ohne Wunsch · 3) Engpasstage (Arbeitstage ab Gelb, aufgeteilt dunkelrot/hellrot/gelb) · 4) offene ATOSS-Übertragungen · 5) Resturlaub (Summe Anspruch − gewünscht; Anzahl überzogen / ohne Anspruch) · 6) Hinweise zu den Daten | jede Kachel springt zur passenden Liste (z. B. »ohne Wunsch« → Personentabelle mit genau diesen Personen) |
-| **Jahresübersicht (Heatmap)** | Zeile = Monat, Spalte = Tag 1–31. Farbe = höchste Ampelstufe der gefilterten Stationen/Fachteams an diesem Tag, Zahl = wie viele Personen fehlen. Grau = Wochenende, lila = Feiertag/frei (inkl. Heiligabend/Silvester), oranger Rahmen = heute, senkrechter Strich = Wochenbeginn (Montag) | Tag anklicken → rechts **»Wer fehlt«**: Personen mit Wunsch, Verschiebbarkeit, ATOSS-Status, betroffene Bereiche, wer an dem Wochentag ohnehin frei hat (Teilzeit) |
+| **Kennzahlen-Leiste** (oben, auf allen Registerkarten außer Übersicht) | 1) Urlaubswünsche im Zeitraum + gewünschte Arbeitstage · 2) Personen ohne Wunsch · 3) Engpasstage (Arbeitstage ab Gelb, aufgeteilt dunkelrot/hellrot/gelb) · 4) Resturlaub (Summe Anspruch − gewünscht; Anzahl überzogen / ohne Anspruch) · 5) Hinweise zu den Daten | jede Kachel springt zur passenden Liste (z. B. »ohne Wunsch« → Personentabelle mit genau diesen Personen) |
+| **Jahresübersicht (Heatmap)** | Zeile = Monat, Spalte = Tag 1–31. Farbe = höchste Ampelstufe der gefilterten Stationen/Fachteams an diesem Tag, Zahl = wie viele Personen fehlen. Grau = Wochenende, lila = Feiertag/frei (inkl. Heiligabend/Silvester), oranger Rahmen = heute, senkrechter Strich = Wochenbeginn (Montag) | Tag anklicken → rechts **»Wer fehlt«**: Personen mit Wunsch, Verschiebbarkeit, betroffene Bereiche, wer an dem Wochentag ohnehin frei hat (Teilzeit) |
 | **Top 5 kritische Wochen** | Die fünf schwierigsten Kalenderwochen im Filter, mit den betroffenen Stationen/Fachteams | Woche anklicken → »Wer fehlt in der Woche« |
 | **Urlaub je Monat** | Umschalter **je Fachrichtung / je Station**. Balken = Anteil Urlaub an den Soll-Arbeitstagen des Bereichs (gleiche Skala für alle Zeilen), Zahl darüber = Urlaubs-Arbeitstage, farbiger Strich darunter = höchste Ampelstufe im Monat, rechts Jahressumme | Maus über Balken = genaue Werte |
 
@@ -47,8 +49,8 @@ Namen werden im Fließtext als »Vorname Nachname« geschrieben (aus »Nachname,
 |---|---|
 | **Kalender** | wie bisher: Ampel je Station/Fachteam und Personenzeilen, Raster Wochen oder Tage. Neu: Teilzeit-freie Tage schraffiert, Wunschtage an freien Tagen blass |
 | **Konflikte** | wie bisher: zusammenhängende Engpässe je Bereich mit »Zuerst ansprechen« (wer »verschiebbar« angegeben hat), Liste kopieren für E-Mail |
-| **Personen** | **sortierbare** Tabelle (Klick auf Spaltenkopf, nochmal = umgekehrt): Name, Fachrichtung, Stationen, Arbeitstage (TZ = Teilzeit), Wünsche, gewünschte AT, Anspruch, Rest, ATOSS offen, Engpass. Schnellfilter »alle / ohne Wunsch / ATOSS offen«. Name anklicken → Personenansicht |
-| **Personenansicht** | eine Person wählen: Kennzahlen (Wünsche, AT, Anspruch, Rest, ATOSS offen, höchster Engpass), eigenes Jahresraster (U = Urlaub, Farbe = Engpass, schraffiert = Teilzeit-frei), Tabelle aller Wünsche mit Excel-Zeilennummer |
+| **Personen** | **sortierbare** Tabelle (Klick auf Spaltenkopf, nochmal = umgekehrt): Name, Fachrichtung, Stationen, Arbeitstage (TZ = Teilzeit), Wünsche, gewünschte AT, Anspruch, Rest, Engpass. Schnellfilter »alle / ohne Wunsch«. Name anklicken → Personenansicht |
+| **Personenansicht** | eine Person wählen: Kennzahlen (Wünsche, AT, Anspruch, Rest, höchster Engpass), eigenes Jahresraster (U = Urlaub, Farbe = Engpass, schraffiert = Teilzeit-frei), Tabelle aller Wünsche mit Excel-Zeilennummer |
 | **Regeln & Ampel** | vier **eingeklappte** Abschnitte (Klick auf die Überschrift klappt auf): **Ampel einstellen** (siehe unten), So rechnet die Ampel, Hinweise zu den Daten, Planungszeitraum und Feiertage |
 
 ## Ampel einstellen (Reiter »Regeln & Ampel«)
@@ -74,7 +76,6 @@ Drei Wege, von »gilt für alle« bis »nur zum Ausprobieren«:
 - **Heiligabend/Silvester** stehen in Excel in der Feiertagsliste und zählen deshalb nie als Arbeitstag.
 - **Engpasstage** = Arbeitstage im Zeitraum, an denen mindestens ein gefilterter Bereich Gelb oder höher ist (gezählt wird die höchste Stufe des Tages).
 - **Top 5 Wochen** – Rangfolge: 1. höchste Stufe der Woche, 2. Punkte, 3. meiste gleichzeitig Abwesende. Punkte = Summe über alle Arbeitstage und alle gefilterten Bereiche: Gelb 1 · Hellrot 3 · Dunkelrot 9. Wochen ohne Gelb erscheinen nicht.
-- **Offene ATOSS-Übertragung** = Wunsch ohne Datum in *Wünsche*, Spalte J »In ATOSS übertragen am«.
 - **Resturlaub** = Anspruch (*Team*, Spalte G) − gewünschte Arbeitstage. Personen ohne Anspruch werden nicht mitgerechnet, sondern gezählt (»ohne Anspruch«).
 - **Monatsbalken:** Soll-Arbeitstage = Summe der Personen, die an jedem Arbeitstag des Monats im Dienst wären (Teilzeit berücksichtigt).
 
@@ -86,6 +87,8 @@ Drei Wege, von »gilt für alle« bis »nur zum Ausprobieren«:
 - **Teilzeit nur bei der Standardregel tagesbezogen**: Fest eingetragene Schwellen sind bewusste Vorgaben der Leitung und werden nicht automatisch verändert. Planmäßig freie Teilzeit-Tage zählen *nicht* als »weg«, sonst wäre z. B. jeder Freitag gelb, obwohl niemand Urlaub hat.
 - **Stationen mit 1 Person** werden nach Standardregel dunkelrot, sobald diese Person Urlaub hat (= Station unbesetzt). Wenn das zu viel Rot erzeugt: in *Einstellungen* bei dieser Station »Dunkelrot ab … weg« = `2` eintragen – dann zeigt sie bei 1 Abwesenheit nur »weg, unkritisch« (leer lassen reicht nicht, leer = Standardregel).
 - **Filter und Ampel-Logik** der bisherigen Ansicht wurden unverändert übernommen (Wunsch Tom, 06.10.2026).
+- **ATOSS komplett entfernt** (Wunsch Tom, 08.10.2026): Ob ein Wunsch in ATOSS übertragen ist, wird in der Ansicht nicht gebraucht. Die Ansicht liest Spalte J »In ATOSS übertragen am« im Blatt *Wünsche* nicht mehr; die Spalte in Excel bleibt unverändert und kann weiter genutzt werden.
+- **Gemeinsamer Kern mit der Teamansicht** (08.10.2026): Excel einlesen und Ampel berechnen steht in `ansicht/kern.js` und wird in beide Seiten eingebaut. So rechnen Leitung und Team garantiert gleich.
 - Filter, Sortierung und gewählte Person merkt sich der Browser lokal (`localStorage`), nicht in der Excel-Datei. Nach dem Laden einer Datei startet die Ansicht immer mit der Übersicht.
 - **Übersicht vor der Auswertung** (Wunsch Tom, 08.10.2026): Wer nur wissen will »passt alles?«, soll nicht zuerst Heatmap und Filter sehen. Die Auswertung bleibt unverändert dahinter.
 - **Ampel in der Ansicht einstellbar, aber nur lokal** (08.10.2026): Die Ansicht darf die Excel-Datei nicht verändern (nur lesend, Datenschutz/Sicherheit). Deshalb speichert sie eigene Werte im Browser und bietet »Für Excel kopieren«, damit dauerhafte Regeln in Excel landen und für alle gelten.
@@ -97,6 +100,7 @@ Drei Wege, von »gilt für alle« bis »nur zum Ausprobieren«:
 - Bereits **genehmigter/abgelehnter** Urlaub wird nicht unterschieden – es sind Wünsche.
 - Halbe Tage gibt es nicht; ein Tag im Wunsch ist ein ganzer Tag.
 - Teilzeit-Anspruch muss in *Team* Spalte G bereits anteilig stehen (wird nicht umgerechnet).
+- **Automatisch laden geht nur eingeschränkt** (Browser-Sicherheit: eine per Doppelklick geöffnete Seite darf keine Datei ohne Zutun lesen – das lässt sich in der Seite nicht abschalten). Was geht (nur Edge/Chrome): Die Excel-Datei **einmal per Ziehen-und-Ablegen** ins Fenster ziehen. Danach merkt sich die Seite die Datei. Beim nächsten Öffnen lädt sie sie **von selbst**, wenn der Browser das Lesen noch erlaubt (gleiche Browsersitzung oder »Bei jedem Besuch zulassen«, falls der Browser das anbietet); sonst erscheint ein grüner Knopf »… laden« – **ein Klick**, ggf. »Zulassen«. Nach Auswahl über den Knopf »Excel-Datei auswählen« merkt sich die Seite nichts.
 - »Neu laden« ohne Dialog geht nur, wenn die Datei per Ziehen-und-Ablegen geöffnet wurde (Edge/Chrome). Nach Auswahl über den Knopf öffnet »Neu laden« den Dateidialog erneut – einfach dieselbe Datei wählen.
 - Die Seite muss per Doppelklick im Browser geöffnet werden. In Vorschau-Fenstern (Teams, Outlook, Claude-App) sind Dateidialoge gesperrt.
 - Druck: Browser-Einstellung »Hintergrundgrafiken« muss an sein, sonst fehlen die Farben.
@@ -106,18 +110,21 @@ Ordner `urlaubsplanung/`:
 
 | Datei | Zweck |
 |---|---|
-| `Urlaubsansicht.html` | **fertige Datei zum Weitergeben** (wird erzeugt – nicht direkt bearbeiten) |
-| `ansicht/urlaubsansicht.src.html` | Quelltext (HTML, CSS, JavaScript) – **hier ändern** |
+| `Urlaubsansicht.html` | **fertige Datei für die Leitung** (wird erzeugt – nicht direkt bearbeiten) |
+| `Teamansicht.html` | fertige Datei für die Kolleg:innen (wird erzeugt) – siehe `Dokumentation_Teamansicht.md` |
+| `ansicht/urlaubsansicht.src.html` | Quelltext der Leitungsansicht (Darstellung) – **hier ändern** |
+| `ansicht/teamansicht.src.html` | Quelltext der Teamansicht (Darstellung) |
+| `ansicht/kern.js` | **gemeinsam für beide Seiten:** Excel-Layout (`LAYOUT`), Standardregel (`STANDARD`), Hilfsfunktionen, Einlesen + Ampel (`build`). Änderungen wirken auf beide Seiten. |
 | `ansicht/xlsx.full.min.js` | Bibliothek SheetJS 0.18.5 (Apache-2.0) zum Lesen von Excel |
-| `ansicht/baue_ansicht.py` | baut beides zu `Urlaubsansicht.html` zusammen |
+| `ansicht/baue_ansicht.py` | baut beide Seiten zusammen (setzt `kern.js`, Bibliothek und Logo ein) |
 | `ansicht/logo.svg` oder `ansicht/logo.png` (optional) | Logo der Klinik (PP.rt) für den Seitenkopf. Liegt die Datei dort, bettet das Build-Skript sie automatisch ein (als Teil der HTML-Datei, kein Internet nötig). SVG bevorzugt (bleibt scharf). Höhe im Kopf: 42 px auf weißem Feld. Nutzung des Logos vorher mit der Öffentlichkeitsarbeit der Klinik abstimmen. |
 
-Ablauf: Quelltext ändern → `python3 ansicht/baue_ansicht.py` (im Ordner `urlaubsplanung/`) → `Urlaubsansicht.html` im Browser mit einer **Testkopie** der Excel prüfen → weitergeben.
+Ablauf: Quelltext ändern → `python3 ansicht/baue_ansicht.py` (im Ordner `urlaubsplanung/`) → `Urlaubsansicht.html` **und** `Teamansicht.html` im Browser mit einer **Testkopie** der Excel prüfen → weitergeben.
 
-Häufige Anpassungen (alle oben im `<script>` des Quelltexts):
-- **Excel-Spalten verschoben?** → `LAYOUT` (Blattnamen, erste Datenzeile, Spaltenbuchstaben; Stationen `st: ["C","D","E","F","R"]` – R = »Station 5«; Teilzeit-Spalten `tage: ["L"…"P"]`).
-- **Standardregel ändern** → `STANDARD`.
-- **Gewichtung Top-5-Wochen** → `WOCHEN_PUNKTE` (Index = Stufe 0–4).
+Häufige Anpassungen:
+- **Excel-Spalten verschoben?** → `LAYOUT` in `ansicht/kern.js` (Blattnamen, erste Datenzeile, Spaltenbuchstaben; Stationen `st: ["C","D","E","F","R"]` – R = »Station 5«; Teilzeit-Spalten `tage: ["L"…"P"]`).
+- **Standardregel ändern** → `STANDARD` in `ansicht/kern.js` (gilt für beide Seiten).
+- **Gewichtung Top-5-Wochen** → `WOCHEN_PUNKTE` in `ansicht/kern.js` (Index = Stufe 0–4).
 - **Farben** → CSS-Variablen `--l1` … `--l4` (Ampel), `--bar` (Monatsbalken), `FACH_FARBEN`.
 
 **Datenschutz:** Die echte Excel-Datei (Namen der Mitarbeitenden) gehört **nicht** ins Git-Repository – `urlaubsplanung/.gitignore` schließt `*.xlsx`/`*.xlsm` aus. Zum Testen eine Kopie mit erfundenen Namen verwenden.
@@ -125,6 +132,7 @@ Häufige Anpassungen (alle oben im `<script>` des Quelltexts):
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | **ATOSS komplett entfernt** (Kennzahl, Zu-tun-Punkt, Spalte und Filter in Personen, Personenansicht, »Wer fehlt«). Einlese- und Ampel-Logik in `ansicht/kern.js` ausgelagert (gemeinsam mit der neuen **Teamansicht**). Zuletzt geöffnete Datei wird beim Start automatisch geladen, wenn der Browser es erlaubt, sonst grüner Knopf. Hinweise sprechen von »Einsatzort« statt »Station«. |
 | 08.10.2026 | Startseite neu nach Mockup B (Klartext) mit funktionierender Ampel links; Stationsliste eingeklappt darunter. |
 | 08.10.2026 | **Fehler behoben:** Auf manchen PCs öffnete der Knopf »Excel-Datei auswählen« keinen Dialog (moderner Browser-Dialog per Richtlinie gesperrt, Ersatzdialog wurde dann vom Browser blockiert). Jetzt immer der einfache Dateidialog; zusätzlich Hinweis auf Ziehen-und-Ablegen auf der Startseite. |
 | 08.10.2026 | Titel jetzt »Urlaubsplanung Kreativtherapie«; Platz für das Klinik-Logo im Kopf (`ansicht/logo.svg|png` wird beim Bauen eingebettet). Logo eingebaut: `ansicht/logo.svg` = offizielles PP.rt-Logo von https://www.pprt.de (abgerufen 08.10.2026, nur der leere Rand beschnitten, sonst unverändert). |

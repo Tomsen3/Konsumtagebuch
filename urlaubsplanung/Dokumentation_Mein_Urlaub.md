@@ -1,6 +1,6 @@
 # Urlaubswünsche 2027 – Blatt »Mein Urlaub«, Teilzeit und freie Tage
 
-Stand: 06.10.2026 · Verantwortlich: Tom
+Stand: 08.10.2026 · Verantwortlich: Tom
 
 ## Worum geht es?
 Jede Person soll in der Excel-Datei
@@ -28,6 +28,8 @@ Beide Fassungen enthalten dieselben Änderungen für Teilzeit und freie Tage.
 | **Team** | Neue Spalten **L–P (Mo–Fr)**: Arbeitstage mit `x` markieren. Alle leer = Vollzeit Mo–Fr. Spalte Q »Muster« (ausgeblendet) rechnet daraus das Arbeitstage-Muster. Sortier-/Filterknöpfe im Spaltenkopf nur noch bei Name, Fachrichtung, Gewünschte Arbeitstage und Rest (Wunsch Tom, 06.10.2026); die anderen Knöpfe sind ausgeblendet. Sortieren nach anderen Spalten geht weiterhin über Daten → Sortieren. |
 | **Team** (08.10.2026) | Neue Spalte **R »Station 5«** – fünfte Station/Einsatzort je Person, gleiche Auswahlliste wie C–F. Sie steht bewusst **hinter** den Wochentagen (die versteckte Spalte Q liegt dazwischen): Eine eingeschobene Spalte hätte über 1.800 Formelbezüge und ggf. das Makro verschoben. Die Team-Tabelle reicht jetzt bis R; »Einstellungen« Spalte L (Therapeut:innen je Station) zählt R mit. |
 | **Einstellungen** (08.10.2026) | Station **»Ambulanz«** in H21 ergänzt (Ampel = Standardregel, bis eigene Werte in I21–K21 eingetragen werden). Die Stationsliste darf bis H36 wachsen – so weit reicht die Auswahlliste in »Team«. |
+| **Einstellungen + Team** (08.10.2026, Skript `excel/einsatzorte_umstellen.py`) | **»StäB« aus der Stationsliste entfernt** (H7; die Einträge darunter sind eine Zeile nachgerückt, Liste endet jetzt mit »Ambulanz« in H20). Bei »Hensch, Kevin« (Team C17) war StäB eingetragen – die Zelle wurde geleert (Entscheidung Tom), bitte bei Bedarf einen Einsatzort wählen. **Spaltenüberschriften in »Team«: »Station 1–5« heißen jetzt »Einsatzort 1–5«** (C4:F4 und R4, auch in der Excel-Tabelle). Das Blatt *Einstellungen* heißt in Spalte H weiterhin »Station« (nicht verlangt; Ansichten lesen nach Spaltenbuchstaben, Name egal). |
+| **Anleitung** (08.10.2026) | Verweist für Kolleg:innen auf die neue **Teamansicht.html** statt auf die Leitungsansicht. »So trage ich meine Wünsche ein« beschreibt nur noch den Weg über »Mein Urlaub« + Knopf, weil »Wünsche« nach der Freigabe schreibgeschützt ist; Ändern/Streichen über die Leitung. Hinweis: Leitungsansicht liegt nicht im Team-Ordner. |
 | **Wünsche** | Spalte H »Arbeitstage« rechnet jetzt mit `NETWORKDAYS.INTL` (deutsch: `NETTOARBEITSTAGE.INTL`) nach dem persönlichen Muster aus »Team«. In E1 steht der Link »← zurück zu Mein Urlaub«. Sonst nichts geändert. |
 | **Einstellungen** | Feiertagsliste N19/N20: Heiligabend und Silvester als Formel `=DATUM(JAHR($B$3);12;24)` bzw. `…;12;31)` → das Jahr passt sich automatisch an das Startdatum an. |
 | **Anleitung** | Neuer Abschnitt ab Zeile 36. |
@@ -55,11 +57,27 @@ Mitnehmen: `Urlaubswuensche_2027_Makro-Vorlage.xlsx` und `Makro_WunschEintragen.
 
 Beim Öffnen der .xlsm zeigt Excel ggf. eine gelbe Leiste »Inhalt aktivieren« – einmal klicken. Erscheint eine rote Leiste »Makros wurden blockiert«, muss der Speicherort als vertrauenswürdig gelten → IT fragen.
 
+### Planung freigeben / Einrichtung bearbeiten (für die Leitung, ab 08.10.2026)
+Wunsch Tom: Wenn Einstellungen und Team fertig sind, sollen die Kolleg:innen nur noch **»Mein Urlaub« bearbeiten** und **»Wünsche« und »Anleitung« nur lesen** können; *Team* und *Einstellungen* sollen nicht sichtbar sein.
+
+Dafür enthält `Makro_WunschEintragen.bas` zwei weitere Makros (Start über **Alt+F8**, Makro wählen, »Ausführen«):
+
+| Makro | Wirkung |
+|---|---|
+| **PlanungFreigeben** | *Team* und *Einstellungen* ganz ausgeblendet (»sehr ausgeblendet« – erscheinen nicht unter »Einblenden«), *Wünsche* und *Anleitung* schreibgeschützt (Filtern in *Wünsche* bleibt erlaubt), *Mein Urlaub* wie bisher (nur gelbe Felder), Arbeitsmappenstruktur geschützt. Fragt vorher nach und bietet Speichern an. |
+| **EinrichtungBearbeiten** | alles wieder sichtbar und bearbeitbar (Team pflegen, Ampelwerte ändern, Wunsch ändern/löschen, ATOSS-Datum in *Wünsche* Spalte J eintragen). Danach wieder **PlanungFreigeben**. |
+
+- »Wunsch eintragen« funktioniert auch nach der Freigabe: Das Makro hebt den Schutz von *Wünsche* kurz auf, trägt ein und schützt wieder.
+- Die Ansichten (Team- und Leitungsansicht) lesen ausgeblendete und geschützte Blätter ohne Einschränkung.
+- **Kennwort:** Standard ist *ohne Kennwort* (Konstante `KENNWORT = ""` oben im Makro) – das schützt vor Versehen, nicht vor Absicht (wer sich auskennt, kann über Überprüfen → Arbeitsmappe schützen den Schutz aufheben). Wer ein Kennwort möchte: in der Zeile `Private Const KENNWORT As String = ""` zwischen die Anführungszeichen eintragen, dann zusätzlich das VBA-Projekt sperren (VBA-Editor → Extras → Eigenschaften von VBAProject → Schutz), sonst ist das Kennwort im Code lesbar. Kennwort an einem für die Nachfolge auffindbaren Ort dokumentieren (z. B. Passwortverwaltung der Leitung).
+- **Folge für die Kolleg:innen:** Wünsche ändern oder streichen geht nach der Freigabe nicht mehr selbst, sondern über die Leitung (steht so in der Anleitung).
+- Gilt nur für die Makro-Fassung (.xlsm). Fassung A (.xlsx ohne Makro) braucht beschreibbares *Wünsche* und wird deshalb nicht freigegeben.
+
 ### Was das Makro tut (Stand 08.10.2026)
 - Nutzt die Prüfung der Vorlage (»Mein Urlaub« J18 = Code 1–9, B18 = Text), damit Maske und Makro dasselbe sagen.
 - Code 1–5 (Name/Datum fehlt oder falsch, außerhalb Zeitraum) und 6 (schon eingetragen): Meldung, nichts wird eingetragen.
 - Code 7 (keine eigenen Arbeitstage) und 8 (Überschneidung): Rückfrage »Trotzdem eintragen?«; ebenso, wenn der Anspruch überschritten würde.
-- Schreibt Name, Von, Bis, Verschiebbar, Bemerkung in die nächste freie Zeile in »Wünsche« (Spalten A–E, bis Zeile 605), leert die Eingabefelder, zeigt Zeile, Arbeitstage und Rest und bietet »Datei jetzt speichern?« an.
+- Schreibt Name, Von, Bis, Verschiebbar, Bemerkung in die nächste freie Zeile in »Wünsche« (Spalten A–E, bis Zeile 605; ist das Blatt geschützt, wird der Schutz dafür kurz aufgehoben und danach wieder gesetzt), leert die Eingabefelder, zeigt Zeile, Arbeitstage und Rest und bietet »Datei jetzt speichern?« an.
 - Modulname `ModulWunschEintragen` (bewusst anders als das Makro `WunschEintragen`, sonst findet der Knopf es nicht). Umlaute im Quelltext als Platzhalter `{ue}` usw., ersetzt durch die Funktion `D()`.
 
 ## Ablauf für Mitarbeitende
@@ -81,9 +99,13 @@ Beim Öffnen der .xlsm zeigt Excel ggf. eine gelbe Leiste »Inhalt aktivieren« 
 - Urlaubsanspruch für Teilzeitkräfte bitte in »Team« Spalte G bereits anteilig eintragen (Excel rechnet ihn nicht um).
 
 ## Neues Jahr
+Vorher **EinrichtungBearbeiten** ausführen (sonst sind Team/Einstellungen nicht sichtbar), danach wieder **PlanungFreigeben**.
+
 Wie bisher: Datei kopieren, Startdatum in »Einstellungen« B3 ändern, alte Wünsche leeren, Feiertage aktualisieren. Heiligabend/Silvester passen sich selbst an. »Mein Urlaub« und die Teilzeit-Kreuze bleiben erhalten.
 
 ## Technisches
+Änderung vom 08.10.2026 (StäB, Einsatzort-Überschriften, Anleitung): `python3 excel/einsatzorte_umstellen.py <quelle.xlsx> <ziel.xlsx>` – ändert nur die genannten Zellen direkt im XML (Knopf, Datenüberprüfung und bedingte Formatierung bleiben erhalten) und bricht ohne Änderung ab, wenn die Datei anders aussieht als erwartet. Für die Makro-Fassung gedacht (Anleitung beschreibt Eintragen über »Mein Urlaub«).
+
 Erzeugt mit `baue_mein_urlaub.py` (Python; ändert die .xlsx direkt im XML, damit Datenüberprüfungen, bedingte Formatierung und Tabelle erhalten bleiben):
 `python3 baue_mein_urlaub.py <original.xlsx> <ziel.xlsx> link` bzw. `… makro <makro.bas>`.
 Für kleine Änderungen reicht es, direkt in Excel zu arbeiten (vorher Blattschutz aufheben).
