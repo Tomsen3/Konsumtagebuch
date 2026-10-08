@@ -41,7 +41,7 @@ Beide Fassungen enthalten dieselben Änderungen für Teilzeit und freie Tage.
 ## Einrichtung Fassung B (mit Makro) – auf dem Arbeits-PC
 Hintergrund: Eine .xlsm-Datei kann nicht per Mail auf die Arbeit geschickt werden, Makros dürfen dort aber laufen. Deshalb wird die Makro-Datei **erst auf dem Arbeits-PC zusammengebaut**.
 
-Mitnehmen: `Urlaubswuensche_2027_Makro-Vorlage.xlsx` und `Makro_WunschEintragen.bas` (falls .bas-Dateien blockiert werden: `Makro_WunschEintragen_zum_Kopieren.txt` oder den Text in den Mail-Text kopieren).
+Mitnehmen: `Urlaubswuensche_2027_Makro-Vorlage.xlsx` und `Makro_WunschEintragen.bas` (liegt im Repository unter `urlaubsplanung/makro/`, neu erstellt am 08.10.2026, weil die erste Fassung nicht mehr auffindbar war) (falls .bas-Dateien blockiert werden: `Makro_WunschEintragen_zum_Kopieren.txt` oder den Text in den Mail-Text kopieren).
 
 1. `Urlaubswuensche_2027_Makro-Vorlage.xlsx` in Excel öffnen (ggf. »Bearbeitung aktivieren«).
 2. **Alt+F11** drücken → der VBA-Editor öffnet sich.
@@ -54,6 +54,13 @@ Mitnehmen: `Urlaubswuensche_2027_Makro-Vorlage.xlsx` und `Makro_WunschEintragen.
 8. Im Blatt »Team« Teilzeit-Arbeitstage ankreuzen.
 
 Beim Öffnen der .xlsm zeigt Excel ggf. eine gelbe Leiste »Inhalt aktivieren« – einmal klicken. Erscheint eine rote Leiste »Makros wurden blockiert«, muss der Speicherort als vertrauenswürdig gelten → IT fragen.
+
+### Was das Makro tut (Stand 08.10.2026)
+- Nutzt die Prüfung der Vorlage (»Mein Urlaub« J18 = Code 1–9, B18 = Text), damit Maske und Makro dasselbe sagen.
+- Code 1–5 (Name/Datum fehlt oder falsch, außerhalb Zeitraum) und 6 (schon eingetragen): Meldung, nichts wird eingetragen.
+- Code 7 (keine eigenen Arbeitstage) und 8 (Überschneidung): Rückfrage »Trotzdem eintragen?«; ebenso, wenn der Anspruch überschritten würde.
+- Schreibt Name, Von, Bis, Verschiebbar, Bemerkung in die nächste freie Zeile in »Wünsche« (Spalten A–E, bis Zeile 605), leert die Eingabefelder, zeigt Zeile, Arbeitstage und Rest und bietet »Datei jetzt speichern?« an.
+- Modulname `ModulWunschEintragen` (bewusst anders als das Makro `WunschEintragen`, sonst findet der Knopf es nicht). Umlaute im Quelltext als Platzhalter `{ue}` usw., ersetzt durch die Funktion `D()`.
 
 ## Ablauf für Mitarbeitende
 **Fassung A:** Reiter »Mein Urlaub« → Namen wählen → blauen Link »Hier klicken: neuen Wunsch … eintragen« → in der markierten Zeile Name, Von, Bis, Verschiebbar, Bemerkung eintragen → oben »← zurück zu Mein Urlaub«.
