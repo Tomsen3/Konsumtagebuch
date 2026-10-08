@@ -26,7 +26,7 @@ logo_html = ""
 for name, mime in (("logo.svg", "image/svg+xml"), ("logo.png", "image/png")):
     f = hier / name
     if f.exists():
-        logo_html = f'<img class="logo" alt="Logo" src="data:{mime};base64,{base64.b64encode(f.read_bytes()).decode()}">'
+        logo_html = f'<img class="logo" alt="PP.rt – Klinik für Psychiatrie und Psychosomatik Reutlingen" src="data:{mime};base64,{base64.b64encode(f.read_bytes()).decode()}">'
         print(f"Logo eingebettet: {name} ({f.stat().st_size // 1024} KB)")
         break
 else:
