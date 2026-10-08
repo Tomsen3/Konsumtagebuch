@@ -7,6 +7,7 @@
 - `Dokumentation_Mein_Urlaub.md` – Excel-Datei `Urlaubswuensche_2027.xlsx` (Blatt »Mein Urlaub«, Teilzeit, freie Tage, Makro-Fassung).
 - `makro/` – Makros »WunschEintragen«, »PlanungFreigeben«, »EinrichtungBearbeiten« für die Makro-Fassung (`.bas` zum Importieren, `.txt` zum Einfügen).
 - `excel/` – Skript für Änderungen an der Excel-Datei (08.10.2026: StäB entfernt, »Einsatzort 1–5«, Anleitung).
+- `Mailtexte.md` – Vorlagen für die Mail ans Team (nur Excel + Teamansicht) und an die Leitung (Urlaubsansicht, Makros).
 - `ansicht/` – Quelltexte beider Seiten, gemeinsamer Kern `kern.js` und Build-Skript (`python3 ansicht/baue_ansicht.py`).
 
 Die Excel-Dateien selbst liegen bewusst **nicht** hier (Personaldaten), sondern im gemeinsamen Ordner der Fachtherapien.
