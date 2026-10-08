@@ -15,7 +15,7 @@ Stand: 08.10.2026 · Verantwortlich: Tom · gehört zu `Urlaubswuensche_2027.xls
 ## Bedienung in 5 Schritten
 1. `Urlaubsansicht.html` doppelklicken (öffnet im Browser).
 2. **»Excel-Datei auswählen«** → `Urlaubswuensche_2027.xlsx` (bzw. `.xlsm`) wählen oder Datei ins Fenster ziehen.
-   Liegt die Datei in Teams/SharePoint: über den synchronisierten OneDrive-Ordner im Explorer auswählen.
+   Die Excel-Datei liegt im gemeinsamen Ordner der Fachtherapien.
 3. Es öffnet sich immer zuerst die **Übersicht** (Ampel-Status, »Zu tun«, Liste der Einsatzorte und Teams). Für Einzelheiten auf einen Einsatzort/ein Team oder auf »ansehen →« klicken – das führt in die ausführliche **Auswertung**.
 4. In der Auswertung mit den **Filtern** (Fachrichtung, Einsatzort, Name, Zeitraum, »nur Personen mit Wünschen«) eingrenzen – alle Ansichten und Kennzahlen folgen dem Filter.
 5. Nach Änderungen in Excel: **speichern**, dann hier **»Neu laden«**.
@@ -135,6 +135,7 @@ Häufige Anpassungen:
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | Startseite: Hinweis auf Teams/SharePoint/OneDrive entfernt – die Excel-Datei liegt im gemeinsamen Ordner der Fachtherapien (Rückmeldung Tom). |
 | 08.10.2026 | **Zurück-Taste** schließt nicht mehr die Datei, sondern geht zum vorherigen Bildschirm bzw. schließt das Seitenfenster »Wer fehlt« (gemeinsamer Baustein in `ansicht/kern.js`, gilt auch für die Teamansicht). |
 | 08.10.2026 | **»Station« heißt jetzt »Einsatzort«** in allen Texten der Leitungsansicht (Filter, Übersicht, Monatsbalken, Kalender, Konflikte, Personen, Regeln & Ampel, Knopf »Einsatzorte für Excel kopieren«) – gleiche Begriffe wie Excel und Teamansicht. Einsatzorte erscheinen nur mit ihrem Namen (»Ambulanz« statt »Station Ambulanz«). Rechnung und Ampel unverändert. |
 | 08.10.2026 | **ATOSS komplett entfernt** (Kennzahl, Zu-tun-Punkt, Spalte und Filter in Personen, Personenansicht, »Wer fehlt«). Einlese- und Ampel-Logik in `ansicht/kern.js` ausgelagert (gemeinsam mit der neuen **Teamansicht**). Zuletzt geöffnete Datei wird beim Start automatisch geladen, wenn der Browser es erlaubt, sonst grüner Knopf. Hinweise sprechen von »Einsatzort« statt »Station«. |

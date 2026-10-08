@@ -9,4 +9,4 @@
 - `excel/` – Skript für Änderungen an der Excel-Datei (08.10.2026: StäB entfernt, »Einsatzort 1–5«, Anleitung).
 - `ansicht/` – Quelltexte beider Seiten, gemeinsamer Kern `kern.js` und Build-Skript (`python3 ansicht/baue_ansicht.py`).
 
-Die Excel-Dateien selbst liegen bewusst **nicht** hier (Personaldaten), sondern am gemeinsamen Ablageort in Teams/SharePoint.
+Die Excel-Dateien selbst liegen bewusst **nicht** hier (Personaldaten), sondern im gemeinsamen Ordner der Fachtherapien.

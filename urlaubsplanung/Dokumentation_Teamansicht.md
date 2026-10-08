@@ -64,8 +64,8 @@ Geprüfte und verworfene Alternativen: Datei per Pfad nachladen (`fetch`) wird v
 ## Ablage (Empfehlung)
 | Datei | Wohin | Wer hat Zugriff |
 |---|---|---|
-| `Urlaubswuensche_2027.xlsm` | gemeinsamer Team-Ordner (Teams/SharePoint) | Team + Leitung |
-| `Teamansicht.html` | derselbe Team-Ordner | Team + Leitung |
+| `Urlaubswuensche_2027.xlsm` | gemeinsamer Ordner der Fachtherapien | Team + Leitung |
+| `Teamansicht.html` | derselbe Ordner der Fachtherapien | Team + Leitung |
 | `Urlaubsansicht.html` | eigener Ordner der Leitung | nur Leitung |
 
 ## Bekannte Grenzen
@@ -83,5 +83,6 @@ Geprüfte und verworfene Alternativen: Datei per Pfad nachladen (`fetch`) wird v
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | Startseite: Hinweis auf Teams/SharePoint/OneDrive entfernt – Ablageort ist der gemeinsame Ordner der Fachtherapien (Rückmeldung Tom). |
 | 08.10.2026 | Zurück-Taste schließt nicht mehr die Datei, sondern schließt das Seitenfenster bzw. springt zum vorher gewählten Team (Rückmeldung Tom). |
 | 08.10.2026 | Teamansicht neu erstellt: Auswahl Fachteam/Einsatzort, Lage-Satz, Jahresübersicht, Kalender, Wunschliste, »Wer ist weg«, Druck A4 quer, automatisches Laden der zuletzt gezogenen Datei. |
