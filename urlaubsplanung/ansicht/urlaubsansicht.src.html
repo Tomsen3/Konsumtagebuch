@@ -368,7 +368,7 @@ aside.detail li{margin:3px 0}
 
     <div class="filters" id="filters">
       <div class="fgroup"><label>Fachrichtung</label><div class="chips" id="fFach"></div></div>
-      <div class="fgroup"><label>Station</label><div class="chips" id="fStat"></div></div>
+      <div class="fgroup"><label>Einsatzort</label><div class="chips" id="fStat"></div></div>
       <div class="fgroup"><label>Person</label><input type="search" id="fQ" placeholder="Name suchen …"></div>
       <div class="fgroup"><label>Zeitraum</label>
         <div style="display:flex;gap:6px;align-items:center"><select id="fM0"></select><span>bis</span><select id="fM1"></select></div>
@@ -511,9 +511,10 @@ function syncSeg() {
 
 /* ===================== Darstellung: Bausteine ===================== */
 const fachColor = (fi) => (fi >= 0 ? FACH_FARBEN[fi % 10] : "#9aa3b5");
-const unitLabel = (u) => (u.type === "stat" ? "Station" : "Fachteam");
-/* "Station 1A" nicht als "Station Station 1A" anzeigen */
-const unitTitle = (u) => (u.name.toLowerCase().startsWith(unitLabel(u).toLowerCase()) ? u.name : unitLabel(u) + " " + u.name);
+const unitLabel = (u) => (u.type === "stat" ? "Einsatzort" : "Fachteam");
+/* Einsatzorte nur mit ihrem Namen (»Station 2«, »TK Sucht«, »Ambulanz« sprechen für sich);
+   Fachteams mit Vorsilbe, aber »Fachteam Ergo« nicht als »Fachteam Fachteam Ergo« */
+const unitTitle = (u) => (u.type === "stat" || u.name.toLowerCase().startsWith(unitLabel(u).toLowerCase()) ? u.name : unitLabel(u) + " " + u.name);
 const thText = (u) => {
   const t = u.th, parts = [];
   if (t.g != null) parts.push(`G ${t.g}`); if (t.h != null) parts.push(`H ${t.h}`); if (t.d != null) parts.push(`D ${t.d}`);
@@ -551,7 +552,7 @@ function renderBanner() {
 function renderPrintInfo(V) {
   const f = [];
   if (S.fach.length) f.push("Fachrichtung: " + S.fach.join(", "));
-  if (S.stat.length) f.push("Station: " + S.stat.join(", "));
+  if (S.stat.length) f.push("Einsatzort: " + S.stat.join(", "));
   if (S.q.trim()) f.push("Name enthält »" + S.q.trim() + "«");
   if (S.only) f.push("nur Personen mit Wünschen");
   $("printinfo").textContent = `Zeitraum ${fmtY(M.ser[V.i0])} – ${fmtY(M.ser[V.i1])} · Filter: ${f.join(" · ") || "keine"} · gedruckt ${new Date().toLocaleDateString("de-DE")} · nur Wünsche, keine Genehmigung`;
@@ -603,7 +604,7 @@ function prosaCard(c) {
   const u = M.units[c.u], names = c.people.map((x) => proseName(M.persons[x.p].name));
   const shown = names.length > 4 ? names.slice(0, 4).concat(`${names.length - 4} weitere`) : names;
   const present = c.peakOn - c.peak;
-  const lage = present <= 0 ? (u.type === "stat" ? "die Station wäre unbesetzt" : "das Team wäre nicht besetzt") : `nur noch ${present} von ${c.peakOn} da`;
+  const lage = present <= 0 ? (u.type === "stat" ? "der Einsatzort wäre unbesetzt" : "das Team wäre nicht besetzt") : `nur noch ${present} von ${c.peakOn} da`;
   const flex = c.people.filter((x) => x.flex === "ja" || x.flex === "etwas").map((x) => proseName(M.persons[x.p].name));
   const flexTxt = flex.length ? `<b>${esc(andList(flex))} ${flex.length === 1 ? "hat" : "haben"} »verschiebbar« angegeben.</b>` : "Niemand hat »verschiebbar« angegeben.";
   const wer = names.length === 1 ? `${esc(shown[0])} ist im Urlaub` : `${esc(andList(shown))} sind gleichzeitig im Urlaub`;
@@ -625,7 +626,7 @@ function renderHome() {
   const ampTitle = ["Noch keine Wünsche", "Alles im grünen Bereich", "Fast alles im Lot", "Es gibt Probleme"][lamp];
   const ampSub = [
     "Sobald Wünsche in Excel stehen: speichern und oben »Neu laden«.",
-    "Keine Station und kein Team ist zu dünn besetzt.",
+    "Kein Einsatzort und kein Team ist zu dünn besetzt.",
     `${plural(gelb.length, "Zeitraum ist", "Zeiträume sind")} knapp, nichts Kritisches.`,
     `${plural(crit.length, "Engpass sollte", "Engpässe sollten")} besprochen werden${gelb.length ? `, ${plural(gelb.length, "weiterer Zeitraum ist", "weitere Zeiträume sind")} knapp` : ""}.`
   ][lamp];
@@ -641,7 +642,7 @@ function renderHome() {
   if (!M.wishes.length) lead = `<b>Es sind noch keine Urlaubswünsche eingetragen.</b>`;
   else if (crit.length) lead = `<b>${crit.length <= 2 ? "Im Großen und Ganzen passt die Urlaubsplanung." : "Die Urlaubsplanung braucht Aufmerksamkeit."}</b> An <b class="red">${zahl(crit.length)} Stelle${crit.length === 1 ? "" : "n"}</b> fehlen zu viele Leute gleichzeitig${gelb.length ? `, an ${zahl(gelb.length)} weiteren wird es knapp` : ""}.`;
   else if (gelb.length) lead = `<b>Die Urlaubsplanung passt.</b> An ${zahl(gelb.length)} Stelle${gelb.length === 1 ? "" : "n"} wird es knapp, aber nirgends kritisch.`;
-  else lead = `<b>Die Urlaubsplanung passt.</b> Keine Station und kein Team ist zu dünn besetzt.`;
+  else lead = `<b>Die Urlaubsplanung passt.</b> Kein Einsatzort und kein Team ist zu dünn besetzt.`;
   if (noWish && M.wishes.length) lead += ` <b>${noWish === 1 ? "Eine Person hat" : zahlF(noWish).replace(/^./, (x) => x.toUpperCase()) + " Kolleg:innen haben"}</b> noch keinen Wunsch abgegeben.`;
 
   // Darum kümmern: kritische Engpässe einzeln, gelbe zusammengefasst
@@ -662,7 +663,7 @@ function renderHome() {
     [M.warn.length, `🔎 ${plural(M.warn.length, "Hinweis", "Hinweise")} zu den Daten in Excel prüfen`, "rules", ""]
   ].filter((t) => t[0] > 0);
   const offen = todo.map((t) => `<div class="tline" data-go="${t[2]}" data-pf="${t[3]}">${t[1]} <span class="lk">Liste →</span></div>`).join("") +
-    (okUnits.length && M.wishes.length ? `<div class="tline nolink">✅ ${all.length ? "Alle anderen Stationen" : "Alle Stationen"}: <b class="green">alles in Ordnung</b> <span class="muted" style="font-size:13px">(${okUnits.join(", ")})</span></div>` : "");
+    (okUnits.length && M.wishes.length ? `<div class="tline nolink">✅ ${all.length ? "Alle anderen Einsatzorte" : "Alle Einsatzorte"}: <b class="green">alles in Ordnung</b> <span class="muted" style="font-size:13px">(${okUnits.join(", ")})</span></div>` : "");
 
   const unitList = (type) => {
     const us = M.units.filter((u) => u.type === type && u.n > 0).map((u) => ({ u, ...unitStatus(u) }))
@@ -683,8 +684,8 @@ function renderHome() {
           <div class="muted" style="font-size:12.5px">${plural(M.persons.length, "Person", "Personen")} · ${plural(M.wishes.length, "Wunsch", "Wünsche")} · Planungszeitraum ${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])}</div></div>
         ${care ? `<h3 class="hh">Darum sollten wir uns kümmern</h3>${care}` : ""}
         ${offen ? `<h3 class="hh">Noch offen</h3><div class="hcard offen">${offen}</div>` : ""}
-        <details class="sec" data-sec="homeunits" style="margin-top:22px"${openSec.has("homeunits") ? " open" : ""}><summary>Alle Stationen und Teams im Überblick <span class="hint">Klick auf eine Zeile = ausführliche Auswertung</span></summary>
-          <div class="body"><div class="hgrid"><div><h4 style="margin:6px 0">Stationen</h4>${unitList("stat")}</div><div><h4 style="margin:6px 0">Fachteams</h4>${unitList("fach")}</div></div></div></details>
+        <details class="sec" data-sec="homeunits" style="margin-top:22px"${openSec.has("homeunits") ? " open" : ""}><summary>Alle Einsatzorte und Teams im Überblick <span class="hint">Klick auf eine Zeile = ausführliche Auswertung</span></summary>
+          <div class="body"><div class="hgrid"><div><h4 style="margin:6px 0">Einsatzorte</h4>${unitList("stat")}</div><div><h4 style="margin:6px 0">Fachteams</h4>${unitList("fach")}</div></div></div></details>
       </div>
     </div>`;
   const d = $("t-home").querySelector("details.sec"); d.addEventListener("toggle", () => { d.open ? openSec.add("homeunits") : openSec.delete("homeunits"); });
@@ -702,7 +703,7 @@ function renderDash(V) {
   $("t-dash").innerHTML = `
     <div class="dgrid">
       <div class="panel"><h2>Jahresübersicht</h2>
-        <p class="sub">Farbe = höchste Ampelstufe der gefilterten Stationen/Fachteams · Zahl = wie viele Personen an dem Tag fehlen (Teilzeit-freie Tage zählen nicht) · <b>Klick auf einen Tag = wer fehlt</b></p>
+        <p class="sub">Farbe = höchste Ampelstufe der gefilterten Einsatzorte/Fachteams · Zahl = wie viele Personen an dem Tag fehlen (Teilzeit-freie Tage zählen nicht) · <b>Klick auf einen Tag = wer fehlt</b></p>
         ${heatLegend()}${heatTable(V, (i) => heatCell(V, i))}</div>
       <div class="panel"><h2>Top 5 kritische Wochen</h2>
         <p class="sub">Rangfolge: höchste Stufe, dann Punkte (je Arbeitstag und Bereich: Gelb ${WOCHEN_PUNKTE[2]} · Hellrot ${WOCHEN_PUNKTE[3]} · Dunkelrot ${WOCHEN_PUNKTE[4]}). Klick = Details.</p>
@@ -710,8 +711,8 @@ function renderDash(V) {
     </div>
     <div class="panel bars-panel" style="margin-top:14px"><div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">
       <h2>Urlaub je Monat</h2>
-      <div class="seg noprint" id="barSeg"><button data-b="fach" class="${S.bars === "fach" ? "on" : ""}">je Fachrichtung</button><button data-b="stat" class="${S.bars === "stat" ? "on" : ""}">je Station</button></div></div>
-      <p class="sub">Balken = Anteil Urlaub an den Soll-Arbeitstagen des Bereichs im Monat (gleiche Skala für alle Zeilen, Zahl = Urlaubs-Arbeitstage). Strich darunter = höchste Ampelstufe im Monat (<span style="color:#b38f00">gelb</span>/<span style="color:#c43c3c">hellrot</span>/<span style="color:var(--l4)">dunkelrot</span>). Eine Person mit mehreren Stationen zählt auf jeder.</p>
+      <div class="seg noprint" id="barSeg"><button data-b="fach" class="${S.bars === "fach" ? "on" : ""}">je Fachrichtung</button><button data-b="stat" class="${S.bars === "stat" ? "on" : ""}">je Einsatzort</button></div></div>
+      <p class="sub">Balken = Anteil Urlaub an den Soll-Arbeitstagen des Bereichs im Monat (gleiche Skala für alle Zeilen, Zahl = Urlaubs-Arbeitstage). Strich darunter = höchste Ampelstufe im Monat (<span style="color:#b38f00">gelb</span>/<span style="color:#c43c3c">hellrot</span>/<span style="color:var(--l4)">dunkelrot</span>). Eine Person mit mehreren Einsatzorten zählt an jedem.</p>
       ${monthBars(V)}</div>`;
   $("barSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; S.bars = b.dataset.b; save(); render(); };
 }
@@ -778,7 +779,7 @@ function topWeeks(V) {
 }
 function monthBars(V) {
   const units = V.units.filter((u) => u.type === S.bars && u.n > 0);
-  if (!units.length) return `<div class="empty" style="padding:16px">Keine ${S.bars === "fach" ? "Fachrichtungen" : "Stationen"} im Filter.</div>`;
+  if (!units.length) return `<div class="empty" style="padding:16px">Keine ${S.bars === "fach" ? "Fachrichtungen" : "Einsatzorte"} im Filter.</div>`;
   const ks = monthsInRange(V);
   const data = units.map((u) => ks.map((k) => {
     let abs = 0, soll = 0, lv = 0;
@@ -786,7 +787,7 @@ function monthBars(V) {
     return { abs, soll, lv, q: soll ? abs / soll : 0 };
   }));
   const maxQ = Math.max(0.1, ...data.flat().map((x) => x.q));   // mind. 10 % als Skala, damit kleine Werte nicht riesig wirken
-  let h = `<table class="bars"><thead><tr><th class="gl">${S.bars === "fach" ? "Fachrichtung" : "Station"}</th>${ks.map((k) => `<th>${MON[k % 12]}</th>`).join("")}<th style="width:56px">Summe</th></tr></thead><tbody>`;
+  let h = `<table class="bars"><thead><tr><th class="gl">${S.bars === "fach" ? "Fachrichtung" : "Einsatzort"}</th>${ks.map((k) => `<th>${MON[k % 12]}</th>`).join("")}<th style="width:56px">Summe</th></tr></thead><tbody>`;
   units.forEach((u, r) => {
     const sum = data[r].reduce((s, x) => s + x.abs, 0);
     h += `<tr><td class="gl" title="${esc(unitTitle(u))} – ${u.n} Personen">${u.type === "fach" ? dot(M.fachIdx.get(u.name)) : ""}${esc(u.name)}<span class="meta">${u.n} P.</span></td>`;
@@ -846,7 +847,7 @@ function renderCal(V) {
     return h + "</tr>";
   };
   const st = V.units.filter((u) => u.type === "stat"), fa = V.units.filter((u) => u.type === "fach");
-  if (st.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Station · Zahl = gleichzeitig weg</span></td></tr>`; st.forEach((u) => (body += unitRow(u))); }
+  if (st.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Einsatzort · Zahl = gleichzeitig weg</span></td></tr>`; st.forEach((u) => (body += unitRow(u))); }
   if (fa.length) { body += `<tr class="sec"><td colspan="${ncol}"><span>Ampel je Fachteam · Zahl = gleichzeitig weg</span></td></tr>`; fa.forEach((u) => (body += unitRow(u))); }
   if (V.ps.length) {
     body += `<tr class="sec"><td colspan="${ncol}"><span>Personen · ${day ? "farbig = Urlaubswunsch · schraffiert = Teilzeit-frei" : "Zahl = eigene Arbeitstage Urlaub in der Woche"} · roter Rahmen = Engpass</span></td></tr>`;
@@ -909,7 +910,7 @@ function confCard(c) {
 }
 function renderConf(V) {
   const cs = confVisible(V);
-  let h = `<div class="conf-head"><div class="note">Jede Karte = ein zusammenhängender Zeitraum (nur Arbeitstage), in dem eine Station oder ein Fachteam mindestens »gelb« ist. Sortiert nach Schwere, dann Datum.</div>
+  let h = `<div class="conf-head"><div class="note">Jede Karte = ein zusammenhängender Zeitraum (nur Arbeitstage), in dem ein Einsatzort oder ein Fachteam mindestens »gelb« ist. Sortiert nach Schwere, dann Datum.</div>
     <div style="display:flex;gap:8px;align-items:center"><label style="font-size:13px"><input type="checkbox" id="cGelb" ${S.gelb ? "checked" : ""}> gelbe anzeigen</label>
     <button class="btn" id="cCopy">Liste kopieren</button></div></div>`;
   if (!cs.length) h += `<div class="empty">Keine Engpässe im gewählten Zeitraum und Filter. 🎉</div>`;
@@ -937,7 +938,7 @@ function copyText(t) {
 const PCOLS = [
   { k: "name", t: "Name", v: (p) => p.name },
   { k: "fach", t: "Fachrichtung", v: (p) => (p.fi < 0 ? "￿" : String(p.fi).padStart(3, "0")) + p.name },
-  { k: "st", t: "Stationen", v: (p) => p.st.join(", ") || "￿" },
+  { k: "st", t: "Einsatzorte", v: (p) => p.st.join(", ") || "￿" },
   { k: "tage", t: "Arbeitstage", v: (p) => p.wk.filter(Boolean).length },
   { k: "n", t: "Wünsche", v: (p) => p.wishes.length, num: 1 },
   { k: "total", t: "Gewünscht (AT)", v: (p) => p.total, num: 1 },
@@ -996,7 +997,7 @@ function renderOne(V) {
     <td>${esc(w.bem)}</td><td class="num muted">${w.row}</td></tr>`).join("");
   $("t-one").innerHTML = `
     <div class="phead noprint"><label>Person: <select class="sel" id="oneSel">${opts}</select></label><span class="muted">Liste folgt den Filtern oben</span></div>
-    <div class="panel"><div class="phead"><h2>${dot(p.fi)}${esc(p.name)}</h2><span>${esc(p.fach || "ohne Fachrichtung")}</span><span class="muted">${esc(p.st.join(", ") || "keine Station")}</span>${p.tz ? tzBadge(p) : '<span class="muted">Vollzeit Mo–Fr</span>'}</div>
+    <div class="panel"><div class="phead"><h2>${dot(p.fi)}${esc(p.name)}</h2><span>${esc(p.fach || "ohne Fachrichtung")}</span><span class="muted">${esc(p.st.join(", ") || "kein Einsatzort")}</span>${p.tz ? tzBadge(p) : '<span class="muted">Vollzeit Mo–Fr</span>'}</div>
       <div class="pkpis">
         <div class="kpi"><div class="v">${p.wishes.length}</div><div class="l">Wünsche</div></div>
         <div class="kpi"><div class="v">${p.total}</div><div class="l">gewünschte Arbeitstage</div></div>
@@ -1039,19 +1040,19 @@ function renderRules(V) {
   const ampBody = `
     <p>Hier lässt sich die Ampel <b>direkt in der Ansicht</b> einstellen. Die Werte werden <b>nur in diesem Browser auf diesem PC</b> gespeichert, die Excel-Datei bleibt unverändert, und andere Personen sehen sie nicht. Damit alle dieselbe Ampel haben, die Werte mit »Für Excel kopieren« ins Blatt <i>Einstellungen</i> übernehmen und danach hier »Alle Werte hier löschen«.</p>
     <p class="muted" style="font-size:12.5px">Vorrang je Wert: <b>hier eingestellt</b> &gt; Excel → Einstellungen &gt; Standardregel. Feld leer = nächste Stufe gilt (grauer Platzhalter). Eine Stufe abschalten: eine Zahl größer als die Personenzahl eintragen. Zahlen = »ab so vielen gleichzeitig Abwesenden«.</p>
-    <h3 style="margin:14px 0 4px;font-size:14px">Standardregel für Stationen ohne eigene Werte</h3>
-    <div class="stdform amp">${stdIn("gelbAb", "Gelb ab … weg")}${stdIn("hellrotWennNochDa", "Hellrot, wenn nur noch … da")}${stdIn("hellrotAbGroesse", "Hellrot nur bei Stationen ab … Personen")}<span class="muted" style="font-size:12.5px">Dunkelrot = alle weg (fest)</span></div>
-    <h3 style="margin:14px 0 4px;font-size:14px">Je Station und Fachteam</h3>
+    <h3 style="margin:14px 0 4px;font-size:14px">Standardregel für Einsatzorte ohne eigene Werte</h3>
+    <div class="stdform amp">${stdIn("gelbAb", "Gelb ab … weg")}${stdIn("hellrotWennNochDa", "Hellrot, wenn nur noch … da")}${stdIn("hellrotAbGroesse", "Hellrot nur bei Einsatzorten ab … Personen")}<span class="muted" style="font-size:12.5px">Dunkelrot = alle weg (fest)</span></div>
+    <h3 style="margin:14px 0 4px;font-size:14px">Je Einsatzort und Fachteam</h3>
     <div style="overflow-x:auto"><table class="list amp"><thead><tr><th>Name</th><th>Art</th><th class="num">Personen</th><th>Excel G/H/D</th><th>Gelb ab</th><th>Hellrot ab</th><th>Dunkelrot ab</th><th>Gilt jetzt</th></tr></thead>
       <tbody>${M.units.filter((u) => u.type === "stat").map(ampRow).join("")}${M.units.filter((u) => u.type === "fach").map(ampRow).join("")}</tbody></table></div>
-    <div class="btnrow"><button class="btn" id="ampCopyS" title="Name + Gelb/Hellrot/Dunkelrot aller Stationen aus Excel – in Excel bei Einstellungen in Zelle H7 einfügen">Stationen für Excel kopieren</button>
+    <div class="btnrow"><button class="btn" id="ampCopyS" title="Name + Gelb/Hellrot/Dunkelrot aller Einsatzorte aus Excel – in Excel bei Einstellungen in Zelle H7 einfügen">Einsatzorte für Excel kopieren</button>
       <button class="btn" id="ampCopyF" title="Name + Gelb/Hellrot/Dunkelrot aller Fachrichtungen – in Excel bei Einstellungen in Zelle A7 einfügen">Fachteams für Excel kopieren</button>
       <button class="btn" id="ampReset"${M.localCount ? "" : " disabled"}>Alle Werte hier löschen</button></div>
-    <p class="muted" style="font-size:12.5px">Einfügen in Excel: Blatt <i>Einstellungen</i> → Blattschutz ggf. aufheben → Stationen: Zelle <b>H7</b> anklicken, Strg+V (füllt Spalten H–K) · Fachteams: Zelle <b>A7</b> anklicken, Strg+V (füllt A–D). Die Namen werden mit überschrieben, damit die Zeilen sicher zusammenpassen. Leere Felder = Standardregel.</p>`;
+    <p class="muted" style="font-size:12.5px">Einfügen in Excel: Blatt <i>Einstellungen</i> → Blattschutz ggf. aufheben → Einsatzorte: Zelle <b>H7</b> anklicken, Strg+V (füllt Spalten H–K) · Fachteams: Zelle <b>A7</b> anklicken, Strg+V (füllt A–D). Die Namen werden mit überschrieben, damit die Zeilen sicher zusammenpassen. Leere Felder = Standardregel.</p>`;
 
   const howBody = `
-    <p>Gezählt wird pro Arbeitstag, wie viele Mitglieder einer Station bzw. eines Fachteams einen Urlaubswunsch haben. Die Zahlen bedeuten: <b>ab so vielen gleichzeitig Abwesenden</b> gilt die Farbe. Die höchste erreichte Stufe zählt. Eine Person mit mehreren Stationen zählt auf jeder ihrer Stationen. Kürzel in der Ansicht: <b>G</b> = Gelb ab, <b>H</b> = Hellrot ab, <b>D</b> = Dunkelrot ab.</p>
-    <p><b>Standardregel für Stationen</b> (wenn nichts eingetragen ist): 1 weg = unkritisch · <span class="pill lv2">Gelb</span> ab ${std.gelbAb} weg · <span class="pill lv3">Hellrot</span>, wenn nur noch ${std.hellrotWennNochDa} da sind (nur bei Stationen ab ${std.hellrotAbGroesse} Personen) · <span class="pill lv4">Dunkelrot</span>, wenn alle weg sind. Fachteams haben nur eine Ampel, wenn Werte eingetragen sind. Fallen zwei Stufen auf dieselbe Zahl, gilt die höhere.</p>
+    <p>Gezählt wird pro Arbeitstag, wie viele Mitglieder eines Einsatzorts bzw. eines Fachteams einen Urlaubswunsch haben. Die Zahlen bedeuten: <b>ab so vielen gleichzeitig Abwesenden</b> gilt die Farbe. Die höchste erreichte Stufe zählt. Eine Person mit mehreren Einsatzorten zählt an jedem ihrer Einsatzorte. Kürzel in der Ansicht: <b>G</b> = Gelb ab, <b>H</b> = Hellrot ab, <b>D</b> = Dunkelrot ab.</p>
+    <p><b>Standardregel für Einsatzorte</b> (wenn nichts eingetragen ist): 1 weg = unkritisch · <span class="pill lv2">Gelb</span> ab ${std.gelbAb} weg · <span class="pill lv3">Hellrot</span>, wenn nur noch ${std.hellrotWennNochDa} da sind (nur bei Einsatzorten ab ${std.hellrotAbGroesse} Personen) · <span class="pill lv4">Dunkelrot</span>, wenn alle weg sind. Fachteams haben nur eine Ampel, wenn Werte eingetragen sind. Fallen zwei Stufen auf dieselbe Zahl, gilt die höhere.</p>
     <p><b>Teilzeit</b> (Blatt Team, Spalten L–P, »x« = Arbeitstag): Ein Urlaubswunsch zählt nur an den eigenen Arbeitstagen als »weg«. Bei der Standardregel beziehen sich »nur noch ${std.hellrotWennNochDa} da« und »alle weg« auf die Personen, die an dem Wochentag arbeiten würden (angezeigte Werte = Vollzeit-Wert). Fest eingetragene Werte gelten unverändert.
       ${tzs.length ? `Teilzeit eingetragen: ${tzs.map((p) => `${esc(p.name)} (${daysText(p)})`).join(", ")}.` : "Zurzeit ist niemand als Teilzeit markiert."}</p>`;
 
@@ -1060,7 +1061,7 @@ function renderRules(V) {
   const perBody = `<p>${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} (Startdatum aus Excel → Einstellungen B3)</p><p>Feiertage/freie Tage: ${hols.length ? hols.join(" · ") : "keine eingetragen"}</p>`;
 
   $("t-rules").innerHTML =
-    secD("amp", "Ampel einstellen", M.localCount ? `${plural(M.localCount, "eigener Wert", "eigene Werte")} in diesem Browser aktiv` : "Schwellen je Station/Team und Standardregel anpassen", ampBody) +
+    secD("amp", "Ampel einstellen", M.localCount ? `${plural(M.localCount, "eigener Wert", "eigene Werte")} in diesem Browser aktiv` : "Schwellen je Einsatzort/Team und Standardregel anpassen", ampBody) +
     secD("how", "So rechnet die Ampel", "Erklärung, Standardregel, Teilzeit", howBody) +
     secD("warn", `Hinweise zu den Daten (${M.warn.length})`, M.warn.length ? "z. B. fehlende Angaben in Excel" : "alles vollständig", warnBody) +
     secD("per", "Planungszeitraum und Feiertage", `${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])}`, perBody);
@@ -1106,7 +1107,7 @@ function showRange(i0, i1) {
   if (off.length) h += `<h4>Hat an diesem Wochentag ohnehin frei (Teilzeit)</h4><p>${off.map((pi) => esc(M.persons[pi].name)).join(", ")}</p>`;
   openDetail(h);
 }
-/* Zelle im Kalender (Station/Fachteam oder Person) */
+/* Zelle im Kalender (Einsatzort/Fachteam oder Person) */
 function showDetail(k) {
   const [t, idx, a, b] = k.split(":"); const i0 = +a, i1 = +b;
   const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
