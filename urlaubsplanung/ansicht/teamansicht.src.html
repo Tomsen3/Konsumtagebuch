@@ -12,38 +12,47 @@
   Läuft komplett lokal im Browser: kein Server, keine Internetverbindung, es werden keine Daten verschickt.
   Die Excel-Datei wird nur gelesen, nie verändert.
 
+  Aufbau seit 08.10.2026 (neue Oberfläche): Auswahl Fachteam ODER Einsatzort · Kennzahlen · »Das Jahr auf einen
+  Blick« (Kacheln Woche × Wochentag) · Zeitleiste (Startmonat + Länge 1–12 Monate) mit »Wer ist weg« daneben ·
+  Liste aller Wünsche (eingeklappt).
+
   QUELLTEXT: ansicht/teamansicht.src.html  →  mit ansicht/baue_ansicht.py zu Teamansicht.html zusammenbauen
   (dabei werden ansicht/kern.js = Einlesen + Ampel und SheetJS ansicht/xlsx.full.min.js eingebettet).
   Doku: Dokumentation_Teamansicht.md
 -->
 <style>
 :root{
-  --navy:#1F3864; --navy-2:#2F5496; --ink:#1d2433; --muted:#5b6475; --line:#dde2ea; --bg:#f4f6fa; --card:#fff;
+  --navy:#1F3864; --navy-2:#2F5496; --navy-3:#dbe4f3; --ink:#1d2433; --muted:#5b6475; --line:#dde2ea; --bg:#f4f6fa; --card:#fff;
   --we:#eef0f4; --hol:#e4e0ef;
-  --l1:#d9efdc; --l1-ink:#1e6b2e;
-  --l2:#ffe58f; --l2-ink:#7a5600;
-  --l3:#f7a8a8; --l3-ink:#8a1010;
-  --l4:#b00020; --l4-ink:#fff;
-  --wish:#5b7bb5;
-  --cw-week:34px; --cw-day:22px;
+  --l0:#eef1f6;
+  --l1:#cdebd3; --l1-ink:#1e6b2e;
+  --l2:#ffe08a; --l2-ink:#7a5600;
+  --l3:#f5a3a3; --l3-ink:#8a1010;
+  --l4:#a51d2d; --l4-ink:#fff;
+  --label:210px;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
 body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
-button,select,input{font:inherit}
-header.top{background:var(--navy);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-header.top h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
-header.top .logo{height:56px;width:auto;background:#fff;border-radius:8px;padding:3px 6px}
-header.top .file{font-size:12.5px;opacity:.85;flex:1;min-width:200px}
-.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}
-.btn:hover{border-color:var(--navy-2)}
-header.top .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
-header.top .btn.primary{background:#fff;color:var(--navy);font-weight:600;border-color:#fff}
-main{padding:16px 20px 40px;max-width:100%}
+button,select,input{font:inherit;color:inherit}
 .hidden{display:none!important}
 .muted{color:var(--muted)}
 .printinfo{display:none}
 
+/* Kopf */
+header.top{background:var(--navy);color:#fff;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+header.top .logo{height:48px;width:auto;background:#fff;border-radius:8px;padding:3px 6px}
+header.top .titel{flex:1;min-width:220px}
+header.top h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px}
+header.top .file{font-size:12.5px;color:#c9d6ee}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:6px 13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--navy-2)}
+header.top .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
+header.top .btn:hover{border-color:#fff}
+header.top .btn.primary{background:#fff;color:var(--navy);font-weight:600;border-color:#fff}
+main{padding:16px 20px 40px;max-width:1500px;margin:0 auto}
+
+/* Startfläche */
 .drop{max-width:720px;margin:40px auto;background:var(--card);border:2px dashed #b9c3d6;border-radius:16px;padding:36px;text-align:center}
 .drop.over{border-color:var(--navy-2);background:#eef3ff}
 .drop h2{margin:0 0 6px;color:var(--navy)}
@@ -51,90 +60,137 @@ main{padding:16px 20px 40px;max-width:100%}
 .drop .btn{margin-top:14px}
 .drop ol{text-align:left;display:inline-block;color:var(--muted);margin:18px 0 0}
 
-.filters{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-start;margin-bottom:14px}
-.fgroup{display:flex;flex-direction:column;gap:6px;min-width:0}
-.fgroup > label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;cursor:pointer;user-select:none}
+/* Karten */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:14px}
+.card > .kopf{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:12px 16px 0}
+.card h2{margin:0;font-size:15px;color:var(--navy);font-weight:600;flex:1;min-width:180px}
+.card .inhalt{padding:10px 16px 14px}
+
+/* Auswahl */
+.auswahl{padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.gruppe{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.gruppe > .lbl{font-size:12px;color:var(--muted);margin-right:2px}
+.chip{border:1px solid var(--navy-2);color:var(--navy-2);background:#fff;border-radius:999px;padding:4px 13px;font-size:13px;cursor:pointer;user-select:none}
+.chip:hover{background:#eef3ff}
 .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+select.ort{border:1px solid var(--navy-2);color:var(--navy-2);border-radius:999px;padding:4px 10px;background:#fff;font-size:13px;cursor:pointer;max-width:260px}
+select.ort.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.info{border-top:1px solid var(--line);background:#f8f9fc;padding:7px 16px;font-size:12.5px;color:var(--muted);border-radius:0 0 12px 12px}
+.info b{color:var(--ink);font-weight:600}
+
+/* Kennzahlen */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--navy-2);border-radius:0 10px 10px 0;padding:10px 14px}
+.kpi.gelb{border-left-color:#e0a800} .kpi.rot{border-left-color:#d64545}
+.kpi .k{font-size:12.5px;color:var(--muted)}
+.kpi .v{font-size:26px;font-weight:600;line-height:1.2;color:var(--ink)}
+.kpi .s{font-size:12px;color:var(--muted)}
+.hinweis{font-size:12.5px;color:var(--muted);margin:-6px 0 14px}
+
+/* Legende */
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:12px;color:var(--muted)}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.lv0{background:var(--l0)} .lv1{background:var(--l1)} .lv2{background:var(--l2)} .lv3{background:var(--l3)} .lv4{background:var(--l4)}
+
+/* Das Jahr auf einen Blick: Spalte = Woche, Zeile = Mo–Fr */
+.jahr{display:grid;gap:2px;align-items:center}
+.jahr .wt{font-size:11px;color:var(--muted);padding-right:4px}
+.jahr .mo{font-size:11px;color:var(--navy);font-weight:600;white-space:nowrap;overflow:visible;height:15px}
+.hc{aspect-ratio:1;border-radius:3px;min-width:0;cursor:pointer}
+.hc.leer{background:transparent;cursor:default}
+.hc.hol{background:repeating-linear-gradient(45deg,var(--hol),var(--hol) 2px,#f6f4fa 2px,#f6f4fa 4px);cursor:default}
+.hc.heute{outline:2px solid #ED7D31;outline-offset:-1px}
+.hc:not(.leer):not(.hol):hover{outline:2px solid var(--navy-2);outline-offset:-1px}
+#app:has(#detail.open) .hc.pk{outline:2px solid var(--navy);outline-offset:-1px}
+.jahr .fen{height:4px;border-radius:2px}
+.jahr .fen.in{background:var(--navy-2)}
+.fenstertext{font-size:12px;color:var(--navy-2);margin-top:6px}
+
+/* Zeitleiste */
+.steuer{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px}
+.steuer select{border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:#fff}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{border:0;background:#fff;padding:5px 12px;cursor:pointer}
+.seg button{border:0;background:#fff;padding:4px 11px;cursor:pointer;font-size:12.5px}
+.seg button + button{border-left:1px solid var(--line)}
 .seg button.on{background:var(--navy);color:#fff}
-.filters select{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff}
+.regler{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin:10px 0 12px}
+.regler input{flex:1;accent-color:var(--navy-2)}
+.regler b{color:var(--ink);min-width:80px;text-align:right;font-weight:600}
+.zl-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
+.tl{display:grid;grid-template-columns:var(--label) minmax(0,1fr)}
+.tl .namen > div,.tl .spuren > .trk{height:28px;margin-bottom:4px}
+.tl .namen > div{display:flex;align-items:center;gap:6px;font-size:12.5px;padding-right:8px;min-width:0}
+.tl .namen .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl .namen .ohne{color:var(--muted)}
+.tl .namen > .kopfz,.tl .spuren > .monate{height:18px;margin-bottom:4px}
+.tl .namen > .sum,.tl .spuren > .sumtrk{height:14px;margin-bottom:8px}
+.tl .namen > .sum{font-size:11.5px;color:var(--navy);font-weight:600}
+.spuren{position:relative;cursor:crosshair;min-width:0}
+.monate{display:flex;font-size:11px;color:var(--muted)}
+.monate span{border-left:1px solid var(--line);padding-left:4px;white-space:nowrap;overflow:hidden}
+.sumtrk{display:flex;border-radius:3px;overflow:hidden}
+.sumtrk i{flex:1;min-width:0}
+.trk{position:relative;background:#f3f5f9;border-radius:7px}
+.bar{position:absolute;top:5px;height:18px;border-radius:9px;background:var(--navy-2);color:#fff;font-size:11px;line-height:18px;padding:0 7px;white-space:nowrap;overflow:hidden;min-width:4px}
+.bar.lv2{box-shadow:inset 0 -3px 0 #e0a800} .bar.lv3,.bar.lv4{box-shadow:inset 0 -3px 0 #d64545}
+.ov{position:absolute;top:22px;bottom:0;pointer-events:none}
+.ov.we{background:rgba(120,130,150,.10)} .ov.hol{background:rgba(125,111,166,.16)}
+.ov.mon{width:1px;background:var(--line)}
+.ov.heute{width:2px;background:#ED7D31}
+.ov.pk{background:rgba(31,56,100,.14);border-left:2px solid var(--navy);border-right:2px solid var(--navy);display:none}
+#app:has(#detail.open) .ov.pk{display:block}
 
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
-.panel h2{margin:0 0 2px;font-size:15.5px;color:var(--navy)}
-.panel .sub{color:var(--muted);font-size:12.5px;margin-bottom:8px}
-.lage{font-size:15px;margin:0}
-.legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12.5px;color:var(--muted);margin:0 0 10px}
-.legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(0,0,0,.06)}
+/* Fachgruppe */
+.fb{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px;white-space:nowrap;background:#fff}
+.fb i{width:7px;height:7px;border-radius:50%;display:inline-block}
 
-/* Jahresübersicht Monat × Tag */
-table.heat{border-collapse:separate;border-spacing:2px;width:100%;table-layout:fixed;font-size:10.5px}
-table.heat th{font-weight:600;color:var(--muted);font-size:10px;padding:0}
-table.heat th.ml{width:62px;text-align:left;color:var(--navy);font-size:11.5px}
-table.heat td{height:22px;text-align:center;border-radius:3px;padding:0;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
-table.heat td.na{background:transparent;cursor:default}
-table.heat td.out{background:#f7f8fb;cursor:default}
-table.heat td.we{background:var(--we);color:#b0b6c3;font-weight:400}
-table.heat td.hol{background:var(--hol);color:#7d6fa6;font-weight:400}
-table.heat td.lv0{background:#f3f5f9;color:#9aa3b5}
-table.heat td.lv1{background:var(--l1);color:var(--l1-ink)} table.heat td.lv2{background:var(--l2);color:var(--l2-ink)}
-table.heat td.lv3{background:var(--l3);color:var(--l3-ink)} table.heat td.lv4{background:var(--l4);color:#fff}
-table.heat td.mo{box-shadow:inset 2px 0 0 #c6cee0}
-table.heat td.today{outline:2px solid #ED7D31;outline-offset:-2px}
-table.heat td.sel{outline:2px solid var(--navy);outline-offset:-2px}
+/* Wer ist weg */
+aside.detail{background:#f8f9fc;border:1px solid var(--line);border-radius:10px;padding:12px 14px;position:relative}
+aside.detail .leer{font-size:12.5px;color:var(--muted)}
+aside.detail:not(.open) #detailBody,aside.detail:not(.open) .x{display:none}
+aside.detail.open .leer{display:none}
+aside.detail .x{position:absolute;top:6px;right:8px;border:0;background:none;font-size:20px;cursor:pointer;color:var(--muted)}
+aside.detail h3{margin:0 0 2px;color:var(--navy);font-size:14.5px;padding-right:24px}
+.wer{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.wer > div{display:flex;gap:9px;align-items:center;font-size:12.5px}
+.av{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+.tag{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:600}
+.tag.lv1{color:var(--l1-ink)} .tag.lv2{color:var(--l2-ink)} .tag.lv3{color:var(--l3-ink)} .tag.lv4{color:#fff}
 
-/* Kalender Personen × Wochen/Tage */
-.calwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 150px)}
-table.cal{border-collapse:separate;border-spacing:0;font-size:12px}
-table.cal th,table.cal td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;text-align:center;height:26px}
-table.cal thead th{position:sticky;background:#f8f9fc;z-index:2;font-weight:600;color:var(--muted)}
-table.cal thead tr.m th{top:0;height:24px;color:var(--navy);font-size:12px;text-align:left;padding-left:6px}
-table.cal thead tr.c th{top:24px;font-size:10.5px;line-height:1.1}
-table.cal .lh{position:sticky;left:0;z-index:3;background:#fff;text-align:left;padding:0 10px;min-width:200px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-table.cal thead .lh{z-index:4;background:#f8f9fc}
-table.cal td.c{min-width:var(--cw);max-width:var(--cw);width:var(--cw);cursor:pointer;font-weight:600;font-size:11px}
-table.cal td.we{background:var(--we)} table.cal td.hol{background:var(--hol)}
-table.cal th.we{background:#e8ebf1} table.cal th.hol{background:#ddd7ec}
-table.cal th.today,table.cal td.today{box-shadow:inset 2px 0 0 #ED7D31, inset -2px 0 0 #ED7D31}
-table.cal th.mstart,table.cal td.mstart{border-left:2px solid #9aa7c2}
-table.cal td.w{background:var(--wish);color:#fff}
-table.cal td.lv1{background:var(--l1);color:var(--l1-ink)} table.cal td.lv2{background:var(--l2);color:var(--l2-ink)}
-table.cal td.lv3{background:var(--l3);color:var(--l3-ink)} table.cal td.lv4{background:var(--l4);color:#fff}
-table.cal tr.sum td.lh{font-weight:700;color:var(--navy)}
-table.cal tr.sum td{border-bottom:2px solid #c6cee0}
-table.cal td.sel{outline:2px solid var(--navy);outline-offset:-2px}
-
-/* Liste der Wünsche */
+/* Liste */
+.klapp{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;padding:12px 16px;cursor:pointer;text-align:left;border-radius:12px}
+.klapp:hover{background:#f8f9fc}
+.klapp .pfeil{display:inline-block;transition:transform .15s;color:var(--navy-2)}
+.klapp.offen .pfeil{transform:rotate(90deg)}
+.klapp h2{flex:1}
+.klapp .anz{font-size:12.5px;color:var(--muted)}
+.listbody{padding:0 16px 14px}
+.listbody input[type=search]{border:1px solid var(--line);border-radius:8px;padding:5px 10px;width:220px;margin-bottom:8px}
 table.list{width:100%;border-collapse:collapse;font-size:13px}
 table.list th{text-align:left;color:var(--muted);font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);padding:5px 8px}
-table.list td{padding:5px 8px;border-bottom:1px solid #f0f2f6}
-.pill{display:inline-block;border-radius:999px;padding:0 8px;font-size:11.5px;font-weight:600}
-.pill.lv2{background:var(--l2);color:var(--l2-ink)} .pill.lv3{background:var(--l3);color:var(--l3-ink)} .pill.lv4{background:var(--l4);color:#fff}
+table.list td{padding:6px 8px;border-bottom:1px solid #f0f2f6}
+table.list tr.weg{display:none}
 
-aside.detail{position:fixed;top:0;right:0;height:100vh;width:min(400px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(20,30,60,.12);padding:16px 18px;overflow:auto;z-index:50;transform:translateX(105%);transition:transform .18s}
-aside.detail.open{transform:none}
-aside.detail h3{margin:0 0 4px;color:var(--navy);padding-right:26px}
-aside.detail .x{position:absolute;top:10px;right:12px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
-aside.detail ul{padding-left:18px;margin:4px 0}
-aside.detail li{margin:3px 0}
+@media (max-width:1000px){ .zl-wrap{grid-template-columns:1fr} .kpis{grid-template-columns:1fr} :root{--label:150px} }
 
 @page{size:A4 landscape;margin:9mm}
 @media print{
-  header.top .btn, .filters, aside.detail, .noprint{display:none!important}
-  html,body{background:#fff;font-size:11px}
-  main{padding:0}
+  header.top .btn,.auswahl,.steuer,.regler,aside.detail,.noprint,.listbody input,.klapp .pfeil,.fenstertext{display:none!important}
+  html,body{background:#fff;font-size:10.5px}
+  main{padding:0;max-width:none}
   header.top{background:#fff;color:#000;border-bottom:2px solid #000;padding:0 0 4px}
-  header.top h1{font-size:15px}
-  header.top .logo{height:32px;padding:0}
-  header.top .file{opacity:1;font-size:10px}
+  header.top h1{font-size:15px} header.top .file{color:#333}
+  header.top .logo{height:30px;padding:0}
   .printinfo{display:block;font-size:10px;color:#333;margin:4px 0 6px}
-  .panel{padding:6px 8px;margin-bottom:6px;border-radius:6px;break-inside:avoid}
-  table.heat{font-size:8.5px;border-spacing:1px}
-  table.heat td{height:15px}
-  .calwrap{max-height:none;overflow:visible;border:0}
-  .cal-panel,.list-panel{break-before:page}
+  .card{border-radius:6px;margin-bottom:6px;break-inside:avoid}
+  .card.zl{break-inside:auto}
+  .info{background:#fff}
+  .kpis{margin-bottom:6px} .kpi{padding:4px 10px} .kpi .v{font-size:18px}
+  .hinweis{margin:0 0 6px}
+  .zl-wrap{grid-template-columns:1fr}
+  .card.liste{break-before:page}
+  .listbody{display:block!important}
+  table.list tr.weg{display:table-row}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
@@ -142,18 +198,20 @@ aside.detail li{margin:3px 0}
 <body>
 <header class="top">
   <!--LOGO-->
-  <h1>Teamurlaubsplanung Kreativtherapie</h1>
-  <div class="file" id="fileinfo">Keine Datei geladen</div>
+  <div class="titel">
+    <h1>Teamurlaub · Kreativtherapie</h1>
+    <div class="file" id="fileinfo">Keine Datei geladen</div>
+  </div>
+  <button class="btn hidden" id="btnReload" title="Dieselbe Datei erneut einlesen (nach neuen Einträgen)">↻ Neu laden</button>
   <button class="btn primary" id="btnLoad">Excel-Datei laden</button>
-  <button class="btn hidden" id="btnReload" title="Dieselbe Datei erneut einlesen (nach neuen Einträgen)">Neu laden</button>
-  <button class="btn hidden" id="btnPrint" title="Druckt die Ansicht – eingestellt auf A4 quer">Drucken (A4 quer)</button>
+  <button class="btn hidden" id="btnPrint" title="Druckt die Ansicht – eingestellt auf A4 quer">Drucken</button>
   <input type="file" id="fileInput" accept=".xlsx,.xlsm" class="hidden">
 </header>
 
 <main>
   <section class="drop" id="drop">
     <h2>Wer ist wann im Urlaub?</h2>
-    <p>Datei <b>Urlaubswuensche_2027.xlsx</b> (oder <b>.xlsm</b>) hier hineinziehen oder auswählen.</p>
+    <p>Datei <b>Urlaubswuensche_2027.xlsm</b> (oder <b>.xlsx</b>) hier hineinziehen oder auswählen.</p>
     <p>Alles bleibt auf diesem Rechner. Die Excel-Datei wird nur gelesen, nicht verändert.</p>
     <button class="btn" id="btnLoad2" style="background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600">Excel-Datei auswählen</button>
     <div id="lastFile"></div>
@@ -165,41 +223,67 @@ aside.detail li{margin:3px 0}
 
   <section id="app" class="hidden">
     <div class="printinfo" id="printinfo"></div>
-    <div class="filters" id="filters">
-      <div class="fgroup"><label>Fachteam</label><div class="chips" id="fFach"></div></div>
-      <div class="fgroup"><label>Einsatzort</label><div class="chips" id="fOrt"></div></div>
-      <div class="fgroup"><label>Zeitraum</label>
-        <div style="display:flex;gap:6px;align-items:center"><select id="fM0"></select><span>bis</span><select id="fM1"></select></div>
+
+    <div class="card">
+      <div class="auswahl" id="filters">
+        <div class="gruppe"><span class="lbl">Fachteam</span><span id="fFach" class="gruppe"></span></div>
+        <div class="gruppe"><span class="lbl">oder Einsatzort</span><select class="ort" id="fOrt"></select></div>
       </div>
-      <div class="fgroup"><label>Kalender-Raster</label>
-        <div class="seg" id="fView"><button data-v="w">Wochen</button><button data-v="d">Tage</button></div>
+      <div class="info" id="info"></div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+    <div class="hinweis" id="hinweis"></div>
+
+    <div class="card">
+      <div class="kopf"><h2>Das Jahr auf einen Blick</h2><div class="legend" id="legend"></div></div>
+      <div class="inhalt"><div class="jahr" id="jahr"></div><div class="fenstertext" id="fenstertext"></div></div>
+    </div>
+
+    <div class="card zl">
+      <div class="kopf">
+        <h2>Zeitleiste</h2>
+        <div class="steuer">
+          <label for="tlAb">ab</label><select id="tlAb"></select>
+          <div class="seg" id="tlSeg"><button data-n="1">1 Monat</button><button data-n="3">3 Monate</button><button data-n="6">6 Monate</button><button data-n="12">ganzes Jahr</button></div>
+        </div>
+      </div>
+      <div class="inhalt">
+        <div class="regler"><span>1 Monat</span><input type="range" id="tlN" min="1" max="12" step="1"><span>12 Monate</span><b id="tlNOut"></b></div>
+        <div class="zl-wrap">
+          <div class="tl" id="tl"></div>
+          <aside class="detail" id="detail" aria-live="polite">
+            <button class="x" id="detailX" aria-label="Schließen">×</button>
+            <div class="leer">Auf eine Kachel oder in die Zeitleiste klicken: Hier steht dann, wer an dem Tag bzw. in der Woche weg ist.</div>
+            <div id="detailBody"></div>
+          </aside>
+        </div>
       </div>
     </div>
 
-    <div class="panel"><p class="lage" id="lage"></p></div>
-    <div class="panel" id="p-heat"></div>
-    <div class="panel cal-panel" id="p-cal"></div>
-    <div class="panel list-panel" id="p-list"></div>
+    <div class="card liste">
+      <button class="klapp" id="listKlapp" aria-expanded="false"><span class="pfeil">▶</span><h2>Alle Urlaubswünsche nach Datum</h2><span class="anz" id="listAnz"></span></button>
+      <div class="listbody hidden" id="listBody"></div>
+    </div>
   </section>
 </main>
-
-<aside class="detail" id="detail"><button class="x" id="detailX" aria-label="Schließen">×</button><div id="detailBody"></div></aside>
 <!--SHEETJS-->
 <script>
 "use strict";
 <!--KERN-->
 
 /* ===================== Zustand =====================
-   sel = gewähltes Team: "" = alle · "fach:<Name>" = Fachteam · "stat:<Name>" = Einsatzort (intern heißen Einsatzorte »stat«). */
+   sel = gewähltes Team: "" = alle · "fach:<Name>" = Fachteam · "stat:<Name>" = Einsatzort (intern heißen Einsatzorte »stat«).
+   tl0 = erster Monat der Zeitleiste (monthKey), tlN = Länge in Monaten (1–12). pick = gewählter Tag/Woche (Indizes a–b). */
 let M = null, fileHandle = null;
 const KEY = "teamansicht.state";   // eigener Schlüssel, getrennt von der Leitungsansicht
-const S = Object.assign({ sel: "", view: "w", m0: null, m1: null }, lsGet(KEY, {}));
-const save = () => lsSet(KEY, { sel: S.sel, view: S.view });
+const S = Object.assign({ sel: "", tl0: null, tlN: 3 }, lsGet(KEY, {}), { pick: null, listOffen: false, suche: "" });
+const save = () => lsSet(KEY, { sel: S.sel, tl0: S.tl0, tlN: S.tlN });
 /* Zurück-Taste: ein »Bildschirm« = gewähltes Team (Fachteam/Einsatzort/alle) */
 verlaufStart({
   schluessel: () => S.sel,
-  zustand: () => JSON.parse(JSON.stringify(S)),
-  wiederherstellen: (z) => { Object.assign(S, z); setupFilters(); save(); render(); }
+  zustand: () => ({ sel: S.sel, tl0: S.tl0, tlN: S.tlN }),
+  wiederherstellen: (z) => { Object.assign(S, z); save(); render(); }
 });
 
 /* Gewähltes Team → Personen, Bereich (für die Ampel) und Tageswerte */
@@ -207,9 +291,6 @@ function auswahl() {
   const u = S.sel ? M.units.find((x) => ukey(x) === S.sel) : null;
   const ps = u ? u.members.slice() : M.persons.map((p, i) => i);
   ps.sort((a, b) => M.persons[a].name.localeCompare(M.persons[b].name, "de"));
-  let i0 = 0, i1 = M.N - 1;
-  if (S.m0 != null) while (i0 < M.N - 1 && monthKey(M.ser[i0]) < S.m0) i0++;
-  if (S.m1 != null) while (i1 > 0 && monthKey(M.ser[i1]) > S.m1) i1--;
   // Je Tag: wie viele aus dem Team fehlen und welche Ampelstufe gilt.
   // Ein Team: dessen Ampel (Regeln aus Excel). Alle: höchste Stufe aller Bereiche.
   const lv = new Uint8Array(M.N), abs = new Uint8Array(M.N);
@@ -219,7 +300,8 @@ function auswahl() {
     if (u) l = u.lv[i]; else for (const x of M.units) l = Math.max(l, x.lv[i]);
     abs[i] = a; lv[i] = l || (a ? 1 : 0);
   }
-  return { u, ps, i0, i1, lv, abs, name: u ? u.name : "alle Teams" };
+  const ohneAmpel = !!u && u.th.g == null && u.th.h == null && u.th.d == null;
+  return { u, ps, lv, abs, ohneAmpel, ort: !!u && u.type === "stat", name: u ? u.name : "alle Teams" };
 }
 
 /* ===================== Datei laden ===================== */
@@ -246,171 +328,226 @@ async function loadFile(file) {
     $("fileinfo").textContent = `${file.name} · Stand ${d.toLocaleDateString("de-DE")} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
     $("drop").classList.add("hidden"); $("app").classList.remove("hidden");
     $("btnReload").classList.remove("hidden"); $("btnPrint").classList.remove("hidden");
-    $("btnLoad").textContent = "Andere Datei";
-    setupFilters(); render();
+    $("btnLoad").textContent = "Andere Datei"; $("btnLoad").classList.remove("primary");
+    S.pick = null; $("detail").classList.remove("open");
+    render();
   } catch (e) {
     alert("Die Datei konnte nicht gelesen werden.\n\n" + (e && e.message ? e.message : e));
   }
 }
 
-/* ===================== Auswahl oben ===================== */
-function setupFilters() {
-  if (S.sel && !M.units.some((u) => ukey(u) === S.sel)) S.sel = "";
-  const chip = (key, label) => `<span class="chip${S.sel === key ? " on" : ""}" data-sel="${esc(key)}">${esc(label)}</span>`;
-  // Nur Bereiche mit Personen anbieten (leere Zeilen der Einstellungen-Liste sind für Kolleg:innen ohne Nutzen)
-  $("fFach").innerHTML = chip("", "alle") + M.units.filter((u) => u.type === "fach" && u.n).map((u) => chip(ukey(u), u.name)).join("");
-  $("fOrt").innerHTML = M.units.filter((u) => u.type === "stat" && u.n).map((u) => chip(ukey(u), u.name)).join("");
-  const months = []; for (let i = 0; i < M.N; i++) { const k = monthKey(M.ser[i]); if (!months.includes(k)) months.push(k); }
-  const opt = (k) => `<option value="${k}">${MON_L[k % 12]} ${Math.floor(k / 12)}</option>`;
-  $("fM0").innerHTML = months.map(opt).join(""); $("fM1").innerHTML = months.map(opt).join("");
-  if (S.m0 == null || !months.includes(S.m0)) S.m0 = months[0];
-  if (S.m1 == null || !months.includes(S.m1)) S.m1 = months[Math.min(11, months.length - 1)];
-  $("fM0").value = S.m0; $("fM1").value = S.m1;
+/* ===================== Hilfen für die Darstellung ===================== */
+const LV_TXT = ["niemand weg", "weg, noch Platz", "knapp", "eng", "niemand mehr da"];
+const tag = (l, txt) => `<span class="tag lv${l}">${txt ?? LV_TXT[l]}</span>`;
+const proseName = (n) => { const m = String(n).match(/^([^,]+),\s*(.+)$/); return m ? m[2] + " " + m[1] : n; };
+const initialen = (n) => { const m = String(n).match(/^([^,]+),\s*(.+)$/); const t = m ? [m[2], m[1]] : String(n).split(/\s+/); return ((t[0] || "")[0] || "").toUpperCase() + ((t[1] || "")[0] || "").toUpperCase(); };
+const fachFarbe = (p) => (p.fi >= 0 ? FACH_FARBEN[p.fi % FACH_FARBEN.length] : "#8a93a6");
+const fachKurz = (f) => (String(f).replace(/therapie$/i, "") || f);
+const fachBadge = (p) => (p.fach ? `<span class="fb"><i style="background:${fachFarbe(p)}"></i>${esc(fachKurz(p.fach))}</span>` : "");
+const monate = () => { const ks = []; for (let i = 0; i < M.N; i++) { const k = monthKey(M.ser[i]); if (ks[ks.length - 1] !== k) ks.push(k); } return ks; };
+const monName = (k) => `${MON_L[k % 12]} ${Math.floor(k / 12)}`;
+const monKurz = (k) => `${MON[k % 12]} ${String(Math.floor(k / 12)).slice(2)}`;
+const idx = (s) => s - M.start;
+const kw = (i) => isoWeek(M.ser[i]);
+const wann = (a, b) => (a === b ? fmtW(M.ser[a]) + ser2date(M.ser[a]).getUTCFullYear() : `${fmtW(M.ser[a])} – ${fmtW(M.ser[b])}${ser2date(M.ser[b]).getUTCFullYear()}`);
+
+/* Zeitleisten-Fenster (Indizes) aus Startmonat und Länge */
+function fenster() {
+  const ks = monate();
+  S.tlN = Math.max(1, Math.min(12, Math.round(+S.tlN || 3), ks.length));
+  if (S.tl0 == null || !ks.includes(S.tl0)) {
+    const heute = monthKey(todaySer());
+    S.tl0 = ks.includes(heute) ? heute : ks[0];
+  }
+  let p = ks.indexOf(S.tl0);
+  if (p + S.tlN > ks.length) p = ks.length - S.tlN;
+  S.tl0 = ks[p];
+  const kEnd = ks[p + S.tlN - 1];
+  let w0 = 0; while (w0 < M.N - 1 && monthKey(M.ser[w0]) < S.tl0) w0++;
+  let w1 = M.N - 1; while (w1 > 0 && monthKey(M.ser[w1]) > kEnd) w1--;
+  return { w0, w1, T: w1 - w0 + 1, ks, kEnd };
 }
-function syncChips() {
-  document.querySelectorAll("#filters .chip").forEach((c) => c.classList.toggle("on", c.dataset.sel === S.sel));
-  document.querySelectorAll("#fView button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.view));
+/* Fenster so verschieben, dass Tag i darin liegt (Länge bleibt) */
+function fensterZu(i) {
+  const F = fenster();
+  if (i >= F.w0 && i <= F.w1) return false;
+  const k = monthKey(M.ser[i]), ks = F.ks;
+  let p = ks.indexOf(k);
+  if (i > F.w1) p = p - S.tlN + 1;
+  S.tl0 = ks[Math.max(0, Math.min(p, ks.length - S.tlN))];
+  save();
+  return true;
 }
 
 /* ===================== Darstellung ===================== */
-const LV_TXT = ["", "weg, unkritisch", "knapp", "eng", "niemand mehr da"];
-const pill = (l) => (l >= 2 ? `<span class="pill lv${l}">${LV_TXT[l]}</span>` : "");
-const proseName = (n) => { const m = String(n).match(/^([^,]+),\s*(.+)$/); return m ? m[2] + " " + m[1] : n; };
-function idxOf(y, m, d) { const dt = new Date(Date.UTC(y, m - 1, d)); if (dt.getUTCMonth() !== m - 1) return -1; const i = date2ser(y, m, d) - M.start; return i >= 0 && i < M.N ? i : -1; }
-
 function render() {
   if (!M) return;
-  const A = auswahl();
-  syncChips();
-  $("printinfo").textContent = `Team: ${A.name} · ${MON_L[S.m0 % 12]} ${Math.floor(S.m0 / 12)} – ${MON_L[S.m1 % 12]} ${Math.floor(S.m1 / 12)} · gedruckt ${new Date().toLocaleDateString("de-DE")}`;
-  renderLage(A); renderHeat(A); renderCal(A); renderList(A);
+  const A = auswahl(), F = fenster();
+  renderAuswahl(A); renderKpis(A); renderJahr(A, F); renderZeitleiste(A, F); renderListe(A);
+  if (S.pick && $("detail").classList.contains("open")) zeigeWer(S.pick.a, S.pick.b, A, true);
+  $("printinfo").textContent = `${A.u ? (A.ort ? "Einsatzort " : "Fachteam ") + A.name : "Alle Teams"} · Zeitleiste ${monName(S.tl0)}${S.tlN > 1 ? " – " + monName(F.kEnd) : ""} · gedruckt ${new Date().toLocaleDateString("de-DE")}`;
   verlaufMerken();
 }
 
-/* Ein Satz zur Lage: wie viele Wünsche, wie viele Tage knapp/eng */
-function renderLage(A) {
-  let wishes = 0; for (const pi of A.ps) wishes += M.persons[pi].wishes.filter((w) => w.bis >= M.ser[A.i0] && w.von <= M.ser[A.i1]).length;
-  let knapp = 0, eng = 0;
-  for (let i = A.i0; i <= A.i1; i++) if (M.work[i]) { if (A.lv[i] === 2) knapp++; else if (A.lv[i] >= 3) eng++; }
-  const wer = A.u ? `Im Team <b>${esc(A.name)}</b> (${plural(A.ps.length, "Person", "Personen")})` : `In allen Teams (${plural(A.ps.length, "Person", "Personen")})`;
-  let t = `${wer} sind im gewählten Zeitraum ${plural(wishes, "Urlaubswunsch", "Urlaubswünsche")} eingetragen. `;
-  if (A.u && A.u.th.g == null && A.u.th.h == null && A.u.th.d == null) t += "Für dieses Team ist keine Ampel hinterlegt – grün heißt hier nur »jemand ist weg«.";
-  else if (!knapp && !eng) t += "Es gibt noch <b>keine knappen Tage</b>.";
-  else t += `${eng ? `An <b>${plural(eng, "Arbeitstag", "Arbeitstagen")}</b> wird es <b>eng</b> (rot)` : ""}${eng && knapp ? ", an " : knapp ? "An " : ""}${knapp ? `<b>${plural(knapp, "Arbeitstag", "Arbeitstagen")}</b> ist es <b>knapp</b> (gelb)` : ""}. Bitte für neue Wünsche möglichst andere Zeiten wählen oder vorher im Team absprechen.`;
-  $("lage").innerHTML = t;
+function renderAuswahl(A) {
+  if (S.sel && !M.units.some((u) => ukey(u) === S.sel)) S.sel = "";
+  const chip = (key, label) => `<span class="chip${S.sel === key ? " on" : ""}" data-sel="${esc(key)}" role="button" tabindex="0">${esc(label)}</span>`;
+  // Nur Bereiche mit Personen anbieten (leere Zeilen der Einstellungen-Liste sind für Kolleg:innen ohne Nutzen)
+  $("fFach").innerHTML = chip("", "alle") + M.units.filter((u) => u.type === "fach" && u.n).map((u) => chip(ukey(u), u.name)).join("");
+  const orte = M.units.filter((u) => u.type === "stat" && u.n);
+  $("fOrt").innerHTML = `<option value="">Einsatzort wählen …</option>` + orte.map((u) => `<option value="${esc(ukey(u))}">${esc(u.name)}</option>`).join("");
+  $("fOrt").value = A.ort ? S.sel : "";
+  $("fOrt").classList.toggle("on", A.ort);
+  const fachs = new Set(A.ps.map((pi) => M.persons[pi].fach).filter(Boolean));
+  let t = A.u ? `<b>${esc(A.name)}</b> · ` : "<b>Alle Teams</b> · ";
+  if (A.ort) t += fachs.size > 1 ? `alle Fachgruppen (${fachs.size}) · ` : "";
+  t += plural(A.ps.length, "Person", "Personen");
+  if (A.ohneAmpel) t += " · Für dieses Team ist keine Ampel hinterlegt: grün heißt hier nur »jemand ist weg«.";
+  $("info").innerHTML = t;
 }
 
-function legend() {
-  return `<div class="legend">
-    <span><span class="sw" style="background:#f3f5f9"></span>niemand weg</span>
-    <span><span class="sw" style="background:var(--l1)"></span>jemand weg, noch Platz</span>
-    <span><span class="sw" style="background:var(--l2)"></span>knapp – keiner mehr dazu</span>
-    <span><span class="sw" style="background:var(--l3)"></span>eng</span>
-    <span><span class="sw" style="background:var(--l4)"></span>niemand mehr da</span>
-    <span><span class="sw" style="background:var(--we)"></span>Wochenende</span>
-    <span><span class="sw" style="background:var(--hol)"></span>Feiertag/frei</span>
-    <span><span class="sw" style="background:#fff;border:2px solid #ED7D31"></span>heute</span></div>`;
+function renderKpis(A) {
+  let wuensche = 0; for (const pi of A.ps) wuensche += M.persons[pi].wishes.length;
+  let knapp = 0, eng = 0, erstEng = -1, erstKnapp = -1;
+  for (let i = 0; i < M.N; i++) if (M.work[i]) {
+    if (A.lv[i] === 2) { knapp++; if (erstKnapp < 0) erstKnapp = i; }
+    else if (A.lv[i] >= 3) { eng++; if (erstEng < 0) erstEng = i; }
+  }
+  const kpi = (cls, k, v, s) => `<div class="kpi ${cls}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  $("kpis").innerHTML =
+    kpi("", A.u ? (A.ort ? "Wünsche an diesem Einsatzort" : "Wünsche im Team") : "Wünsche in allen Teams", wuensche, plural(A.ps.length, "Person", "Personen")) +
+    kpi("gelb", "Knappe Arbeitstage", A.ohneAmpel ? "–" : knapp, A.ohneAmpel ? "keine Ampel hinterlegt" : knapp ? `keiner mehr dazu · zuerst KW ${kw(erstKnapp)}` : "keiner mehr dazu") +
+    kpi("rot", "Enge Arbeitstage", A.ohneAmpel ? "–" : eng, A.ohneAmpel ? "keine Ampel hinterlegt" : eng ? `zu wenige da · zuerst KW ${kw(erstEng)}` : "zu wenige da");
+  $("hinweis").textContent = !A.ohneAmpel && (knapp || eng) ? "Für neue Wünsche in gelben oder roten Zeiten bitte vorher im Team absprechen." : "";
+  $("legend").innerHTML = ["lv0", "lv1", "lv2", "lv3", "lv4"].map((c, l) => `<span><span class="sw ${c}"></span>${LV_TXT[l]}</span>`).join("") +
+    `<span><span class="sw hc hol" style="aspect-ratio:auto"></span>Feiertag/frei</span><span><span class="sw" style="outline:2px solid #ED7D31;outline-offset:-2px"></span>heute</span>`;
 }
 
-/* Jahresübersicht: Zeile = Monat, Spalte = Tag 1–31, Zahl = so viele aus dem Team weg */
-function renderHeat(A) {
-  const today = todaySer();
-  const ks = []; for (let i = A.i0; i <= A.i1; i++) { const k = monthKey(M.ser[i]); if (ks[ks.length - 1] !== k) ks.push(k); }
-  let h = `<table class="heat"><thead><tr><th class="ml"></th>${Array.from({ length: 31 }, (_, d) => `<th>${d + 1}</th>`).join("")}</tr></thead><tbody>`;
-  for (const k of ks) {
-    const y = Math.floor(k / 12), m = (k % 12) + 1;
-    h += `<tr><th class="ml">${MON[m - 1]} ${String(y).slice(2)}</th>`;
-    for (let d = 1; d <= 31; d++) {
-      const i = idxOf(y, m, d);
-      if (i < 0) { h += `<td class="na"></td>`; continue; }
-      if (i < A.i0 || i > A.i1) { h += `<td class="out"></td>`; continue; }
-      const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear();
-      const extra = (wday(M.ser[i]) === 1 ? " mo" : "") + (M.ser[i] === today ? " today" : "");
-      if (!M.work[i]) { h += `<td class="${M.hol[i] ? "hol" : "we"}${extra}" data-d="${i}" title="${esc(when + " · " + (M.hol[i] || "Wochenende"))}"></td>`; continue; }
-      const a = A.abs[i], l = A.lv[i];
-      h += `<td class="lv${l}${extra}" data-d="${i}" title="${esc(`${when} · ${a} weg${l >= 2 ? " · " + LV_TXT[l] : ""} – klicken: wer?`)}">${a || ""}</td>`;
+/* Das Jahr auf einen Blick: Spalte = Kalenderwoche, Zeile = Mo–Fr. Unten: Ausschnitt der Zeitleiste. */
+function renderJahr(A, F) {
+  const mon0 = -((wday(M.ser[0]) + 6) % 7), heute = idx(todaySer());
+  const wochen = []; for (let a = mon0; a < M.N; a += 7) wochen.push(a);
+  const nW = wochen.length, pk = S.pick;
+  let h = `<span></span>`;
+  // Monatsnamen über der Woche, in der der Monat beginnt
+  let letzter = null;
+  for (const a of wochen) {
+    let txt = "";
+    for (let d = 0; d < 7; d++) { const i = a + d; if (i < 0 || i >= M.N) continue; const k = monthKey(M.ser[i]); if (k !== letzter && (letzter === null || ser2date(M.ser[i]).getUTCDate() <= 7)) { txt = MON[k % 12]; letzter = k; break; } }
+    h += `<span class="mo">${txt}</span>`;
+  }
+  ["Mo", "Di", "Mi", "Do", "Fr"].forEach((wt, r) => {
+    h += `<span class="wt">${wt}</span>`;
+    for (const a of wochen) {
+      const i = a + r;
+      if (i < 0 || i >= M.N) { h += `<span class="hc leer"></span>`; continue; }
+      const sel = pk && i >= pk.a && i <= pk.b ? " pk" : "", hz = i === heute ? " heute" : "";
+      const when = fmtW(M.ser[i]) + ser2date(M.ser[i]).getUTCFullYear() + ` (KW ${kw(i)})`;
+      if (!M.work[i]) { h += `<span class="hc hol${hz}" title="${esc(when + " · " + (M.hol[i] || "frei"))}"></span>`; continue; }
+      const l = A.lv[i], n = A.abs[i];
+      h += `<span class="hc lv${l}${sel}${hz}" data-d="${i}" title="${esc(`${when} · ${n ? n + " weg" : "niemand weg"}${l >= 2 ? " · " + LV_TXT[l] : ""}`)}"></span>`;
     }
-    h += "</tr>";
-  }
-  $("p-heat").innerHTML = `<h2>Jahresübersicht – wann ist es schon eng?</h2>
-    <div class="sub">Zahl = so viele aus ${A.u ? "dem Team" : "allen Teams"} haben an dem Tag Urlaub gewünscht. Ein Klick auf einen Tag zeigt, wer weg ist.</div>
-    ${legend()}${h}</tbody></table>`;
+  });
+  // Fenster-Leiste: welche Wochen die Zeitleiste gerade zeigt
+  h += `<span></span>` + wochen.map((a) => `<span class="fen${a + 6 >= F.w0 && a <= F.w1 ? " in" : ""}"></span>`).join("");
+  $("jahr").style.gridTemplateColumns = `26px repeat(${nW}, minmax(0, 1fr))`;
+  $("jahr").innerHTML = h;
+  $("fenstertext").textContent = `Blau unterlegt: Ausschnitt der Zeitleiste (${monName(S.tl0)}${S.tlN > 1 ? " – " + monName(F.kEnd) : ""}). Ein Klick auf eine Kachel zeigt, wer an dem Tag weg ist, und schiebt die Zeitleiste dorthin.`;
 }
 
-/* Kalender: oben das Team gesamt (Ampel), darunter je Person ihre Wünsche */
-function columns(A) {
-  const cols = [];
-  if (S.view === "d") { for (let i = A.i0; i <= A.i1; i++) cols.push({ a: i, b: i }); return cols; }
-  const mon0 = -((wday(M.ser[0]) + 6) % 7);
-  for (let a = mon0; a < M.N; a += 7) {
-    const lo = Math.max(a, A.i0, 0), hi = Math.min(a + 6, A.i1, M.N - 1);
-    if (lo <= hi) cols.push({ a: lo, b: hi, mon: M.start + a });
-  }
-  return cols;
-}
-function renderCal(A) {
-  const day = S.view === "d", cols = columns(A), todayS = todaySer();
-  const colCls = cols.map((c) => {
-    let k = "";
-    if (day) { if (M.hol[c.a]) k += " hol"; else if (!M.work[c.a]) k += " we"; if (ser2date(M.ser[c.a]).getUTCDate() === 1) k += " mstart"; }
-    if (M.ser[c.a] <= todayS && todayS <= M.ser[c.b]) k += " today";
-    return k;
-  });
-  let mrow = `<th class="lh">${day ? "Tag" : "Kalenderwoche"}</th>`, cur = null, span = 0;
-  const mk = (c) => monthKey(day ? M.ser[c.a] : c.mon + 3);
-  cols.forEach((c) => { const k = mk(c); if (k !== cur) { if (span) mrow += `<th colspan="${span}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`; cur = k; span = 0; } span++; });
-  if (span) mrow += `<th colspan="${span}">${MON_L[cur % 12]} ${Math.floor(cur / 12)}</th>`;
-  const crow = `<th class="lh"></th>` + cols.map((c, j) => day
-    ? `<th class="${colCls[j]}" title="${esc(M.hol[c.a] || "")}">${ser2date(M.ser[c.a]).getUTCDate()}<br><span style="font-weight:400">${WD[wday(M.ser[c.a])]}</span></th>`
-    : `<th class="${colCls[j]}" title="Woche ab ${fmtY(c.mon)}">${isoWeek(c.mon)}<br><span style="font-weight:400;font-size:9.5px">${fmt(c.mon).slice(0, 5)}</span></th>`).join("");
-  const plain = (j) => colCls[j].replace(/ (we|hol)/g, "");
-  // Zeile »Team gesamt«: höchste Stufe und meiste Abwesende in der Spalte
-  let body = `<tr class="sum"><td class="lh">${A.u ? "Team gesamt" : "alle Teams"}</td>`;
-  cols.forEach((c, j) => {
-    let n = 0, l = 0; for (let i = c.a; i <= c.b; i++) if (M.work[i]) { n = Math.max(n, A.abs[i]); l = Math.max(l, A.lv[i]); }
-    body += day && !M.work[c.a] ? `<td class="c${colCls[j]}"></td>` : `<td class="c lv${l}${plain(j)}" data-r="${c.a}:${c.b}">${n || ""}</td>`;
-  });
-  body += "</tr>";
+/* Zeitleiste: je Person ein Balken pro Wunsch im gewählten Ausschnitt */
+function renderZeitleiste(A, F) {
+  const ks = F.ks;
+  $("tlAb").innerHTML = ks.map((k) => `<option value="${k}">${monName(k)}</option>`).join("");
+  $("tlAb").value = S.tl0;
+  $("tlN").value = S.tlN;
+  $("tlNOut").textContent = S.tlN === 12 ? "ganzes Jahr" : plural(S.tlN, "Monat", "Monate");
+  document.querySelectorAll("#tlSeg button").forEach((b) => b.classList.toggle("on", +b.dataset.n === S.tlN));
+
+  const { w0, w1, T } = F, pct = (i) => ((i - w0) / T) * 100;
+  // Breite der Spur in Pixeln (für die Entscheidung, ob ein Datum in den Balken passt)
+  const spurPx = Math.max(200, ($("tl").clientWidth || 900) - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--label")) || 210));
+  // Kopf: Monate
+  let mon = "", k0 = null, n = 0;
+  const flush = () => { if (n) mon += `<span style="flex:${n}">${T / n > 8 && S.tlN > 6 ? MON[k0 % 12] : MON_L[k0 % 12]}</span>`; };
+  for (let i = w0; i <= w1; i++) { const k = monthKey(M.ser[i]); if (k !== k0) { flush(); k0 = k; n = 0; } n++; }
+  flush();
+  // Team gesamt: Ampel je Tag
+  let sum = ""; for (let i = w0; i <= w1; i++) sum += `<i class="${M.work[i] ? "lv" + A.lv[i] : ""}" style="${M.work[i] ? "" : "background:transparent"}"></i>`;
+  // Hintergrund: Wochenenden/Feiertage (nur bei kurzen Ausschnitten), Monatsgrenzen, heute, gewählte Woche
+  let ov = "";
+  if (T <= 100) for (let i = w0; i <= w1; i++) if (!M.work[i]) ov += `<div class="ov ${M.hol[i] && wday(M.ser[i]) % 6 ? "hol" : "we"}" style="left:${pct(i)}%;width:${100 / T}%"></div>`;
+  for (let i = w0 + 1; i <= w1; i++) if (ser2date(M.ser[i]).getUTCDate() === 1) ov += `<div class="ov mon" style="left:${pct(i)}%"></div>`;
+  const heute = idx(todaySer()); if (heute >= w0 && heute <= w1) ov += `<div class="ov heute" style="left:${pct(heute)}%" title="heute"></div>`;
+  if (S.pick && S.pick.b >= w0 && S.pick.a <= w1) { const a = Math.max(S.pick.a, w0), b = Math.min(S.pick.b, w1); ov += `<div class="ov pk" style="left:${pct(a)}%;width:${((b - a + 1) / T) * 100}%"></div>`; }
+
+  let namen = `<div class="kopfz"></div><div class="sum">${A.u ? (A.ort ? "Einsatzort gesamt" : "Team gesamt") : "alle Teams"}</div>`;
+  let spuren = `<div class="monate">${mon}</div><div class="sumtrk" title="Ampel je Arbeitstag">${sum}</div>`;
   for (const pi of A.ps) {
     const p = M.persons[pi];
-    body += `<tr><td class="lh" title="${esc(p.name)}">${esc(p.name)}</td>`;
-    cols.forEach((c, j) => {
-      let n = 0, any = 0; for (let i = c.a; i <= c.b; i++) if (p.wish[i]) { any = 1; if (p.abs[i]) n++; }
-      const show = day ? any && (p.abs[c.a] || !M.work[c.a]) : n > 0;
-      body += show ? `<td class="c w${plain(j)}" data-r="${c.a}:${c.b}" ${day && !M.work[c.a] ? 'style="opacity:.45"' : ""}>${day ? "" : n}</td>` : `<td class="c${colCls[j]}" data-r="${c.a}:${c.b}"></td>`;
-    });
-    body += "</tr>";
+    namen += `<div title="${esc(p.name + (p.fach ? " · " + p.fach : ""))}"><span class="nm${p.wishes.length ? "" : " ohne"}">${esc(p.name)}</span>${A.ort ? fachBadge(p) : ""}</div>`;
+    let bars = "";
+    for (const w of p.wishes) {
+      const a = Math.max(idx(w.von), w0), b = Math.min(idx(w.bis), w1);
+      if (b < a) continue;
+      const breite = ((b - a + 1) / T) * 100;
+      const px = (breite / 100) * spurPx;
+      const txt = px > 84 ? `${fmt(w.von)}–${fmt(w.bis)}` : px > 46 ? fmt(w.von) : "";
+      const lv = Math.max(0, ...Array.from({ length: b - a + 1 }, (_, j) => (p.abs[a + j] ? A.lv[a + j] : 0)));
+      bars += `<div class="bar lv${lv}" style="left:${pct(a)}%;width:${breite}%" title="${esc(`${p.name}: ${fmt(w.von)}–${fmtY(w.bis)} · ${plural(w.wd, "Arbeitstag", "Arbeitstage")}${lv >= 2 ? " · " + LV_TXT[lv] : ""}`)}">${txt}</div>`;
+    }
+    spuren += `<div class="trk">${bars}</div>`;
   }
-  $("p-cal").innerHTML = `<h2>Kalender – wer hat wann Urlaub gewünscht?</h2>
-    <div class="sub">Oberste Zeile = ${A.u ? "Team" : "alle"} gesamt (Farbe wie oben, Zahl = meiste gleichzeitig weg). Darunter je Person: ${day ? "blau = Urlaubswunsch" : "Zahl = Urlaubs-Arbeitstage in der Woche"}. Klick = wer ist weg.</div>
-    <div class="calwrap"><table class="cal" style="--cw:${day ? "var(--cw-day)" : "var(--cw-week)"}"><thead><tr class="m">${mrow}</tr><tr class="c">${crow}</tr></thead><tbody>${body}</tbody></table></div>`;
+  if (!A.ps.length) { namen += `<div class="muted">niemand</div>`; spuren += `<div class="trk"></div>`; }
+  $("tl").innerHTML = `<div class="namen">${namen}</div><div class="spuren" id="spuren" data-w0="${w0}" data-t="${T}">${spuren}${ov}</div>`;
 }
 
-/* Liste aller Wünsche im Team, nach Datum */
-function renderList(A) {
+/* Liste aller Wünsche (ganzer Planungszeitraum), richtet sich nach der Auswahl oben */
+function renderListe(A) {
   const rows = [];
-  for (const pi of A.ps) for (const w of M.persons[pi].wishes) if (w.bis >= M.ser[A.i0] && w.von <= M.ser[A.i1]) rows.push(w);
+  for (const pi of A.ps) for (const w of M.persons[pi].wishes) rows.push(w);
   rows.sort((a, b) => a.von - b.von || M.persons[a.p].name.localeCompare(M.persons[b.p].name, "de"));
   // Stufe des Wunsches = höchste Stufe des gewählten Teams an den Tagen, an denen die Person fehlt
   const lvOf = (w) => { const p = M.persons[w.p]; let m = 0; for (let s = Math.max(w.von, M.start); s <= Math.min(w.bis, M.start + M.N - 1); s++) { const i = s - M.start; if (p.abs[i]) m = Math.max(m, A.lv[i]); } return m; };
-  $("p-list").innerHTML = `<h2>Alle Urlaubswünsche ${A.u ? "im Team " + esc(A.name) : ""} nach Datum</h2>
-    <div class="sub">Nur Wünsche – genehmigt wird später durch die Leitung.</div>
-    ${rows.length ? `<table class="list"><thead><tr><th>Von</th><th>Bis</th><th>Name</th><th>Arbeitstage</th><th>Lage im Team</th></tr></thead><tbody>${rows.map((w) => `<tr><td>${fmtW(w.von)}${ser2date(w.von).getUTCFullYear()}</td><td>${fmtW(w.bis)}${ser2date(w.bis).getUTCFullYear()}</td><td>${esc(M.persons[w.p].name)}</td><td>${w.wd}</td><td>${pill(lvOf(w))}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">Noch keine Wünsche in diesem Zeitraum.</p>`}`;
+  $("listAnz").textContent = `${A.u ? A.name : "alle Teams"} · ${plural(rows.length, "Wunsch", "Wünsche")}`;
+  $("listKlapp").classList.toggle("offen", S.listOffen);
+  $("listKlapp").setAttribute("aria-expanded", S.listOffen);
+  $("listBody").classList.toggle("hidden", !S.listOffen);
+  $("listBody").innerHTML = rows.length
+    ? `<input type="search" id="suche" placeholder="Name suchen" value="${esc(S.suche)}" aria-label="Name suchen">
+       <table class="list"><thead><tr><th>Von</th><th>Bis</th><th>Name</th><th>Arbeitstage</th><th>Lage im Team</th></tr></thead><tbody>${rows.map((w) => {
+         const p = M.persons[w.p], l = lvOf(w);
+         return `<tr data-n="${esc(p.name.toLowerCase())}"><td>${fmtW(w.von)}${ser2date(w.von).getUTCFullYear()}</td><td>${fmtW(w.bis)}${ser2date(w.bis).getUTCFullYear()}</td><td>${esc(p.name)} ${A.ort ? fachBadge(p) : ""}</td><td>${w.wd}</td><td>${l >= 2 ? `<span class="tag lv${l}">${LV_TXT[l]}</span>` : ""}</td></tr>`;
+       }).join("")}</tbody></table>
+       <div class="muted" style="font-size:12px;margin-top:6px">Nur Wünsche, keine Genehmigung.</div>`
+    : `<p class="muted">Noch keine Wünsche eingetragen.</p>`;
+  filtereListe();
+}
+function filtereListe() {
+  const q = S.suche.trim().toLowerCase();
+  document.querySelectorAll("#listBody tbody tr").forEach((tr) => tr.classList.toggle("weg", !!q && !tr.dataset.n.includes(q)));
 }
 
-/* Klick auf einen Tag / eine Woche: wer aus dem Team ist weg */
-function showRange(i0, i1) {
-  const A = auswahl();
-  const when = i0 === i1 ? fmtW(M.ser[i0]) + ser2date(M.ser[i0]).getUTCFullYear() : `${fmtW(M.ser[i0])} – ${fmtW(M.ser[i1])}${ser2date(M.ser[i1]).getUTCFullYear()}`;
-  let h = `<h3>${i0 === i1 ? "Wer ist weg am" : "Wer ist weg in der Woche"}</h3><div class="muted">${when} · ${esc(A.u ? "Team " + A.name : "alle Teams")}</div>`;
-  if (i0 === i1 && !M.work[i0]) { openDetail(h + `<p>Kein Arbeitstag (${esc(M.hol[i0] || "Wochenende")}).</p>`); return; }
-  let l = 0, peak = 0; for (let i = i0; i <= i1; i++) if (M.work[i]) { l = Math.max(l, A.lv[i]); peak = Math.max(peak, A.abs[i]); }
-  const who = A.ps.filter((pi) => { for (let i = i0; i <= i1; i++) if (M.persons[pi].abs[i]) return true; return false; });
-  h += `<p>${pill(l)} ${i0 === i1 ? plural(peak, "Person", "Personen") + " weg" : `bis zu ${peak} gleichzeitig weg`}</p>`;
-  h += who.length ? `<ul>${who.map((pi) => { const p = M.persons[pi]; const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]); return `<li><b>${esc(proseName(p.name))}</b><br><span class="muted">${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}`).join(", ")}</span></li>`; }).join("")}</ul>` : "<p>niemand</p>";
-  openDetail(h);
+/* Wer ist weg: Tag oder Woche (Indizes a–b) */
+function zeigeWer(a, b, A, still) {
+  A = A || auswahl();
+  S.pick = { a, b };
+  const tage = []; for (let i = a; i <= b; i++) if (M.work[i]) tage.push(i);
+  let h = `<h3>${a === b ? "" : `KW ${kw(a)} · `}${wann(a, b)}</h3><div class="muted" style="font-size:12px">${esc(A.u ? (A.ort ? "Einsatzort " : "Team ") + A.name : "alle Teams")}</div>`;
+  if (!tage.length) h += `<p>Kein Arbeitstag (${esc(M.hol[a] || "Wochenende")}).</p>`;
+  else {
+    let l = 0, peak = 0; for (const i of tage) { l = Math.max(l, A.lv[i]); peak = Math.max(peak, A.abs[i]); }
+    const who = A.ps.filter((pi) => tage.some((i) => M.persons[pi].abs[i]));
+    h += `<div style="margin-top:6px">${tag(l, peak ? `${LV_TXT[l]} · ${a === b ? peak : "bis zu " + peak} von ${A.ps.length} weg` : "niemand weg")}</div>`;
+    h += who.length ? `<div class="wer">${who.map((pi) => {
+      const p = M.persons[pi];
+      const ws = p.wishes.filter((w) => w.von <= M.ser[b] && w.bis >= M.ser[a]);
+      return `<div><span class="av" style="background:${fachFarbe(p)}">${esc(initialen(p.name))}</span><div><div>${esc(proseName(p.name))} ${A.ort ? fachBadge(p) : ""}</div><div class="muted" style="font-size:11.5px">${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}`).join(", ")}</div></div></div>`;
+    }).join("")}</div>` : "";
+  }
+  $("detailBody").innerHTML = h;
+  if (!still) { detailOeffnen(); render(); }
 }
-function openDetail(h) { $("detailBody").innerHTML = h; detailOeffnen(); }
 
 /* ===================== Ereignisse ===================== */
 $("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = () => (fileHandle ? reload() : pickFile()); $("btnPrint").onclick = () => window.print();
@@ -423,17 +560,36 @@ document.addEventListener("drop", async (e) => {
   if (it && it.getAsFileSystemHandle) { try { const h = await it.getAsFileSystemHandle(); if (h && h.kind === "file") { fileHandle = h; IDB.put(h); loadFile(await h.getFile()); return; } } catch (er) {} }
   const f = e.dataTransfer.files[0]; if (f) { fileHandle = null; loadFile(f); }
 });
-$("filters").addEventListener("click", (e) => {
-  const c = e.target.closest(".chip"); if (c) { S.sel = c.dataset.sel; save(); render(); $("detail").classList.remove("open"); return; }
-  const b = e.target.closest("#fView button"); if (b) { S.view = b.dataset.v; save(); render(); }
-});
-$("fM0").onchange = (e) => { S.m0 = +e.target.value; if (S.m1 < S.m0) { S.m1 = S.m0; $("fM1").value = S.m1; } render(); };
-$("fM1").onchange = (e) => { S.m1 = +e.target.value; if (S.m0 > S.m1) { S.m0 = S.m1; $("fM0").value = S.m0; } render(); };
-const markSel = (td) => { document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); };
-$("p-heat").onclick = (e) => { const td = e.target.closest("td[data-d]"); if (!td) return; markSel(td); showRange(+td.dataset.d, +td.dataset.d); };
-$("p-cal").onclick = (e) => { const td = e.target.closest("td[data-r]"); if (!td) return; markSel(td); const [a, b] = td.dataset.r.split(":").map(Number); showRange(a, b); };
-$("detailX").onclick = detailSchliessen;
+const teamWahl = (sel) => { S.sel = sel; S.pick = null; save(); $("detail").classList.remove("open"); render(); };
+$("fFach").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) teamWahl(c.dataset.sel); });
+$("fFach").addEventListener("keydown", (e) => { const c = e.target.closest(".chip"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); teamWahl(c.dataset.sel); } });
+$("fOrt").onchange = (e) => teamWahl(e.target.value);
+$("tlAb").onchange = (e) => { S.tl0 = +e.target.value; save(); render(); };
+$("tlN").oninput = (e) => { S.tlN = +e.target.value; save(); render(); };
+$("tlSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { S.tlN = +b.dataset.n; save(); render(); } };
+$("jahr").onclick = (e) => {
+  const c = e.target.closest(".hc[data-d]"); if (!c) return;
+  const i = +c.dataset.d;
+  fensterZu(i);
+  zeigeWer(i, i);
+};
+// Klick in die Zeitleiste: die Woche (Mo–Fr) an dieser Stelle
+$("tl").onclick = (e) => {
+  const sp = e.target.closest("#spuren"); if (!sp) return;
+  const r = sp.getBoundingClientRect(), x = Math.max(0, Math.min(0.9999, (e.clientX - r.left) / r.width));
+  const i = +sp.dataset.w0 + Math.floor(x * +sp.dataset.t);
+  const mo = i - ((wday(M.ser[i]) + 6) % 7);
+  zeigeWer(Math.max(0, mo), Math.min(M.N - 1, mo + 4));
+};
+$("listKlapp").onclick = () => { S.listOffen = !S.listOffen; renderListe(auswahl()); };
+$("listBody").addEventListener("input", (e) => { if (e.target.id === "suche") { S.suche = e.target.value; filtereListe(); } });
+$("detailX").onclick = detailSchliessen;   // Markierung verschwindet per CSS (#app:has(#detail.open))
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") detailSchliessen(); });
+let groesseT = null;
+window.addEventListener("resize", () => { clearTimeout(groesseT); groesseT = setTimeout(() => { if (M) renderZeitleiste(auswahl(), fenster()); }, 150); });
+// Drucken: Liste immer mit allen Zeilen
+window.addEventListener("beforeprint", () => { if (M) { $("listBody").classList.remove("hidden"); } });
+window.addEventListener("afterprint", () => { if (M) renderListe(auswahl()); });
 
 // Zuletzt geöffnete Datei (nur Edge/Chrome, nur wenn einmal per Ziehen-und-Ablegen geöffnet):
 // Erlaubt der Browser das Lesen noch (gleiche Sitzung oder »bei jedem Besuch zulassen«), wird sie ohne Klick geladen.
