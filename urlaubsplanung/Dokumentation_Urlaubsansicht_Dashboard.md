@@ -1,4 +1,4 @@
-# Urlaubsansicht Kreativtherapie – Dashboard
+# Urlaubsplanung Kreativtherapie – Urlaubsansicht (Dashboard)
 
 Stand: 08.10.2026 · Verantwortlich: Tom · gehört zu `Urlaubswuensche_2027.xlsx` (siehe `Dokumentation_Mein_Urlaub.md`)
 
@@ -107,6 +107,7 @@ Ordner `urlaubsplanung/`:
 | `ansicht/urlaubsansicht.src.html` | Quelltext (HTML, CSS, JavaScript) – **hier ändern** |
 | `ansicht/xlsx.full.min.js` | Bibliothek SheetJS 0.18.5 (Apache-2.0) zum Lesen von Excel |
 | `ansicht/baue_ansicht.py` | baut beides zu `Urlaubsansicht.html` zusammen |
+| `ansicht/logo.svg` oder `ansicht/logo.png` (optional) | Logo der Klinik (PP.rt) für den Seitenkopf. Liegt die Datei dort, bettet das Build-Skript sie automatisch ein (als Teil der HTML-Datei, kein Internet nötig). SVG bevorzugt (bleibt scharf). Höhe im Kopf: 42 px auf weißem Feld. Nutzung des Logos vorher mit der Öffentlichkeitsarbeit der Klinik abstimmen. |
 
 Ablauf: Quelltext ändern → `python3 ansicht/baue_ansicht.py` (im Ordner `urlaubsplanung/`) → `Urlaubsansicht.html` im Browser mit einer **Testkopie** der Excel prüfen → weitergeben.
 
@@ -121,6 +122,7 @@ Häufige Anpassungen (alle oben im `<script>` des Quelltexts):
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | Titel jetzt »Urlaubsplanung Kreativtherapie«; Platz für das Klinik-Logo im Kopf (`ansicht/logo.svg|png` wird beim Bauen eingebettet). Logo selbst noch offen: www.pp-rt.de war aus der Bauumgebung nicht erreichbar. |
 | 08.10.2026 | Neue Startseite **Übersicht** (Status, Zu tun, Stationen/Teams, Klick → Auswertung); bisheriges Dashboard heißt jetzt **Auswertung**; Reiter **Regeln & Ampel** mit eingeklappten Abschnitten und Ampel-Einstellung (lokal + »Für Excel kopieren«); Excel-Spalte R »Station 5« wird mitgelesen. |
 | 06.10.2026 | Umbau zum Dashboard: Kennzahlen-Leiste neu, Jahres-Heatmap mit »wer fehlt«, Top-5-Wochen, Monatsbalken, sortierbare Personentabelle, Personenansicht, Teilzeit in Ampel und Arbeitstagen, Druck A4 quer. Quelltext + Build-Skript ins Repository. |
 | vorher | Kalender, Konflikte, Personenliste, Regeln; .xlsm-Unterstützung |
