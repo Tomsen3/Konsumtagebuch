@@ -21,15 +21,17 @@ Stand: 08.10.2026 · Verantwortlich: Tom · gehört zu `Urlaubswuensche_2027.xls
 Drucken: Knopf **»Drucken (A4 quer)«** druckt die gerade offene Registerkarte. Im Druckdialog ggf. »Hintergrundgrafiken« einschalten, damit die Ampelfarben erscheinen.
 
 ## Übersicht (Startseite)
-Einfache Komplettübersicht **ohne Filter** über den ganzen Planungszeitraum:
+Einfache Komplettübersicht **ohne Filter und ohne Tabellen** über den ganzen Planungszeitraum, aufgebaut nach Mockup-Entwurf B »In Klartext« plus Ampel (Wunsch Tom, 08.10.2026 – für Leitung ohne Technikkenntnisse):
 
 | Bereich | Inhalt | Klick |
 |---|---|---|
-| **Status** | grün »Alles okay« · gelb »Kleinere Engpässe« · rot »Es gibt Probleme« (mind. ein hellroter/dunkelroter Engpass) · grau »Noch keine Wünsche« | – |
-| **Zu tun** | Anzahl Engpässe, Personen ohne Wunsch, nicht in ATOSS übertragene Wünsche, überzogene Ansprüche, Datenhinweise (nur Zeilen mit Zahl > 0) | führt zur passenden ausführlichen Liste |
-| **Stationen / Fachteams** | je Bereich: schlimmste Stufe (OK/Gelb/Hellrot/Dunkelrot bzw. »ohne Ampel«), Personenzahl, Anzahl Engpässe und nächster Engpass. Sortiert: kritischste zuerst. Bereiche ohne Personen stehen klein darunter | Zeile = **Auswertung** gefiltert auf diesen Bereich · »Konflikte« = Konfliktliste dieses Bereichs |
+| **Ampel** (links, bleibt beim Scrollen sichtbar) | **Rot** = mindestens ein hellroter/dunkelroter Engpass · **Gelb** = nur knappe (gelbe) Zeiträume · **Grün** = keine Engpässe · keine Lampe = noch keine Wünsche. Darunter ein kurzer Satz zur Lage | rote Lampe = Konfliktliste nur rot · gelbe Lampe = Konfliktliste mit gelben · grüne Lampe = Auswertung |
+| **Die Lage in Kürze** | zwei, drei Sätze, automatisch aus den Daten: wie viele Stellen kritisch/knapp sind, wie viele Personen noch keinen Wunsch abgegeben haben | – |
+| **Darum sollten wir uns kümmern** | je kritischem Engpass eine Karte in Klartext: Bereich + Zeitraum (»Station 1, 9.–20. August«), wer gleichzeitig weg ist, »nur noch X von Y da« bzw. »unbesetzt«, wer »verschiebbar« angegeben hat. Höchstens 6 Karten, Rest als Link. Gelbe Zeiträume in einer Sammelkarte | Karte = Konfliktliste dieses Bereichs |
+| **Noch offen** | Personen ohne Wunsch, nicht in ATOSS übertragene Wünsche, überzogene Ansprüche, Datenhinweise; Stationen ohne Engpass als »alles in Ordnung« | »Liste →« = passende ausführliche Liste |
+| **Alle Stationen und Teams im Überblick** | eingeklappt; Liste mit Status je Bereich | Zeile = Auswertung gefiltert auf diesen Bereich |
 
-Filterleiste und Kennzahlen-Leiste sind auf der Übersicht bewusst ausgeblendet (einfache Optik). Sind im Browser eigene Ampelwerte eingestellt, erscheint ein blauer Hinweis.
+Namen werden im Fließtext als »Vorname Nachname« geschrieben (aus »Nachname, Vorname« in Excel). Filterleiste und Kennzahlen-Leiste sind auf der Übersicht bewusst ausgeblendet. Sind im Browser eigene Ampelwerte eingestellt, erscheint ein blauer Hinweis.
 
 ## Was zeigt die Auswertung (früher »Dashboard«)?
 
@@ -123,6 +125,7 @@ Häufige Anpassungen (alle oben im `<script>` des Quelltexts):
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | Startseite neu nach Mockup B (Klartext) mit funktionierender Ampel links; Stationsliste eingeklappt darunter. |
 | 08.10.2026 | **Fehler behoben:** Auf manchen PCs öffnete der Knopf »Excel-Datei auswählen« keinen Dialog (moderner Browser-Dialog per Richtlinie gesperrt, Ersatzdialog wurde dann vom Browser blockiert). Jetzt immer der einfache Dateidialog; zusätzlich Hinweis auf Ziehen-und-Ablegen auf der Startseite. |
 | 08.10.2026 | Titel jetzt »Urlaubsplanung Kreativtherapie«; Platz für das Klinik-Logo im Kopf (`ansicht/logo.svg|png` wird beim Bauen eingebettet). Logo eingebaut: `ansicht/logo.svg` = offizielles PP.rt-Logo von https://www.pprt.de (abgerufen 08.10.2026, nur der leere Rand beschnitten, sonst unverändert). |
 | 08.10.2026 | Neue Startseite **Übersicht** (Status, Zu tun, Stationen/Teams, Klick → Auswertung); bisheriges Dashboard heißt jetzt **Auswertung**; Reiter **Regeln & Ampel** mit eingeklappten Abschnitten und Ampel-Einstellung (lokal + »Für Excel kopieren«); Excel-Spalte R »Station 5« wird mitgelesen. |

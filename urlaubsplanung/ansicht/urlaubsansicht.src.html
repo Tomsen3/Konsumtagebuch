@@ -234,6 +234,34 @@ ul.todo li .n{min-width:34px;text-align:right;font-weight:700;font-variant-numer
 .st.s3{background:var(--l3);color:var(--l3-ink)} .st.s4{background:var(--l4);color:#fff} .st.sx{background:#eceef3;color:var(--muted)}
 .localnote{background:#eef3ff;border:1px solid #b9c8ea;color:var(--navy);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
 
+/* Startseite: Ampel links + Klartext rechts */
+.homegrid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start}
+.homegrid aside{position:sticky;top:12px}
+.homemain{max-width:900px}
+@media (max-width:860px){.homegrid{grid-template-columns:1fr}.homegrid aside{position:static}}
+.ampelbox{background:var(--card);border-radius:18px;box-shadow:0 2px 10px rgba(20,30,60,.06);border:1px solid var(--line);padding:26px 18px;text-align:center}
+.ampel{display:inline-flex;flex-direction:column;gap:12px;background:#2b2f3a;border-radius:26px;padding:16px 20px}
+.lamp{width:78px;height:78px;border-radius:50%;border:0;cursor:pointer;padding:0;transition:transform .1s}
+.lamp:hover{transform:scale(1.05)} .lamp:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.lamp.r{background:#5a3a3f} .lamp.y{background:#5a5236} .lamp.g{background:#33463a}
+.lamp.r.on{background:#d63a3a;box-shadow:0 0 28px #d63a3a} .lamp.y.on{background:#e8b400;box-shadow:0 0 28px #e8b400} .lamp.g.on{background:#2fa352;box-shadow:0 0 28px #2fa352}
+.ampelbox .at{font-size:23px;font-weight:700;margin-top:18px;line-height:1.2}
+.ampelbox .as{color:var(--muted);font-size:14.5px;margin-top:4px}
+.ampelbox .al{display:flex;flex-direction:column;gap:3px;align-items:flex-start;margin:14px auto 0;width:max-content;font-size:12.5px;color:var(--muted)}
+.ampelbox .al i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.ampelbox .al i.r{background:#d63a3a} .ampelbox .al i.y{background:#e8b400} .ampelbox .al i.g{background:#2fa352}
+.hcard{background:var(--card);border-radius:16px;box-shadow:0 2px 10px rgba(20,30,60,.06);border:1px solid var(--line);padding:22px 26px}
+.hcard.lead p{font-size:22px;line-height:1.45;margin:10px 0 8px} .red{color:#c43c3c} .green{color:#2e8b47}
+h3.hh{font-size:18px;margin:26px 0 10px;color:var(--ink)}
+.pcard{display:flex;gap:16px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-left:8px solid #c43c3c;border-radius:14px;padding:16px 20px;margin-bottom:12px;cursor:pointer;box-shadow:0 2px 8px rgba(20,30,60,.05)}
+.pcard:hover{border-color:var(--navy-2)} .pcard.pk4{border-left-color:var(--l4)} .pcard.pk3{border-left-color:#e45757} .pcard.pk2{border-left-color:#e2b400}
+.pico{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;background:#fde3e3;color:#c43c3c}
+.pcard.pk2 .pico{background:#fff4c4;color:#a07a00}
+.pcard .pt{font-weight:700;font-size:17px} .pcard .px{font-size:15.5px;margin-top:2px} .plinkx{color:var(--navy-2);font-weight:600;font-size:14px;margin-top:6px}
+.pmore{color:var(--navy-2);font-weight:600;cursor:pointer;margin:0 0 12px 6px}
+.hcard.offen{padding:14px 22px} .tline{padding:6px 0;font-size:16px;cursor:pointer} .tline:hover .lk{text-decoration:underline} .tline.nolink{cursor:default}
+.tline .lk{color:var(--navy-2);font-weight:600;font-size:14px;margin-left:6px}
+
 /* Regeln & Ampel: eingeklappte Abschnitte */
 details.sec{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
 details.sec > summary{cursor:pointer;padding:12px 14px;font-weight:650;color:var(--navy);font-size:15px;list-style:none;display:flex;gap:10px;align-items:center}
@@ -815,47 +843,106 @@ function unitStatus(u) {
   const noAmp = u.type === "fach" && u.th.g == null && u.th.h == null && u.th.d == null;
   return { cs, worst, next, noAmp };
 }
+/* Texthilfen für die Klartext-Startseite */
+const proseName = (n) => { const m = String(n).match(/^([^,]+),\s*(.+)$/); return m ? m[2] + " " + m[1] : n; };   // »Nachname, Vorname« → »Vorname Nachname«
+const andList = (xs) => (xs.length <= 1 ? xs.join("") : xs.slice(0, -1).join(", ") + " und " + xs[xs.length - 1]);
+function spanText(a, b) {   // 9.–20. August · 28. Juli – 3. August · 4. Januar
+  const d1 = ser2date(a), d2 = ser2date(b), m1 = d1.getUTCMonth(), m2 = d2.getUTCMonth();
+  if (a === b) return `${d1.getUTCDate()}. ${MON_L[m1]}`;
+  if (m1 === m2 && d1.getUTCFullYear() === d2.getUTCFullYear()) return `${d1.getUTCDate()}.–${d2.getUTCDate()}. ${MON_L[m1]}`;
+  return `${d1.getUTCDate()}. ${MON_L[m1]} – ${d2.getUTCDate()}. ${MON_L[m2]}`;
+}
+/* Eine Engpass-Karte in Klartext */
+function prosaCard(c) {
+  const u = M.units[c.u], names = c.people.map((x) => proseName(M.persons[x.p].name));
+  const shown = names.length > 4 ? names.slice(0, 4).concat(`${names.length - 4} weitere`) : names;
+  const present = c.peakOn - c.peak;
+  const lage = present <= 0 ? (u.type === "stat" ? "die Station wäre unbesetzt" : "das Team wäre nicht besetzt") : `nur noch ${present} von ${c.peakOn} da`;
+  const flex = c.people.filter((x) => x.flex === "ja" || x.flex === "etwas").map((x) => proseName(M.persons[x.p].name));
+  const flexTxt = flex.length ? `<b>${esc(andList(flex))} ${flex.length === 1 ? "hat" : "haben"} »verschiebbar« angegeben.</b>` : "Niemand hat »verschiebbar« angegeben.";
+  const wer = names.length === 1 ? `${esc(shown[0])} ist im Urlaub` : `${esc(andList(shown))} sind gleichzeitig im Urlaub`;
+  return `<div class="pcard pk${c.maxLv}" data-unitconf="${c.u}" title="Zur Konfliktliste für ${esc(unitTitle(u))}">
+    <span class="pico">!</span><div><div class="pt">${esc(u.name)}, ${spanText(c.from, c.to)}</div>
+    <div class="px">${wer} – ${lage}. ${flexTxt}</div><div class="plinkx">Wer ist betroffen? →</div></div></div>`;
+}
 function renderHome() {
   const all = M.conflicts, worst = all.reduce((a, c) => Math.max(a, c.maxLv), 0);
-  const n = (l) => all.filter((c) => c.maxLv === l).length;
+  const crit = all.filter((c) => c.maxLv >= 3).sort((a, b) => b.maxLv - a.maxLv || a.from - b.from);
+  const gelb = all.filter((c) => c.maxLv === 2).sort((a, b) => a.from - b.from);
   const noWish = M.persons.filter((p) => !p.wishes.length).length;
   const atoss = M.wishes.filter((w) => !w.atoss).length, over = M.persons.filter((p) => p.rest != null && p.rest < 0).length;
-  let cls, icon, big, sub;
-  if (!M.wishes.length) { cls = "none"; icon = "–"; big = "Noch keine Urlaubswünsche eingetragen"; sub = "Sobald Wünsche im Excel stehen: speichern und oben »Neu laden«."; }
-  else if (worst >= 3) { cls = "bad"; icon = "!"; big = `Es gibt Probleme: ${plural(n(4) + n(3), "kritischer Engpass", "kritische Engpässe")}`; sub = `${n(4)} dunkelrot · ${n(3)} hellrot${n(2) ? ` · ${n(2)} gelb` : ""} – unten sieht man, welche Stationen und Teams betroffen sind.`; }
-  else if (worst === 2) { cls = "warn"; icon = "!"; big = `Kleinere Engpässe: ${plural(n(2), "gelber Zeitraum", "gelbe Zeiträume")}`; sub = "Nichts Kritisches, aber im Blick behalten."; }
-  else { cls = "ok"; icon = "✓"; big = "Alles okay – keine Engpässe"; sub = "Keine Station und kein Team erreicht Gelb oder höher."; }
+  const zahl = (n) => (n <= 12 ? ["keine", "einer", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"][n] : String(n));
+  const zahlF = (n) => (n <= 12 ? ["keine", "eine", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf"][n] : String(n));
 
+  // Ampel: welche Lampe leuchtet (0 = keine, 1 = grün, 2 = gelb, 3 = rot)
+  const lamp = !M.wishes.length ? 0 : worst >= 3 ? 3 : worst === 2 ? 2 : 1;
+  const ampTitle = ["Noch keine Wünsche", "Alles im grünen Bereich", "Fast alles im Lot", "Es gibt Probleme"][lamp];
+  const ampSub = [
+    "Sobald Wünsche in Excel stehen: speichern und oben »Neu laden«.",
+    "Keine Station und kein Team ist zu dünn besetzt.",
+    `${plural(gelb.length, "Zeitraum ist", "Zeiträume sind")} knapp, nichts Kritisches.`,
+    `${plural(crit.length, "Engpass sollte", "Engpässe sollten")} besprochen werden${gelb.length ? `, ${plural(gelb.length, "weiterer Zeitraum ist", "weitere Zeiträume sind")} knapp` : ""}.`
+  ][lamp];
+  const L = (n, cls, go, tip, gelb) => `<button class="lamp ${cls}${lamp === n ? " on" : ""}" data-go="${go}"${gelb != null ? ` data-gelb="${gelb}"` : ""} title="${tip}" aria-label="${tip}"></button>`;
+  const ampel = `<div class="ampelbox">
+      <div class="ampel">${L(3, "r", "conf", "Rot: kritische Engpässe anzeigen", 0)}${L(2, "y", "conf", "Gelb: alle Engpässe einschließlich knapper Zeiträume anzeigen", 1)}${L(1, "g", "dash", "Grün: ausführliche Auswertung öffnen")}</div>
+      <div class="at">${ampTitle}</div><div class="as">${ampSub}</div>
+      <div class="al"><span><i class="r"></i>zu viele gleichzeitig weg</span><span><i class="y"></i>knapp</span><span><i class="g"></i>gut besetzt</span></div>
+      <div class="as" style="margin-top:10px;font-size:12px">Lampe anklicken = Details</div></div>`;
+
+  // Kernaussage in Klartext
+  let lead;
+  if (!M.wishes.length) lead = `<b>Es sind noch keine Urlaubswünsche eingetragen.</b>`;
+  else if (crit.length) lead = `<b>${crit.length <= 2 ? "Im Großen und Ganzen passt die Urlaubsplanung." : "Die Urlaubsplanung braucht Aufmerksamkeit."}</b> An <b class="red">${zahl(crit.length)} Stelle${crit.length === 1 ? "" : "n"}</b> fehlen zu viele Leute gleichzeitig${gelb.length ? `, an ${zahl(gelb.length)} weiteren wird es knapp` : ""}.`;
+  else if (gelb.length) lead = `<b>Die Urlaubsplanung passt.</b> An ${zahl(gelb.length)} Stelle${gelb.length === 1 ? "" : "n"} wird es knapp, aber nirgends kritisch.`;
+  else lead = `<b>Die Urlaubsplanung passt.</b> Keine Station und kein Team ist zu dünn besetzt.`;
+  if (noWish && M.wishes.length) lead += ` <b>${noWish === 1 ? "Eine Person hat" : zahlF(noWish).replace(/^./, (x) => x.toUpperCase()) + " Kolleg:innen haben"}</b> noch keinen Wunsch abgegeben.`;
+
+  // Darum kümmern: kritische Engpässe einzeln, gelbe zusammengefasst
+  const MAXK = 6;
+  let care = crit.slice(0, MAXK).map(prosaCard).join("");
+  if (crit.length > MAXK) care += `<div class="pmore" data-go="conf">… und ${crit.length - MAXK} weitere kritische Engpässe → Konfliktliste</div>`;
+  if (gelb.length) {
+    const grp = new Map(); for (const c of gelb) { const k = M.units[c.u].name; if (!grp.has(k)) grp.set(k, new Set()); grp.get(k).add(MON_L[ser2date(c.from).getUTCMonth()]); }
+    const txt = [...grp.entries()].map(([n, ms]) => `${esc(n)} im ${andList([...ms])}`).join(" · ");
+    care += `<div class="pcard pk2" data-go="conf" title="Zur Konfliktliste"><span class="pico">~</span><div><div class="pt">${txt}</div><div class="px">Knapp, aber machbar. Im Blick behalten.</div><div class="plinkx">Wer ist betroffen? →</div></div></div>`;
+  }
+
+  // Noch offen
+  const okUnits = M.units.filter((u) => u.n > 0 && !all.some((c) => c.u === u.ui) && unitStatus(u).noAmp === false && u.type === "stat").map((u) => esc(u.name));
   const todo = [
-    [all.length, "Engpässe (Konflikte) – Liste mit »wer ist weg« und »wen zuerst fragen«", "conf", ""],
-    [noWish, "Personen haben noch keinen Wunsch eingetragen", "pers", "none"],
-    [atoss, "Wünsche noch nicht in ATOSS übertragen", "pers", "atoss"],
-    [over, "Personen haben mehr Tage gewünscht als Anspruch", "pers", "rest"],
-    [M.warn.length, "Hinweise zu den Daten (z. B. fehlende Angaben)", "rules", ""]
+    [noWish, `✉️ ${noWish === 1 ? "1 Person" : noWish + " Personen"} nachfragen, ob sie Urlaub planen`, "pers", "none"],
+    [atoss, `📋 ${plural(atoss, "Wunsch", "Wünsche")} in ATOSS übertragen`, "pers", "atoss"],
+    [over, `⚖️ ${over === 1 ? "1 Person hat" : over + " Personen haben"} mehr Tage gewünscht als zustehen`, "pers", "rest"],
+    [M.warn.length, `🔎 ${plural(M.warn.length, "Hinweis", "Hinweise")} zu den Daten in Excel prüfen`, "rules", ""]
   ].filter((t) => t[0] > 0);
+  const offen = todo.map((t) => `<div class="tline" data-go="${t[2]}" data-pf="${t[3]}">${t[1]} <span class="lk">Liste →</span></div>`).join("") +
+    (okUnits.length && M.wishes.length ? `<div class="tline nolink">✅ ${all.length ? "Alle anderen Stationen" : "Alle Stationen"}: <b class="green">alles in Ordnung</b> <span class="muted" style="font-size:13px">(${okUnits.join(", ")})</span></div>` : "");
 
   const unitList = (type) => {
     const us = M.units.filter((u) => u.type === type && u.n > 0).map((u) => ({ u, ...unitStatus(u) }))
       .sort((a, b) => (a.noAmp - b.noAmp) || b.worst - a.worst || b.cs.length - a.cs.length || a.u.name.localeCompare(b.u.name, "de"));
-    const empty = M.units.filter((u) => u.type === type && u.n === 0).map((u) => esc(u.name));
     return `<ul class="ulist">${us.map((x) => {
       const st = x.noAmp ? `<span class="st sx">ohne Ampel</span>` : `<span class="st s${x.worst}">${ST_TXT[x.worst]}</span>`;
-      const info = x.cs.length ? `${plural(x.cs.length, "Engpass", "Engpässe")} · ${x.next.to >= todaySer() ? "nächster" : "erster"}: ${fmt(x.next.from)}–${fmtY(x.next.to)}` : x.noAmp ? "keine Ampelwerte eingetragen" : "keine Engpässe";
-      return `<li data-unit="${x.u.ui}" title="Ausführliche Auswertung für ${esc(unitTitle(x.u))} öffnen">${st}<div><div class="nm">${esc(x.u.name)} <span class="muted" style="font-weight:400;font-size:12px">${x.u.n} P.</span></div><div class="info">${info}</div></div><span class="go">${x.cs.length ? `<a class="plink" data-unitconf="${x.u.ui}">Konflikte</a> · ` : ""}Details →</span></li>`;
-    }).join("")}</ul>${empty.length ? `<p class="muted" style="font-size:12.5px;margin:8px 6px 0">Ohne zugeordnete Personen: ${empty.join(", ")}</p>` : ""}`;
+      const info = x.cs.length ? `${plural(x.cs.length, "Engpass", "Engpässe")} · ${x.next.to >= todaySer() ? "nächster" : "erster"}: ${spanText(x.next.from, x.next.to)}` : x.noAmp ? "keine Ampelwerte eingetragen" : "keine Engpässe";
+      return `<li data-unit="${x.u.ui}">${st}<div><div class="nm">${esc(x.u.name)} <span class="muted" style="font-weight:400;font-size:12px">${x.u.n} P.</span></div><div class="info">${info}</div></div><span class="go">Details →</span></li>`;
+    }).join("")}</ul>`;
   };
 
   $("t-home").innerHTML = `
     ${M.localCount ? `<div class="localnote">Hinweis: In diesem Browser sind <b>${plural(M.localCount, "eigener Ampelwert", "eigene Ampelwerte")}</b> eingestellt (Reiter »Regeln &amp; Ampel«). Andere sehen sie nicht.</div>` : ""}
-    <div class="status ${cls}"><div class="icon">${icon}</div><div><div class="big">${big}</div><div class="muted">${sub}</div>
-      <div class="muted" style="font-size:12.5px;margin-top:4px">Planungszeitraum ${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} · ${plural(M.persons.length, "Person", "Personen")} · ${plural(M.wishes.length, "Wunsch", "Wünsche")} · alle Stationen und Teams, ohne Filter</div></div></div>
-    <div class="panel"><h2>Zu tun</h2>
-      ${todo.length ? `<ul class="todo">${todo.map((t) => `<li data-go="${t[2]}" data-pf="${t[3]}"><span class="n">${t[0]}</span><span>${t[1]}</span><span class="go muted" style="margin-left:auto">ansehen →</span></li>`).join("")}</ul>` : `<p class="muted">Nichts offen.</p>`}</div>
-    <div class="hgrid">
-      <div class="panel"><h2>Stationen</h2><p class="sub">Schlimmste Stufe im ganzen Planungszeitraum · Klick = ausführliche Auswertung dieser Station</p>${unitList("stat")}</div>
-      <div class="panel"><h2>Fachteams</h2><p class="sub">Schlimmste Stufe im ganzen Planungszeitraum · Klick = ausführliche Auswertung dieses Teams</p>${unitList("fach")}</div>
-    </div>
-    <p style="margin-top:14px"><button class="btn" data-go="dash">→ Zur ausführlichen Auswertung (alle)</button></p>`;
+    <div class="homegrid">
+      <aside>${ampel}</aside>
+      <div class="homemain">
+        <div class="hcard lead"><div class="muted" style="font-size:14.5px">Die Lage für ${ser2date(M.ser[0]).getUTCFullYear()}${M.wishes.length ? " in Kürze" : ""}:</div><p>${lead}</p>
+          <div class="muted" style="font-size:12.5px">${plural(M.persons.length, "Person", "Personen")} · ${plural(M.wishes.length, "Wunsch", "Wünsche")} · Planungszeitraum ${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])}</div></div>
+        ${care ? `<h3 class="hh">Darum sollten wir uns kümmern</h3>${care}` : ""}
+        ${offen ? `<h3 class="hh">Noch offen</h3><div class="hcard offen">${offen}</div>` : ""}
+        <details class="sec" data-sec="homeunits" style="margin-top:22px"${openSec.has("homeunits") ? " open" : ""}><summary>Alle Stationen und Teams im Überblick <span class="hint">Klick auf eine Zeile = ausführliche Auswertung</span></summary>
+          <div class="body"><div class="hgrid"><div><h4 style="margin:6px 0">Stationen</h4>${unitList("stat")}</div><div><h4 style="margin:6px 0">Fachteams</h4>${unitList("fach")}</div></div></div></details>
+      </div>
+    </div>`;
+  const d = $("t-home").querySelector("details.sec"); d.addEventListener("toggle", () => { d.open ? openSec.add("homeunits") : openSec.delete("homeunits"); });
 }
 /* von der Übersicht in die ausführlichen Seiten springen: Filter passend setzen */
 function focusUnit(ui, tab) {
@@ -1332,7 +1419,8 @@ $("t-home").onclick = (e) => {
   const t = e.target.closest("[data-go]"); if (!t) return;
   S.fach = []; S.stat = []; S.q = ""; S.only = false; S.tab = t.dataset.go;
   S.pf = t.dataset.pf === "rest" ? "" : t.dataset.pf || ""; if (t.dataset.pf === "rest") S.sort = { k: "rest", dir: 1 };
-  if (S.tab === "rules" && t.closest("ul.todo")) openSec.add("warn");
+  if (S.tab === "rules") openSec.add("warn");
+  if (t.dataset.gelb) S.gelb = t.dataset.gelb === "1";
   setupFilters(); save(); render(); window.scrollTo(0, 0);
 };
 $("t-cal").onclick = (e) => { const td = e.target.closest("td[data-k]"); if (!td) return; document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); showDetail(td.dataset.k); };
