@@ -106,6 +106,11 @@ Wie bisher: Datei kopieren, Startdatum in »Einstellungen« B3 ändern, alte Wü
 ## Technisches
 Änderung vom 08.10.2026 (StäB, Einsatzort-Überschriften, Anleitung): `python3 excel/einsatzorte_umstellen.py <quelle.xlsx> <ziel.xlsx>` – ändert nur die genannten Zellen direkt im XML (Knopf, Datenüberprüfung und bedingte Formatierung bleiben erhalten) und bricht ohne Änderung ab, wenn die Datei anders aussieht als erwartet. Für die Makro-Fassung gedacht (Anleitung beschreibt Eintragen über »Mein Urlaub«).
 
+**Reparatur (08.10.2026, abends):** Die erste Fassung des Skripts hatte einen Fehler im Suchausdruck. Eine leere Zelle (`<c r="H22" s="10"/>`) »fraß« beim Nachrücken der Stationsliste alles bis zur nächsten Formelzelle mit. Dadurch fehlten in »Einstellungen« die Zellen **I22:L36**, also auch die Formel »Therapeut:innen je Station« in L22:L36. Die Berechnungskette verwies weiter auf diese Formeln, deshalb wollte Excel die Datei bei jedem Öffnen reparieren. Zusätzlich enthielt die ZIP-Datei Ordner-Einträge.
+- Skript korrigiert. Es prüft jetzt am Ende, ob in jedem geänderten Blatt gleich viele Zellen und Formeln stehen wie vorher, und schreibt keine Ordner-Einträge mehr.
+- Bereits betroffene Dateien (auch eine schon gebaute .xlsm): `python3 excel/einstellungen_reparieren.py <kaputt.xlsx|.xlsm> <ziel.xlsx|.xlsm>` setzt genau die fehlenden Zellen I–L in den Zeilen 22–36 wieder ein (Stil und Formel wie Zeile 21) und entfernt die Ordner-Einträge. Sonst wird nichts geändert. Läuft das Skript auf eine intakte Datei, bricht es mit »bereits in Ordnung« ab.
+- Hat Excel eine Datei schon »repariert« und gespeichert, öffnet sie sich wieder ohne Meldung, aber L22:L36 bleiben leer. Dann ebenfalls das Reparatur-Skript ausführen oder in Excel die Formel aus L21 nach unten bis L36 ziehen.
+
 Erzeugt mit `baue_mein_urlaub.py` (Python; ändert die .xlsx direkt im XML, damit Datenüberprüfungen, bedingte Formatierung und Tabelle erhalten bleiben):
 `python3 baue_mein_urlaub.py <original.xlsx> <ziel.xlsx> link` bzw. `… makro <makro.bas>`.
 Für kleine Änderungen reicht es, direkt in Excel zu arbeiten (vorher Blattschutz aufheben).

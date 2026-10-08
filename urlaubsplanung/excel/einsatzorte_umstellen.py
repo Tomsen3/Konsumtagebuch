@@ -44,7 +44,9 @@ def neuer_text(t):
     return len(si) + len(neu) - 1
 
 def zelle(p, ref):
-    m = re.search(r'<c r="%s"(?: [^>]*)?(?:/>|>.*?</c>)' % ref, X[p], re.S)
+    # [^>/]* statt [^>]*: sonst frisst eine leere Zelle <c r="H22" s="10"/> alles bis zum nächsten </c> mit
+    # (so geschehen am 08.10.2026: Formeln Einstellungen L22:L36 gelöscht, calcChain verwies ins Leere → Excel »reparierte«).
+    m = re.search(r'<c r="%s"(?: [^>/]*)?(?:/>|>.*?</c>)' % ref, X[p], re.S)
     if not m: raise SystemExit(f"Zelle {ref} in {p} nicht gefunden – Datei hat ein anderes Layout, nichts geändert.")
     return m
 def str_index(p, ref):
@@ -111,8 +113,16 @@ cnt = sum(len(re.findall(r't="s"><v>', X[p])) for p in (P_ANL, P_TEAM, P_EINST))
 sst = re.sub(r'count="\d+" uniqueCount="\d+"', f'count="{cnt}" uniqueCount="{uc}"', sst, count=1)
 X["xl/sharedStrings.xml"] = sst
 
+# Gegenprobe: In jedem geänderten Blatt müssen Zellen und Formeln vollständig erhalten sein.
+for p in (P_ANL, P_TEAM, P_EINST):
+    vorher, nachher = teile[p].decode("utf-8"), X[p]
+    for was, muster in (("Zellen", r"<c r="), ("Formeln", r"<f[ >/]")):
+        if len(re.findall(muster, vorher)) != len(re.findall(muster, nachher)):
+            raise SystemExit(f"{p}: Anzahl {was} hat sich verändert – Fehler im Skript, nichts geschrieben.")
+
 with zipfile.ZipFile(ziel, "w") as out:
     for n in z.namelist():
+        if n.endswith("/"): continue  # Ordner-Einträge gehören nicht in eine Excel-Datei
         daten = X[n].encode("utf-8") if n in X else teile[n]
         out.writestr(infos[n], daten, compress_type=zipfile.ZIP_DEFLATED)
 print(f"geschrieben: {ziel}")
