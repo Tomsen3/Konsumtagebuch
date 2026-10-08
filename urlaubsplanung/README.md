@@ -5,8 +5,8 @@
 - `Dokumentation_Teamansicht.md` – Bedienung, was bewusst nicht angezeigt wird, Ablage, automatisches Laden.
 - `Dokumentation_Urlaubsansicht_Dashboard.md` – Bedienung, Rechenregeln, Entscheidungen, Wartung der Ansicht.
 - `Dokumentation_Mein_Urlaub.md` – Excel-Datei `Urlaubswuensche_2027.xlsx` (Blatt »Mein Urlaub«, Teilzeit, freie Tage, Makro-Fassung).
-- `makro/` – Makros »WunschEintragen«, »PlanungFreigeben«, »EinrichtungBearbeiten« für die Makro-Fassung (`.bas` zum Importieren, `.txt` zum Einfügen).
-- `excel/` – Skripte für Änderungen an der Excel-Datei (08.10.2026: StäB entfernt, »Einsatzort 1–5«, Anleitung) und `einstellungen_reparieren.py` für Dateien, die Excel beim Öffnen reparieren wollte.
+- `makro/` – Makros für die Makro-Fassung: »WunschEintragen«, »WunschLaden«, »WunschAendern«, »WunschLoeschen« (Knöpfe in »Mein Urlaub«), »PlanungFreigeben«, »EinrichtungBearbeiten«, »TeamUebernehmen« (Leitung) – `.bas` zum Importieren, `.txt` zum Einfügen.
+- `excel/` – Skripte für Änderungen an der Excel-Datei (08.10.2026: StäB entfernt, »Einsatzort 1–5«, Anleitung) und `einstellungen_reparieren.py` für Dateien, die Excel beim Öffnen reparieren wollte; `vorlage_umbauen.py` (08.10.2026 abends: Ändern/Löschen in »Mein Urlaub«, ATOSS raus, Anleitung; braucht Windows + Excel).
 - `Mailtexte.md` – Vorlagen für die Mail ans Team (nur Excel + Teamansicht) und an die Leitung (Urlaubsansicht, Makros).
 - `ansicht/` – Quelltexte beider Seiten, gemeinsamer Kern `kern.js` und Build-Skript (`python3 ansicht/baue_ansicht.py`).
 

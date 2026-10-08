@@ -1,6 +1,6 @@
 # Mailtexte zur Urlaubsplanung 2027
 
-Stand: 08.10.2026 · Verantwortlich: Tom
+Stand: 08.10.2026 (abends) · Verantwortlich: Tom
 
 Zwei Vorlagen zum Kopieren in Outlook. Platzhalter in eckigen Klammern vor dem Versand ersetzen.
 
@@ -24,9 +24,17 @@ die Urlaubswünsche für 2027 sammeln wir wieder in einer gemeinsamen Excel-Date
 1. `Urlaubswuensche_2027.xlsm` öffnen. Erscheint oben eine gelbe Leiste, auf »Inhalt aktivieren« klicken.
 2. Reiter »Mein Urlaub« → oben euren Namen wählen. Ihr seht dann eure bisherigen Wünsche und euren Resturlaub.
 3. In die gelben Felder Von, Bis und ggf. »verschiebbar« und eine Bemerkung eintragen.
-4. Auf »Wunsch eintragen« klicken, danach speichern und die Datei **schließen**, damit die Nächsten eintragen können.
+4. Auf »Wunsch eintragen« klicken. Die Datei speichert sich dabei selbst.
+5. Danach die Datei bitte gleich **schließen**, damit die Nächsten eintragen können.
 
-Einen Wunsch ändern oder streichen könnt ihr nicht selbst. Bitte kurz Bescheid geben, dann erledigen wir das.
+**Wunsch ändern oder löschen** (z. B. nach Absprache im Team)
+1. Reiter »Mein Urlaub« → euren Namen wählen.
+2. Bei »Wunsch Nr.« die Nummer aus eurer Liste wählen und auf »Laden« klicken.
+3. Felder ändern und »Änderung speichern« klicken, oder »Wunsch löschen«.
+
+**Wenn Excel »schreibgeschützt« oder »gesperrt« meldet:** Dann hat gerade jemand anderes die Datei offen. Bitte schließen und später noch einmal versuchen, nicht als Kopie speichern.
+
+Die Datei ist unser Planungsinstrument im Team. Sie ersetzt nicht den Urlaubsantrag.
 
 **Vorher schauen, wo es eng wird**
 1. `Teamansicht.html` per Doppelklick öffnen (Edge oder Chrome).
@@ -60,8 +68,9 @@ im Anhang findest du die `Urlaubsansicht.html`. Das ist die Ansicht nur für die
 4. Nach neuen Einträgen in Excel auf »Neu laden« klicken.
 
 **In der Excel-Datei (Alt+F8)**
-- »EinrichtungBearbeiten«: macht die Blätter Team und Einstellungen sichtbar, damit du Personen pflegen, Ampelwerte ändern oder Wünsche ändern bzw. löschen kannst.
-- »PlanungFreigeben«: blendet diese Blätter danach wieder aus und schützt die Liste der Wünsche. Die Kolleg:innen können dann nur noch über »Mein Urlaub« eintragen.
+- »EinrichtungBearbeiten«: macht die Blätter Team und Einstellungen sichtbar, damit du Personen pflegen oder Ampelwerte ändern kannst.
+- »PlanungFreigeben«: blendet diese Blätter danach wieder aus und schützt die Liste der Wünsche. Die Kolleg:innen tragen dann nur noch über »Mein Urlaub« ein und können dort ihre eigenen Wünsche auch ändern oder löschen.
+- »TeamUebernehmen« (einmalig): übernimmt Team und Einstellungen aus deiner bisherigen Datei. Danach zeigt eine Prüfliste, was nicht passt, z. B. Tippfehler bei Einsatzorten.
 
 Die ausführliche Anleitung liegt bei Tom.
 

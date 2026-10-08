@@ -1,34 +1,37 @@
 Option Explicit
 
 ' =====================================================================
-'  Makro "WunschEintragen" fuer Urlaubswuensche_2027 (Fassung B, .xlsm)
-'  Stand: 08.10.2026 - Verantwortlich: Tom
+'  Makros fuer Urlaubswuensche_2027 (Fassung B, .xlsm)
+'  Stand: 08.10.2026 (abends) - Verantwortlich: Tom
 '
-'  Was es tut:
-'   1. Liest die Eingabemaske im Blatt "Mein Urlaub" (B4 Name, B13 Von,
-'      B14 Bis, B15 Verschiebbar, B16 Bemerkung).
-'   2. Nutzt die Pruefung der Vorlage (J18 = Code 1-9, B18 = Text),
-'      damit Maske und Makro immer dasselbe sagen.
-'   3. Schreibt den Wunsch in die naechste freie Zeile im Blatt
-'      "Wuensche" (Spalten A-E; die grauen Formelspalten F-I bleiben).
-'   4. Leert die Eingabefelder und bietet an, die Datei zu speichern.
+'  Fuer alle (Knoepfe im Blatt "Mein Urlaub"):
+'   WunschEintragen  - neuen Wunsch in die naechste freie Zeile im Blatt
+'                      "Wuensche" schreiben
+'   WunschLaden      - Wunsch mit der gewaehlten Nr. in die gelben Felder
+'                      holen (zum Aendern oder Loeschen)
+'   WunschAendern    - geladenen Wunsch mit den Feldern ueberschreiben
+'   WunschLoeschen   - geladenen Wunsch nach Rueckfrage loeschen
+'   Jeweils: Abbruch, wenn die Datei nur schreibgeschuetzt offen ist;
+'   vorher Tagessicherung (Ordner SICHERUNG_ORDNER, die letzten 7 Tage);
+'   danach Felder und Namen leeren und sofort speichern.
+'
+'  Fuer die Leitung (Alt+F8):
+'   PlanungFreigeben      - Team + Einstellungen ausgeblendet, Wuensche
+'                           und Anleitung nur lesbar, Mein Urlaub wie
+'                           bisher (gelbe Felder bearbeitbar).
+'   EinrichtungBearbeiten - alles wieder sichtbar und bearbeitbar.
+'                           Danach wieder PlanungFreigeben ausfuehren.
+'   TeamUebernehmen       - Team und Einstellungen aus einer anderen
+'                           Urlaubs-Datei (z. B. aeltere Fassung) als
+'                           Werte uebernehmen, mit Pruefliste.
+'
+'  Die Felder im Blatt "Mein Urlaub" werden ueber Namen angesprochen
+'  (MU_Name, MU_Nr, MU_Von, ... - Formeln -> Namensmanager). Wer das
+'  Blatt umbaut, muss die Namen nicht anfassen; Excel verschiebt sie mit.
 '
 '  Umlaute stehen im Quelltext als Platzhalter, z. B. {ue} = ue-Umlaut,
 '  und werden von der Funktion D() ersetzt. So laesst sich der Code
 '  auf jedem PC fehlerfrei importieren oder einfuegen.
-'
-'  Der Knopf "Wunsch eintragen" muss auf das Makro "WunschEintragen"
-'  zeigen (Rechtsklick auf den Knopf -> Makro zuweisen).
-'
-'  Fuer die Leitung (Alt+F8, ab 08.10.2026):
-'   PlanungFreigeben      - wenn Einstellungen und Team fertig sind:
-'                           Team + Einstellungen ausgeblendet, Wuensche
-'                           und Anleitung nur lesbar, Mein Urlaub wie
-'                           bisher (gelbe Felder bearbeitbar).
-'   EinrichtungBearbeiten - alles wieder sichtbar und bearbeitbar
-'                           (z. B. Team pflegen, ATOSS-Datum eintragen,
-'                           Wunsch aendern/loeschen). Danach wieder
-'                           PlanungFreigeben ausfuehren.
 ' =====================================================================
 
 Private Const ERSTE_ZEILE As Long = 6      ' erste Datenzeile im Blatt Wuensche
@@ -38,70 +41,35 @@ Private Const LETZTE_ZEILE As Long = 605   ' letzte Datenzeile im Blatt Wuensche
 ' VBA-Projekt sperren (Extras -> Eigenschaften von VBAProject -> Schutz),
 ' sonst ist es hier lesbar. Kennwort gut dokumentiert ablegen!
 Private Const KENNWORT As String = ""
+' Ordner fuer die Tagessicherungen. Leer = Unterordner "Sicherung" neben der
+' Datei (wird bei Bedarf angelegt). Alle, die eintragen, brauchen dort
+' Schreibrechte. Beispiel: "\\server\Fachtherapien\Urlaubsplanung\Sicherung"
+Private Const SICHERUNG_ORDNER As String = ""
+Private Const SICHERUNG_TAGE As Long = 7   ' so viele Tagesdateien bleiben liegen
 
+' ---------------------------------------------------------------------
+'  Neuen Wunsch eintragen
+' ---------------------------------------------------------------------
 Public Sub WunschEintragen()
-    Dim wsM As Worksheet, wsW As Worksheet
-    Dim code As Long, r As Long, z As Long
-    Dim sName As String, sFlex As String, sBem As String, sTitel As String
-    Dim dVon As Date, dBis As Date
-    Dim at As Variant, rest As Variant, antwort As VbMsgBoxResult
+    Dim wsW As Worksheet, r As Long, z As Long, sTitel As String
+    Dim sName As String, sFlex As String, sBem As String
+    Dim dVon As Date, dBis As Date, at As Variant, rest As Variant
 
     On Error GoTo Fehler
-    sTitel = D("Urlaubsw{ue}nsche")
-    Set wsM = ThisWorkbook.Worksheets("Mein Urlaub")
+    sTitel = D("Wunsch eintragen")
+    If Not Beschreibbar(sTitel) Then Exit Sub
     Set wsW = ThisWorkbook.Worksheets(D("W{ue}nsche"))
 
-    Application.Calculate
-    code = Val(CStr(wsM.Range("J18").Value))
-
-    ' --- Pruefung (Codes aus Zelle J18 der Vorlage)
-    Select Case code
-        Case 1 To 5
-            MsgBox wsM.Range("B18").Text, vbExclamation, sTitel
-            Exit Sub
-        Case 6
-            MsgBox D("Dieser Wunsch ist schon eingetragen (siehe Abschnitt 3 im Blatt {>>}Mein Urlaub{<<})."), vbInformation, sTitel
-            Exit Sub
-        Case 7
-            antwort = MsgBox(D("Im Zeitraum liegt keiner deiner Arbeitstage {-} daf{ue}r braucht es keinen Urlaub.") & vbCrLf & vbCrLf & _
-                             D("Trotzdem eintragen?"), vbQuestion + vbYesNo + vbDefaultButton2, sTitel)
-            If antwort = vbNo Then Exit Sub
-        Case 8
-            antwort = MsgBox(D("Der Wunsch {ue}berschneidet sich mit einem deiner bisherigen W{ue}nsche.") & vbCrLf & vbCrLf & _
-                             D("Trotzdem eintragen?"), vbQuestion + vbYesNo + vbDefaultButton2, sTitel)
-            If antwort = vbNo Then Exit Sub
-        Case 9
-            ' alles in Ordnung
-        Case Else
-            MsgBox D("Die Pr{ue}fung konnte nicht gelesen werden (Zelle J18). Bitte die verantwortliche Person informieren."), vbCritical, sTitel
-            Exit Sub
-    End Select
-
-    sName = Trim$(CStr(wsM.Range("B4").Value))
-    dVon = CDate(wsM.Range("B13").Value)
-    dBis = CDate(wsM.Range("B14").Value)
-    sFlex = LCase$(Trim$(CStr(wsM.Range("B15").Value)))
-    sBem = Trim$(CStr(wsM.Range("B16").Value))
-    at = wsM.Range("B17").Value
-
-    If sFlex <> "" And sFlex <> "ja" And sFlex <> "etwas" And sFlex <> "nein" Then
-        MsgBox D("Bei {>>}Verschiebbar?{<<} bitte ja, etwas oder nein w{ae}hlen (oder leer lassen)."), vbExclamation, sTitel
+    If Trim$(CStr(F("MU_Nr").Value)) <> "" Then
+        MsgBox D("Oben bei {>>}Wunsch Nr.{<<} ist ein bestehender Wunsch gew{ae}hlt.") & vbCrLf & vbCrLf & _
+               D("Zum {Ae}ndern bitte {>>}{Ae}nderung speichern{<<} klicken. F{ue}r einen neuen Wunsch das Feld {>>}Wunsch Nr.{<<} leeren."), _
+               vbExclamation, sTitel
         Exit Sub
     End If
+    If Not PruefungOk(sTitel, False, rest) Then Exit Sub
+    If Not EingabeLesen(sTitel, sName, dVon, dBis, sFlex, sBem, at) Then Exit Sub
 
-    ' --- Resturlaub danach (nur wenn ein Anspruch hinterlegt ist)
-    If IsNumeric(wsM.Range("B9").Value) And Not IsEmpty(wsM.Range("B9").Value) And IsNumeric(at) Then
-        rest = wsM.Range("B9").Value - wsM.Range("B8").Value - at
-        If rest < 0 Then
-            antwort = MsgBox(D("Mit diesem Wunsch w{ae}ren es ") & -rest & D(" Tag(e) mehr als der Urlaubsanspruch.") & vbCrLf & vbCrLf & _
-                             D("Trotzdem eintragen?"), vbQuestion + vbYesNo + vbDefaultButton2, sTitel)
-            If antwort = vbNo Then Exit Sub
-        End If
-    Else
-        rest = Empty
-    End If
-
-    ' --- naechste freie Zeile im Blatt Wuensche (Name und Von leer)
+    ' naechste freie Zeile im Blatt Wuensche (Name und Von leer)
     r = 0
     For z = ERSTE_ZEILE To LETZTE_ZEILE
         If Trim$(CStr(wsW.Cells(z, 1).Value)) = "" And IsEmpty(wsW.Cells(z, 2).Value) Then r = z: Exit For
@@ -111,42 +79,109 @@ Public Sub WunschEintragen()
         Exit Sub
     End If
 
-    ' --- eintragen (nach PlanungFreigeben ist Wuensche geschuetzt: kurz aufheben, danach wieder schuetzen)
+    Sicherung
+    Schreiben wsW, r, sName, dVon, dBis, sFlex, sBem
+    FelderLeeren
+    Speichern
+    MsgBox D("Eingetragen und gespeichert:") & vbCrLf & vbCrLf & _
+           sName & vbCrLf & Zeitraum(dVon, dBis, at) & vbCrLf & _
+           IIf(IsEmpty(rest), "", D("Rest danach: ") & rest & " Tage" & vbCrLf) & vbCrLf & _
+           D("Bitte die Datei jetzt schlie{ss}en, damit andere eintragen k{oe}nnen."), vbInformation, sTitel
+    Exit Sub
+Fehler:
+    FehlerMelden sTitel
+End Sub
+
+' ---------------------------------------------------------------------
+'  Wunsch mit der gewaehlten Nr. in die gelben Felder laden
+' ---------------------------------------------------------------------
+Public Sub WunschLaden()
+    Dim wsW As Worksheet, r As Long, sTitel As String
+    On Error GoTo Fehler
+    sTitel = D("Wunsch laden")
+    r = GewaehlteZeile(sTitel)
+    If r = 0 Then Exit Sub
+    Set wsW = ThisWorkbook.Worksheets(D("W{ue}nsche"))
+    F("MU_Von").Value = wsW.Cells(r, 2).Value
+    F("MU_Bis").Value = wsW.Cells(r, 3).Value
+    F("MU_Flex").Value = wsW.Cells(r, 4).Value
+    F("MU_Bem").MergeArea.ClearContents
+    F("MU_Bem").Value = wsW.Cells(r, 5).Value
+    Application.Calculate
+    F("MU_Von").Select
+    Exit Sub
+Fehler:
+    FehlerMelden sTitel
+End Sub
+
+' ---------------------------------------------------------------------
+'  Geladenen Wunsch mit den Feldern ueberschreiben
+' ---------------------------------------------------------------------
+Public Sub WunschAendern()
+    Dim wsW As Worksheet, r As Long, sTitel As String
+    Dim sName As String, sFlex As String, sBem As String
+    Dim dVon As Date, dBis As Date, at As Variant, rest As Variant
+
+    On Error GoTo Fehler
+    sTitel = D("{Ae}nderung speichern")
+    If Not Beschreibbar(sTitel) Then Exit Sub
+    r = GewaehlteZeile(sTitel)
+    If r = 0 Then Exit Sub
+    If Not PruefungOk(sTitel, True, rest) Then Exit Sub
+    If Not EingabeLesen(sTitel, sName, dVon, dBis, sFlex, sBem, at) Then Exit Sub
+    Set wsW = ThisWorkbook.Worksheets(D("W{ue}nsche"))
+
+    Sicherung
+    Schreiben wsW, r, sName, dVon, dBis, sFlex, sBem
+    FelderLeeren
+    Speichern
+    MsgBox D("Ge{ae}ndert und gespeichert:") & vbCrLf & vbCrLf & _
+           sName & vbCrLf & Zeitraum(dVon, dBis, at) & vbCrLf & _
+           IIf(IsEmpty(rest), "", D("Rest danach: ") & rest & " Tage" & vbCrLf) & vbCrLf & _
+           D("Bitte die Datei jetzt schlie{ss}en, damit andere eintragen k{oe}nnen."), vbInformation, sTitel
+    Exit Sub
+Fehler:
+    FehlerMelden sTitel
+End Sub
+
+' ---------------------------------------------------------------------
+'  Geladenen Wunsch loeschen
+' ---------------------------------------------------------------------
+Public Sub WunschLoeschen()
+    Dim wsW As Worksheet, r As Long, sTitel As String, sName As String
     Dim warGeschuetzt As Boolean
+
+    On Error GoTo Fehler
+    sTitel = D("Wunsch l{oe}schen")
+    If Not Beschreibbar(sTitel) Then Exit Sub
+    r = GewaehlteZeile(sTitel)
+    If r = 0 Then Exit Sub
+    Set wsW = ThisWorkbook.Worksheets(D("W{ue}nsche"))
+    sName = CStr(wsW.Cells(r, 1).Value)
+
+    If MsgBox(D("Diesen Wunsch wirklich l{oe}schen?") & vbCrLf & vbCrLf & sName & vbCrLf & _
+              Format$(wsW.Cells(r, 2).Value, "dd.mm.yyyy") & D(" {-} ") & Format$(wsW.Cells(r, 3).Value, "dd.mm.yyyy") & _
+              IIf(Trim$(CStr(wsW.Cells(r, 5).Value)) = "", "", vbCrLf & CStr(wsW.Cells(r, 5).Value)), _
+              vbQuestion + vbYesNo + vbDefaultButton2, sTitel) = vbNo Then Exit Sub
+
+    Sicherung
     warGeschuetzt = wsW.ProtectContents
     If warGeschuetzt Then wsW.Unprotect KENNWORT
-    wsW.Cells(r, 1).Value = sName
-    wsW.Cells(r, 2).Value = dVon
-    wsW.Cells(r, 3).Value = dBis
-    If sFlex <> "" Then wsW.Cells(r, 4).Value = sFlex
-    If sBem <> "" Then wsW.Cells(r, 5).Value = sBem
+    wsW.Range(wsW.Cells(r, 1), wsW.Cells(r, 5)).ClearContents
     If warGeschuetzt Then NurLesen wsW
-
-    ' --- Eingabefelder leeren (sind entsperrt, gehen auch bei Blattschutz)
-    wsM.Range("B13").ClearContents
-    wsM.Range("B14").ClearContents
-    wsM.Range("B15").ClearContents
-    wsM.Range("B16").MergeArea.ClearContents
-    Application.Calculate
-
-    ' --- Rueckmeldung
-    antwort = MsgBox(D("Eingetragen in Zeile ") & r & D(" im Blatt {>>}W{ue}nsche{<<}:") & vbCrLf & vbCrLf & _
-                     sName & vbCrLf & _
-                     Format$(dVon, "dd.mm.yyyy") & D(" {-} ") & Format$(dBis, "dd.mm.yyyy") & _
-                     IIf(IsNumeric(at), "  (" & at & " Arbeitstage)", "") & vbCrLf & _
-                     IIf(IsEmpty(rest), "", D("Rest danach: ") & rest & " Tage" & vbCrLf) & vbCrLf & _
-                     D("Datei jetzt speichern?"), vbInformation + vbYesNo, sTitel)
-    If antwort = vbYes Then ThisWorkbook.Save
+    FelderLeeren
+    Speichern
+    MsgBox D("Gel{oe}scht und gespeichert.") & vbCrLf & vbCrLf & _
+           D("Bitte die Datei jetzt schlie{ss}en, damit andere eintragen k{oe}nnen."), vbInformation, sTitel
     Exit Sub
-
 Fehler:
+    Dim nr As Long, txt As String
+    nr = Err.Number: txt = Err.Description
     On Error Resume Next
-    If warGeschuetzt And Not wsW Is Nothing Then NurLesen wsW
+    If warGeschuetzt Then NurLesen wsW
     On Error GoTo 0
-    MsgBox D("Der Wunsch konnte nicht eingetragen werden.") & vbCrLf & vbCrLf & _
-           D("Fehler: ") & Err.Description & vbCrLf & vbCrLf & _
-           D("Bitte pr{ue}fen: Blattnamen {>>}Mein Urlaub{<<} und {>>}W{ue}nsche{<<} unver{ae}ndert? Datei nicht schreibgesch{ue}tzt?"), _
-           vbCritical, D("Urlaubsw{ue}nsche")
+    Err.Number = nr: Err.Description = txt
+    FehlerMelden sTitel
 End Sub
 
 ' =====================================================================
@@ -158,7 +193,7 @@ Public Sub PlanungFreigeben()
     sTitel = D("Planung freigeben")
     If MsgBox(D("Einstellungen und Team sind fertig eingetragen?") & vbCrLf & vbCrLf & _
               D("Danach sind {>>}Team{<<} und {>>}Einstellungen{<<} ausgeblendet, {>>}W{ue}nsche{<<} und {>>}Anleitung{<<} nur lesbar. ") & _
-              D("Eintragen geht nur noch {ue}ber {>>}Mein Urlaub{<<}.") & vbCrLf & vbCrLf & _
+              D("Eintragen, {ae}ndern und l{oe}schen geht nur noch {ue}ber {>>}Mein Urlaub{<<}.") & vbCrLf & vbCrLf & _
               D("Zur{ue}ck mit dem Makro {>>}EinrichtungBearbeiten{<<} (Alt+F8)."), vbQuestion + vbYesNo, sTitel) = vbNo Then Exit Sub
 
     Application.ScreenUpdating = False
@@ -210,6 +245,304 @@ Public Sub EinrichtungBearbeiten()
 Fehler:
     Application.ScreenUpdating = True
     MsgBox D("Fehler: ") & Err.Description, vbCritical, D("Einrichtung bearbeiten")
+End Sub
+
+' =====================================================================
+'  Leitung: Team und Einstellungen aus einer anderen Datei uebernehmen
+'  (einmalig, z. B. aus einer aelteren Fassung). Nur Werte, Formeln und
+'  Auswahllisten dieser Datei bleiben unangetastet.
+' =====================================================================
+Public Sub TeamUebernehmen()
+    Dim sTitel As String, pfad As Variant, wbQ As Workbook
+    Dim qT As Worksheet, qE As Worksheet, zT As Worksheet, zE As Worksheet
+    Dim r As Long, z As Long, s As Variant, sp As Variant, bericht As String, n As Long
+    Dim sicherheit As Long
+
+    sTitel = D("Team {ue}bernehmen")
+    If Not Beschreibbar(sTitel) Then Exit Sub
+    If MsgBox(D("Aus einer anderen Urlaubs-Datei werden als Werte {ue}bernommen:") & vbCrLf & vbCrLf & _
+              D("{-} Team: Name bis Bemerkung (A{-}H), Mo{-}Fr (L{-}P), Einsatzort 5 (R)") & vbCrLf & _
+              D("{-} Einstellungen: Startdatum, Fachrichtungen mit Ampel, Einsatzorte mit Ampel (ohne St{ae}B), Feiertage") & vbCrLf & vbCrLf & _
+              D("Was in diesen Bereichen jetzt steht, wird ersetzt. Weiter?"), vbQuestion + vbYesNo, sTitel) = vbNo Then Exit Sub
+
+    pfad = Application.GetOpenFilename(D("Excel-Dateien (*.xlsx;*.xlsm),*.xlsx;*.xlsm"), , D("Alte Urlaubs-Datei w{ae}hlen"))
+    If VarType(pfad) = vbBoolean Then Exit Sub
+    If LCase$(CStr(pfad)) = LCase$(ThisWorkbook.FullName) Then
+        MsgBox D("Das ist diese Datei selbst. Bitte die alte Datei w{ae}hlen."), vbExclamation, sTitel
+        Exit Sub
+    End If
+
+    On Error GoTo Fehler
+    Application.ScreenUpdating = False
+    sicherheit = Application.AutomationSecurity
+    Application.AutomationSecurity = 3   ' msoAutomationSecurityForceDisable: Makros der alten Datei nicht starten
+    Set wbQ = Workbooks.Open(Filename:=CStr(pfad), UpdateLinks:=0, ReadOnly:=True)
+    Application.AutomationSecurity = sicherheit
+    Set qT = wbQ.Worksheets("Team")
+    Set qE = wbQ.Worksheets("Einstellungen")
+    Set zT = ThisWorkbook.Worksheets("Team")
+    Set zE = ThisWorkbook.Worksheets("Einstellungen")
+    If Trim$(CStr(qT.Range("A4").Value)) <> "Name" Then Err.Raise 1000, , D("Im Blatt {>>}Team{<<} der alten Datei steht in A4 nicht {>>}Name{<<}.")
+
+    ' --- Team
+    WerteKopieren qT.Range("A5:H63"), zT.Range("A5:H63")
+    If Trim$(CStr(qT.Range("L4").Value)) = "Mo" Then
+        WerteKopieren qT.Range("L5:P63"), zT.Range("L5:P63")
+    Else
+        bericht = bericht & D("{-} Alte Datei hat keine Spalten Mo{-}Fr: Teilzeit-Tage bitte in Team L{-}P eintragen.") & vbCrLf
+    End If
+    If Trim$(CStr(qT.Range("R4").Value)) <> "" Then
+        WerteKopieren qT.Range("R5:R63"), zT.Range("R5:R63")
+    End If
+
+    ' --- Einstellungen
+    WerteKopieren qE.Range("B3"), zE.Range("B3")
+    WerteKopieren qE.Range("A7:D16"), zE.Range("A7:D16")
+    WerteKopieren qE.Range("F7:F16"), zE.Range("F7:F16")
+    WerteKopieren qE.Range("N7:O40"), zE.Range("N7:O40")
+    ' Einsatzorte H mit Ampel I-K: StaeB auslassen, Rest rueckt nach oben
+    z = 7
+    For r = 7 To 36
+        s = Trim$(CStr(qE.Cells(r, 8).Value))
+        If s <> "" And LCase$(s) <> LCase$(D("St{ae}B")) Then
+            zE.Cells(z, 8).Value = s
+            For sp = 9 To 11: zE.Cells(z, sp).Value = qE.Cells(r, sp).Value: Next sp
+            z = z + 1
+        End If
+    Next r
+    For r = z To 36
+        For sp = 8 To 11: zE.Cells(r, sp).ClearContents: Next sp
+    Next r
+
+    wbQ.Close SaveChanges:=False
+    Set wbQ = Nothing
+    Application.ScreenUpdating = True
+    Application.Calculate
+
+    ' --- Pruefliste
+    For r = 5 To 63
+        s = Trim$(CStr(zT.Cells(r, 1).Value))
+        If s <> "" Then
+            If Application.WorksheetFunction.CountIf(zT.Range("A5:A63"), s) > 1 Then bericht = bericht & D("{-} ") & s & D(": Name steht mehrfach in Team") & vbCrLf: n = n + 1
+            If Trim$(CStr(zT.Cells(r, 2).Value)) = "" Then
+                bericht = bericht & D("{-} ") & s & D(": keine Fachrichtung") & vbCrLf: n = n + 1
+            ElseIf Application.WorksheetFunction.CountIf(zE.Range("A7:A16"), zT.Cells(r, 2).Value) = 0 Then
+                bericht = bericht & D("{-} ") & s & D(": Fachrichtung {>>}") & zT.Cells(r, 2).Value & D("{<<} steht nicht in Einstellungen") & vbCrLf: n = n + 1
+            End If
+            For Each sp In Array(3, 4, 5, 6, 18)
+                If Trim$(CStr(zT.Cells(r, sp).Value)) <> "" Then
+                    If Application.WorksheetFunction.CountIf(zE.Range("H7:H36"), zT.Cells(r, sp).Value) = 0 Then
+                        bericht = bericht & D("{-} ") & s & D(": Einsatzort {>>}") & zT.Cells(r, sp).Value & D("{<<} steht nicht in der Einsatzortliste") & vbCrLf: n = n + 1
+                    End If
+                End If
+            Next sp
+        End If
+    Next r
+    If Len(bericht) > 900 Then bericht = Left$(bericht, 900) & D("{-} {-}") & vbCrLf
+
+    If MsgBox(D("{Ue}bernommen.") & vbCrLf & vbCrLf & _
+              IIf(bericht = "", D("Pr{ue}fliste: alles passt."), D("Bitte pr{ue}fen:") & vbCrLf & bericht) & vbCrLf & _
+              D("Datei jetzt speichern?"), IIf(bericht = "", vbInformation, vbExclamation) + vbYesNo, sTitel) = vbYes Then ThisWorkbook.Save
+    Exit Sub
+Fehler:
+    If sicherheit <> 0 Then Application.AutomationSecurity = sicherheit
+    Application.ScreenUpdating = True
+    If Not wbQ Is Nothing Then wbQ.Close SaveChanges:=False
+    MsgBox D("{Ue}bernahme abgebrochen: ") & Err.Description, vbCritical, sTitel
+End Sub
+
+' =====================================================================
+'  Hilfsroutinen
+' =====================================================================
+
+' Feld im Blatt "Mein Urlaub" ueber seinen Namen (MU_...)
+Private Function F(ByVal sName As String) As Range
+    Set F = ThisWorkbook.Names(sName).RefersToRange
+End Function
+
+' Nur weiter, wenn die Datei nicht schreibgeschuetzt offen ist (Netzlaufwerk:
+' wer als Zweite:r oeffnet, bekommt eine schreibgeschuetzte Kopie).
+Private Function Beschreibbar(ByVal sTitel As String) As Boolean
+    If ThisWorkbook.ReadOnly Then
+        MsgBox D("Die Datei ist gerade bei jemand anderem offen und hier nur schreibgesch{ue}tzt ge{oe}ffnet.") & vbCrLf & vbCrLf & _
+               D("Bitte schlie{ss}en (nicht als Kopie speichern) und sp{ae}ter noch einmal versuchen."), vbExclamation, sTitel
+        Exit Function
+    End If
+    Beschreibbar = True
+End Function
+
+' Pruefung der Vorlage (MU_Code = 1-9, MU_Text = Text) auswerten.
+' rest = Resturlaub nach dem Wunsch (Empty, wenn kein Anspruch hinterlegt).
+Private Function PruefungOk(ByVal sTitel As String, ByVal aendern As Boolean, ByRef rest As Variant) As Boolean
+    Dim code As Long, wort As String
+    Application.Calculate
+    code = Val(CStr(F("MU_Code").Value))
+    wort = IIf(aendern, D("Trotzdem speichern?"), D("Trotzdem eintragen?"))
+    Select Case code
+        Case 1 To 5
+            MsgBox F("MU_Text").Text, vbExclamation, sTitel
+            Exit Function
+        Case 6
+            MsgBox D("Genau diesen Zeitraum gibt es schon als eigenen Wunsch (siehe Abschnitt 3 im Blatt {>>}Mein Urlaub{<<})."), vbInformation, sTitel
+            Exit Function
+        Case 7
+            If MsgBox(D("Im Zeitraum liegt keiner deiner Arbeitstage {-} daf{ue}r braucht es keinen Urlaub.") & vbCrLf & vbCrLf & wort, _
+                      vbQuestion + vbYesNo + vbDefaultButton2, sTitel) = vbNo Then Exit Function
+        Case 8
+            If MsgBox(D("Der Wunsch {ue}berschneidet sich mit einem deiner anderen W{ue}nsche.") & vbCrLf & vbCrLf & wort, _
+                      vbQuestion + vbYesNo + vbDefaultButton2, sTitel) = vbNo Then Exit Function
+        Case 9
+            ' alles in Ordnung
+        Case Else
+            MsgBox D("Die Pr{ue}fung konnte nicht gelesen werden (Name MU_Code). Bitte die verantwortliche Person informieren."), vbCritical, sTitel
+            Exit Function
+    End Select
+
+    ' Rest danach: Anspruch - bisher gewuenscht + alter Wunsch (beim Aendern) - neuer Wunsch
+    rest = Empty
+    If IsNumeric(F("MU_Anspruch").Value) And Not IsEmpty(F("MU_Anspruch").Value) And IsNumeric(F("MU_AT").Value) Then
+        rest = F("MU_Anspruch").Value - F("MU_Gewuenscht").Value + Val(CStr(F("MU_AltAT").Value)) - F("MU_AT").Value
+        If rest < 0 Then
+            If MsgBox(D("Damit w{ae}ren es ") & -rest & D(" Tag(e) mehr als der Urlaubsanspruch.") & vbCrLf & vbCrLf & wort, _
+                      vbQuestion + vbYesNo + vbDefaultButton2, sTitel) = vbNo Then Exit Function
+        End If
+    End If
+    PruefungOk = True
+End Function
+
+' Gelbe Felder lesen
+Private Function EingabeLesen(ByVal sTitel As String, ByRef sName As String, ByRef dVon As Date, ByRef dBis As Date, _
+                              ByRef sFlex As String, ByRef sBem As String, ByRef at As Variant) As Boolean
+    sName = Trim$(CStr(F("MU_Name").Value))
+    dVon = CDate(F("MU_Von").Value)
+    dBis = CDate(F("MU_Bis").Value)
+    sFlex = LCase$(Trim$(CStr(F("MU_Flex").Value)))
+    sBem = Trim$(CStr(F("MU_Bem").Value))
+    at = F("MU_AT").Value
+    If sFlex <> "" And sFlex <> "ja" And sFlex <> "etwas" And sFlex <> "nein" Then
+        MsgBox D("Bei {>>}Verschiebbar?{<<} bitte ja, etwas oder nein w{ae}hlen (oder leer lassen)."), vbExclamation, sTitel
+        Exit Function
+    End If
+    EingabeLesen = True
+End Function
+
+' Zeile im Blatt Wuensche zum gewaehlten Wunsch (0 = keine)
+Private Function GewaehlteZeile(ByVal sTitel As String) As Long
+    Dim r As Variant
+    Application.Calculate
+    If Trim$(CStr(F("MU_Name").Value)) = "" Then
+        MsgBox D("Bitte zuerst oben bei 1. den eigenen Namen w{ae}hlen."), vbExclamation, sTitel
+        Exit Function
+    End If
+    If Trim$(CStr(F("MU_Nr").Value)) = "" Then
+        MsgBox D("Bitte bei {>>}Wunsch Nr.{<<} die Nummer aus der Liste w{ae}hlen (siehe Abschnitt 3 {>>}Meine W{ue}nsche{<<}) und auf {>>}Laden{<<} klicken."), vbExclamation, sTitel
+        Exit Function
+    End If
+    r = F("MU_Zeile").Value
+    If Not IsNumeric(r) Or IsEmpty(r) Or CStr(r) = "" Then
+        MsgBox D("Diese Nummer gibt es bei den eigenen W{ue}nschen nicht. Bitte aus der Liste w{ae}hlen."), vbExclamation, sTitel
+        Exit Function
+    End If
+    GewaehlteZeile = CLng(r)
+End Function
+
+' Wunsch in Zeile r schreiben (Spalten A-E; die grauen Formelspalten bleiben)
+Private Sub Schreiben(ByVal wsW As Worksheet, ByVal r As Long, ByVal sName As String, ByVal dVon As Date, ByVal dBis As Date, _
+                      ByVal sFlex As String, ByVal sBem As String)
+    Dim warGeschuetzt As Boolean
+    warGeschuetzt = wsW.ProtectContents
+    If warGeschuetzt Then wsW.Unprotect KENNWORT
+    On Error GoTo Fehler
+    wsW.Cells(r, 1).Value = sName
+    wsW.Cells(r, 2).Value = dVon
+    wsW.Cells(r, 3).Value = dBis
+    If sFlex <> "" Then wsW.Cells(r, 4).Value = sFlex Else wsW.Cells(r, 4).ClearContents
+    If sBem <> "" Then wsW.Cells(r, 5).Value = sBem Else wsW.Cells(r, 5).ClearContents
+    If warGeschuetzt Then NurLesen wsW
+    Exit Sub
+Fehler:
+    Dim nr As Long, txt As String
+    nr = Err.Number: txt = Err.Description
+    If warGeschuetzt Then NurLesen wsW
+    Err.Raise nr, , txt
+End Sub
+
+' Eingabefelder, Wunsch-Nr. und Namen leeren (so oeffnet die naechste
+' Person die Datei ohne die Angaben der vorherigen)
+Private Sub FelderLeeren()
+    ' MergeArea: Name (B4:D4) und Bemerkung sind verbundene Zellen
+    Dim n As Variant
+    For Each n In Array("MU_Nr", "MU_Von", "MU_Bis", "MU_Flex", "MU_Bem", "MU_Name")
+        F(CStr(n)).MergeArea.ClearContents
+    Next n
+    Application.Calculate
+End Sub
+
+Private Sub Speichern()
+    Application.DisplayAlerts = False
+    ThisWorkbook.Save
+    Application.DisplayAlerts = True
+End Sub
+
+' Tagessicherung vor jeder Aenderung: eine Datei pro Tag (wird im Laufe des
+' Tages ueberschrieben), die letzten SICHERUNG_TAGE bleiben. Fehler werden
+' still uebergangen - eine fehlende Sicherung soll niemanden aufhalten.
+Private Sub Sicherung()
+    Dim ordner As String, basis As String, endung As String, datei As String
+    Dim liste() As String, n As Long, i As Long, j As Long, tmp As String
+    On Error GoTo Ende
+    ordner = SICHERUNG_ORDNER
+    If ordner = "" Then ordner = ThisWorkbook.Path & Application.PathSeparator & "Sicherung"
+    If Right$(ordner, 1) = Application.PathSeparator Then ordner = Left$(ordner, Len(ordner) - 1)
+    If Dir(ordner, vbDirectory) = "" Then MkDir ordner
+    basis = ThisWorkbook.Name
+    endung = Mid$(basis, InStrRev(basis, "."))
+    basis = Left$(basis, InStrRev(basis, ".") - 1)
+    ThisWorkbook.SaveCopyAs ordner & Application.PathSeparator & basis & "_Sicherung_" & Format$(Date, "yyyy-mm-dd") & endung
+
+    ' aelteste Tagesdateien loeschen (Name enthaelt das Datum -> sortierbar)
+    ReDim liste(0 To 0)
+    datei = Dir(ordner & Application.PathSeparator & basis & "_Sicherung_????-??-??" & endung)
+    Do While datei <> ""
+        ReDim Preserve liste(0 To n): liste(n) = datei: n = n + 1
+        datei = Dir()
+    Loop
+    If n <= SICHERUNG_TAGE Then GoTo Ende
+    For i = 0 To n - 2
+        For j = i + 1 To n - 1
+            If liste(j) < liste(i) Then tmp = liste(i): liste(i) = liste(j): liste(j) = tmp
+        Next j
+    Next i
+    For i = 0 To n - SICHERUNG_TAGE - 1
+        Kill ordner & Application.PathSeparator & liste(i)
+    Next i
+Ende:
+End Sub
+
+' Werte von q nach z, nur in Zellen ohne Formel (gleich grosse Bereiche)
+Private Sub WerteKopieren(ByVal q As Range, ByVal z As Range)
+    Dim r As Long, c As Long
+    For r = 1 To z.Rows.Count
+        For c = 1 To z.Columns.Count
+            ' Formel in der alten Datei: deren Ergebnis wird uebernommen
+            If Not z.Cells(r, c).HasFormula Then z.Cells(r, c).Value = q.Cells(r, c).Value
+        Next c
+    Next r
+End Sub
+
+Private Function Zeitraum(ByVal dVon As Date, ByVal dBis As Date, ByVal at As Variant) As String
+    Zeitraum = Format$(dVon, "dd.mm.yyyy") & D(" {-} ") & Format$(dBis, "dd.mm.yyyy") & _
+               IIf(IsNumeric(at), "  (" & at & IIf(at = 1, " Arbeitstag)", " Arbeitstage)"), "")
+End Function
+
+Private Sub FehlerMelden(ByVal sTitel As String)
+    Dim nr As Long, txt As String
+    nr = Err.Number: txt = Err.Description
+    Application.DisplayAlerts = True
+    MsgBox D("Das hat nicht geklappt.") & vbCrLf & vbCrLf & _
+           D("Fehler: ") & txt & " (" & nr & ")" & vbCrLf & vbCrLf & _
+           D("Bitte pr{ue}fen: Blattnamen {>>}Mein Urlaub{<<} und {>>}W{ue}nsche{<<} unver{ae}ndert? Sonst bitte die verantwortliche Person informieren."), _
+           vbCritical, sTitel
 End Sub
 
 ' Blatt nur lesbar: alle Zellen sperren, Schutz ein; Filtern bleibt erlaubt
