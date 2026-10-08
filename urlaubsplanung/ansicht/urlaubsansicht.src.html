@@ -207,6 +207,47 @@ table.list td.num,table.list th.num{text-align:right;font-variant-numeric:tabula
 h2.sec{font-size:15px;color:var(--navy);margin:22px 0 8px}
 .pfbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:13px}
 
+/* Übersicht (Startseite) */
+.status{display:flex;gap:16px;align-items:center;border-radius:14px;padding:18px 20px;margin-bottom:14px;border:1px solid var(--line);background:var(--card)}
+.status .big{font-size:22px;font-weight:700;line-height:1.2}
+.status .icon{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex:none}
+.status.ok{border-left:8px solid #2e8b47} .status.ok .icon{background:var(--l1);color:var(--l1-ink)}
+.status.warn{border-left:8px solid #f2c200} .status.warn .icon{background:var(--l2);color:var(--l2-ink)}
+.status.bad{border-left:8px solid var(--l4)} .status.bad .icon{background:var(--l4);color:#fff}
+.status.none{border-left:8px solid #9aa3b5} .status.none .icon{background:#eceef3;color:var(--muted)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.hgrid > .panel{margin-bottom:0}
+ul.ulist{list-style:none;margin:0;padding:0}
+ul.ulist li{display:grid;grid-template-columns:96px 1fr auto;gap:4px 10px;align-items:center;padding:8px 6px;border-bottom:1px solid #eef0f4;cursor:pointer;border-radius:8px}
+ul.ulist li:hover{background:#f6f8fc}
+ul.ulist li .nm{font-weight:600}
+ul.ulist li .info{font-size:12.5px;color:var(--muted)}
+ul.ulist li .go{color:var(--navy-2);font-size:13px;white-space:nowrap}
+ul.todo{list-style:none;margin:0;padding:0}
+ul.todo li{display:flex;gap:10px;align-items:center;padding:7px 6px;border-bottom:1px solid #eef0f4;cursor:pointer;border-radius:8px}
+ul.todo li:hover{background:#f6f8fc}
+ul.todo li .n{min-width:34px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.st{display:inline-block;text-align:center;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700}
+.st.s0,.st.s1{background:var(--l1);color:var(--l1-ink)} .st.s2{background:var(--l2);color:var(--l2-ink)}
+.st.s3{background:var(--l3);color:var(--l3-ink)} .st.s4{background:var(--l4);color:#fff} .st.sx{background:#eceef3;color:var(--muted)}
+.localnote{background:#eef3ff;border:1px solid #b9c8ea;color:var(--navy);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+
+/* Regeln & Ampel: eingeklappte Abschnitte */
+details.sec{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
+details.sec > summary{cursor:pointer;padding:12px 14px;font-weight:650;color:var(--navy);font-size:15px;list-style:none;display:flex;gap:10px;align-items:center}
+details.sec > summary::-webkit-details-marker{display:none}
+details.sec > summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.sec[open] > summary::before{transform:rotate(90deg)}
+details.sec > summary .hint{font-weight:400;font-size:12.5px;color:var(--muted)}
+details.sec > .body{padding:0 14px 14px}
+.amp input{width:62px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit;text-align:right}
+.amp input.set{border-color:var(--navy-2);background:#eef3ff;font-weight:700}
+.amp td{vertical-align:middle}
+.stdform{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;margin:6px 0 14px}
+.stdform label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.src{font-size:11px;color:var(--muted)} .src.lokal{color:var(--navy-2);font-weight:700}
+
 /* Personenansicht */
 .phead{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:12px}
 .phead h2{margin:0;color:var(--navy);font-size:19px}
@@ -255,6 +296,7 @@ aside.detail li{margin:3px 0}
   ol.top li{padding:3px 2px}
   .bc{height:30px}
   .bars-panel{break-before:page}
+  details.sec > .body{display:block} details.sec{break-inside:avoid}
   .calwrap{max-height:none;overflow:visible;border:0}
   .card{border-color:#999}
   table.list{font-size:10px} table.list td,table.list th{padding:3px 5px}
@@ -307,15 +349,17 @@ aside.detail li{margin:3px 0}
     </div>
 
     <nav class="tabs" id="tabs">
-      <button class="tab" data-t="dash">Dashboard</button>
+      <button class="tab" data-t="home">Übersicht</button>
+      <button class="tab" data-t="dash">Auswertung</button>
       <button class="tab" data-t="cal">Kalender</button>
       <button class="tab" data-t="conf">Konflikte <span class="count" id="confCount"></span></button>
       <button class="tab" data-t="pers">Personen</button>
       <button class="tab" data-t="one">Personenansicht</button>
-      <button class="tab" data-t="rules">Regeln &amp; Hinweise <span class="count" id="warnCount"></span></button>
+      <button class="tab" data-t="rules">Regeln &amp; Ampel <span class="count" id="warnCount"></span></button>
     </nav>
 
-    <section id="t-dash"></section>
+    <section id="t-home"></section>
+    <section id="t-dash" class="hidden"></section>
     <section id="t-cal" class="hidden"></section>
     <section id="t-conf" class="hidden"></section>
     <section id="t-pers" class="hidden"></section>
@@ -333,7 +377,7 @@ aside.detail li{margin:3px 0}
 const LAYOUT = {
   tage: 366,
   wuensche: { sheet: "Wünsche", firstRow: 6, cols: { name: "A", von: "B", bis: "C", flex: "D", bem: "E", atoss: "J" } },
-  team: { sheet: "Team", firstRow: 5, cols: { name: "A", fach: "B", st: ["C", "D", "E", "F"], anspruch: "G", tage: ["L", "M", "N", "O", "P"] } },
+  team: { sheet: "Team", firstRow: 5, cols: { name: "A", fach: "B", st: ["C", "D", "E", "F", "R"], anspruch: "G", tage: ["L", "M", "N", "O", "P"] } },
   einst: {
     sheet: "Einstellungen", start: "B3", firstRow: 7,
     fach: { name: "A", g: "B", h: "C", d: "D" },
@@ -341,13 +385,20 @@ const LAYOUT = {
     feier: { datum: "N", name: "O" }
   }
 };
-/* Standardregel für Stationen, wenn in Einstellungen nichts eingetragen ist */
+/* Standardregel für Stationen, wenn in Einstellungen nichts eingetragen ist (Vorgabe –
+   kann im Reiter »Regeln« für diesen Browser überschrieben werden, siehe AMPEL_KEY) */
 const STANDARD = {
   gelbAb: 2,                       // ab 2 Abwesenden gelb (1 weg = kein Warnsignal)
   hellrotWennNochDa: 2,            // hellrot, wenn nur noch 2 anwesend sind …
   hellrotAbGroesse: 4,             // … aber nur bei Stationen ab 4 Therapeut:innen
   dunkelrot: "alle"                // dunkelrot, wenn alle weg sind (die an dem Tag arbeiten würden)
 };
+/* Ampel-Einstellungen aus dem Reiter »Regeln«: nur in diesem Browser gespeichert (localStorage), nie in der Excel-Datei.
+   Vorrang: hier eingestellt  >  Excel → Einstellungen  >  Standardregel */
+const AMPEL_KEY = "urlaubsansicht.ampel";
+const ampelGet = () => { const a = lsGet(AMPEL_KEY, {}) || {}; return { std: a.std || {}, units: a.units || {} }; };
+const ampelSet = (a) => lsSet(AMPEL_KEY, a);
+const ukey = (u) => u.type + ":" + u.name;
 /* Top-5-Wochen: Punkte je Arbeitstag und Bereich nach Ampelstufe (Index = Stufe 0–4) */
 const WOCHEN_PUNKTE = [0, 0, 1, 3, 9];
 const FACH_FARBEN = ["#4E79A7","#B07AA1","#76B7B2","#9C755F","#F28E2B","#59A1A0","#D37295","#8E8CD8","#6A9FCB","#A08C7D"];
@@ -399,9 +450,9 @@ function build(wb) {
   for (let r = L.einst.firstRow, n = lastRow(E); r <= n; r++) {
     const f = L.einst.fach, s = L.einst.stat, h = L.einst.feier;
     const fn = str(cell(E, f.name + r));
-    if (fn && !fachIdx.has(fn)) { fachIdx.set(fn, fachs.length); fachs.push({ type: "fach", name: fn, custom: { g: num(cell(E, f.g + r)), h: num(cell(E, f.h + r)), d: num(cell(E, f.d + r)) } }); }
+    if (fn && !fachIdx.has(fn)) { fachIdx.set(fn, fachs.length); fachs.push({ type: "fach", inExcel: true, name: fn, custom: { g: num(cell(E, f.g + r)), h: num(cell(E, f.h + r)), d: num(cell(E, f.d + r)) } }); }
     const sn = str(cell(E, s.name + r));
-    if (sn && !statIdx.has(sn)) { statIdx.set(sn, stats.length); stats.push({ type: "stat", name: sn, custom: { g: num(cell(E, s.g + r)), h: num(cell(E, s.h + r)), d: num(cell(E, s.d + r)) } }); }
+    if (sn && !statIdx.has(sn)) { statIdx.set(sn, stats.length); stats.push({ type: "stat", inExcel: true, name: sn, custom: { g: num(cell(E, s.g + r)), h: num(cell(E, s.h + r)), d: num(cell(E, s.d + r)) } }); }
     const hd = toSer(cell(E, h.datum + r));
     if (hd) holidays.set(hd, str(cell(E, h.name + r)) || "Feiertag");
   }
@@ -484,24 +535,37 @@ function build(wb) {
   }
 
   // Einheiten (Stationen + Fachteams) mit Schwellen
+  // Reihenfolge je Wert: im Reiter »Regeln« eingestellt (lokal) > Excel → Einstellungen > Standardregel
+  const AMP = ampelGet(), std = {};
+  for (const k of ["gelbAb", "hellrotWennNochDa", "hellrotAbGroesse"]) std[k] = AMP.std[k] != null ? AMP.std[k] : STANDARD[k];
+  const applyLocal = (u) => {
+    u.excel = Object.assign({}, u.custom);
+    const o = AMP.units[ukey(u)] || {};
+    u.local = { g: o.g ?? null, h: o.h ?? null, d: o.d ?? null };
+    u.custom = { g: u.local.g ?? u.excel.g, h: u.local.h ?? u.excel.h, d: u.local.d ?? u.excel.d };
+    u.orig = {}; for (const k of ["g", "h", "d"]) u.orig[k] = u.local[k] != null ? "lokal" : u.excel[k] != null ? "Excel" : u.type === "stat" ? "Standard" : "";
+  };
   const units = [];
   for (const s of stats) {
+    applyLocal(s);
     s.members = persons.map((p, i) => (p.st.includes(s.name) ? i : -1)).filter((i) => i >= 0);
     const n = s.members.length, c = s.custom;
     s.th = {
-      g: c.g ?? STANDARD.gelbAb,
-      h: c.h ?? (n >= STANDARD.hellrotAbGroesse ? n - STANDARD.hellrotWennNochDa : null),
+      g: c.g ?? std.gelbAb,
+      h: c.h ?? (n >= std.hellrotAbGroesse ? n - std.hellrotWennNochDa : null),
       d: c.d ?? (n > 0 ? n : null)
     };
     s.src = { g: c.g != null, h: c.h != null, d: c.d != null };
     units.push(s);
   }
   for (const f of fachs) {
+    applyLocal(f);
     f.members = persons.map((p, i) => (p.fi === fachIdx.get(f.name) ? i : -1)).filter((i) => i >= 0);
     f.th = { g: f.custom.g, h: f.custom.h, d: f.custom.d };
     f.src = { g: true, h: true, d: true };
     units.push(f);
   }
+  const localCount = Object.keys(AMP.std).filter((k) => AMP.std[k] != null).length + units.reduce((a, u) => a + ["g", "h", "d"].filter((k) => u.local[k] != null).length, 0);
   const level = (a, th) => (a <= 0 ? 0 : th.d != null && a >= th.d ? 4 : th.h != null && a >= th.h ? 3 : th.g != null && a >= th.g ? 2 : 1);
   for (const [ui, u] of units.entries()) {
     u.ui = ui; u.n = u.members.length;
@@ -514,7 +578,7 @@ function build(wb) {
       let th = u.th;
       if (u.type === "stat" && (!u.src.h || !u.src.d)) {
         th = { g: u.th.g,
-          h: u.src.h ? u.th.h : (u.n >= STANDARD.hellrotAbGroesse && on > 0 ? Math.max(1, on - STANDARD.hellrotWennNochDa) : null),
+          h: u.src.h ? u.th.h : (u.n >= std.hellrotAbGroesse && on > 0 ? Math.max(1, on - std.hellrotWennNochDa) : null),
           d: u.src.d ? u.th.d : (on > 0 ? on : null) };
       }
       u.lv[i] = level(a, th);
@@ -559,16 +623,17 @@ function build(wb) {
   for (const p of persons) p.maxLv = p.wishes.reduce((a, w) => Math.max(a, w.lv), 0);
 
   const example = persons.some((p) => /^beispiel/i.test(p.name));
-  return { persons, units, fachs, stats, wishes, conflicts, warn, N, start, ser, work, hol, fachIdx, example };
+  return { persons, units, fachs, stats, wishes, conflicts, warn, N, start, ser, work, hol, fachIdx, example, std, localCount };
 }
 
 /* ===================== Zustand ===================== */
-let M = null, fileHandle = null, lastFile = null;
+let M = null, fileHandle = null, lastFile = null, lastWb = null;
+const openSec = new Set();   // im Reiter »Regeln« aufgeklappte Abschnitte (nur für diese Sitzung)
 const S = Object.assign({ fach: [], stat: [], q: "", m0: null, m1: null, view: "w", only: false, tab: "dash", gelb: true,
   bars: "fach", sort: { k: "fach", dir: 1 }, pf: "", person: "" }, lsGet("urlaubsansicht.state", {}));
 const save = () => lsSet("urlaubsansicht.state", { fach: S.fach, stat: S.stat, view: S.view, only: S.only, tab: S.tab, gelb: S.gelb, bars: S.bars, sort: S.sort, person: S.person });
-const TABS = ["dash", "cal", "conf", "pers", "one", "rules"];
-if (!TABS.includes(S.tab)) S.tab = "dash";
+const TABS = ["home", "dash", "cal", "conf", "pers", "one", "rules"];
+if (!TABS.includes(S.tab)) S.tab = "home";
 
 function visible() {
   const q = S.q.trim().toLowerCase();
@@ -628,7 +693,7 @@ async function loadFile(file) {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array", cellFormula: false, cellHTML: false, cellText: false });
     M = build(wb);
-    lastFile = file;
+    lastFile = file; lastWb = wb; S.tab = "home";
     const d = new Date(file.lastModified);
     $("fileinfo").textContent = `${file.name} · gespeichert ${d.toLocaleDateString("de-DE")} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · eingelesen ${new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
     $("drop").classList.add("hidden"); $("app").classList.remove("hidden");
@@ -659,6 +724,8 @@ function syncSeg() {
   document.querySelectorAll("#fView button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.view));
   document.querySelectorAll("#tabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.t === S.tab));
   TABS.forEach((t) => $("t-" + t).classList.toggle("hidden", t !== S.tab));
+  // Übersicht = Komplettübersicht ohne Filter und ohne Kennzahlen-Leiste
+  $("filters").classList.toggle("hidden", S.tab === "home" || S.tab === "rules"); $("kpis").classList.toggle("hidden", S.tab === "home");
 }
 
 /* ===================== Darstellung: Bausteine ===================== */
@@ -686,6 +753,7 @@ function render() {
   const V = visible();
   syncSeg();
   renderBanner(); renderKpis(V); renderPrintInfo(V);
+  if (S.tab === "home") renderHome();
   if (S.tab === "dash") renderDash(V);
   if (S.tab === "cal") renderCal(V);
   if (S.tab === "conf") renderConf(V);
@@ -731,6 +799,65 @@ function renderKpis(V) {
     <div class="kpi click${open ? " warn" : ""}" data-go="pers" data-pf="atoss" title="Wünsche ohne Datum in »In ATOSS übertragen am«"><div class="v">${open}</div><div class="l">offene ATOSS-Übertragungen</div><div class="s">${ws.length - open} von ${ws.length} übertragen</div></div>
     <div class="kpi click${over ? " bad" : ""}" data-go="pers" data-pf="rest" title="Resturlaub = Anspruch (Team, Spalte G) minus gewünschte Arbeitstage"><div class="v">${withA.length ? rest : "–"} <small>${withA.length ? "Tage" : ""}</small></div><div class="l">Resturlaub (noch nicht verplant)</div><div class="s">${over ? `<span class="neg">${over} überzogen</span> · ` : ""}${noA ? `${noA} ohne Anspruch` : "alle mit Anspruch"}</div></div>
     <div class="kpi click" data-go="rules" title="Zu Regeln & Hinweise"><div class="v">${M.warn.length}</div><div class="l">Hinweise zu den Daten</div></div>`;
+}
+
+/* ===================== Übersicht (Startseite, ohne Filter) ===================== */
+const ST_TXT = ["OK", "OK", "Gelb", "Hellrot", "Dunkelrot"];
+function unitStatus(u) {
+  const cs = M.conflicts.filter((c) => c.u === u.ui), today = todaySer();
+  const worst = cs.reduce((a, c) => Math.max(a, c.maxLv), 0);
+  const next = cs.filter((c) => c.to >= today).sort((a, b) => a.from - b.from)[0] || cs.slice().sort((a, b) => a.from - b.from)[0];
+  const noAmp = u.type === "fach" && u.th.g == null && u.th.h == null && u.th.d == null;
+  return { cs, worst, next, noAmp };
+}
+function renderHome() {
+  const all = M.conflicts, worst = all.reduce((a, c) => Math.max(a, c.maxLv), 0);
+  const n = (l) => all.filter((c) => c.maxLv === l).length;
+  const noWish = M.persons.filter((p) => !p.wishes.length).length;
+  const atoss = M.wishes.filter((w) => !w.atoss).length, over = M.persons.filter((p) => p.rest != null && p.rest < 0).length;
+  let cls, icon, big, sub;
+  if (!M.wishes.length) { cls = "none"; icon = "–"; big = "Noch keine Urlaubswünsche eingetragen"; sub = "Sobald Wünsche im Excel stehen: speichern und oben »Neu laden«."; }
+  else if (worst >= 3) { cls = "bad"; icon = "!"; big = `Es gibt Probleme: ${plural(n(4) + n(3), "kritischer Engpass", "kritische Engpässe")}`; sub = `${n(4)} dunkelrot · ${n(3)} hellrot${n(2) ? ` · ${n(2)} gelb` : ""} – unten sieht man, welche Stationen und Teams betroffen sind.`; }
+  else if (worst === 2) { cls = "warn"; icon = "!"; big = `Kleinere Engpässe: ${plural(n(2), "gelber Zeitraum", "gelbe Zeiträume")}`; sub = "Nichts Kritisches, aber im Blick behalten."; }
+  else { cls = "ok"; icon = "✓"; big = "Alles okay – keine Engpässe"; sub = "Keine Station und kein Team erreicht Gelb oder höher."; }
+
+  const todo = [
+    [all.length, "Engpässe (Konflikte) – Liste mit »wer ist weg« und »wen zuerst fragen«", "conf", ""],
+    [noWish, "Personen haben noch keinen Wunsch eingetragen", "pers", "none"],
+    [atoss, "Wünsche noch nicht in ATOSS übertragen", "pers", "atoss"],
+    [over, "Personen haben mehr Tage gewünscht als Anspruch", "pers", "rest"],
+    [M.warn.length, "Hinweise zu den Daten (z. B. fehlende Angaben)", "rules", ""]
+  ].filter((t) => t[0] > 0);
+
+  const unitList = (type) => {
+    const us = M.units.filter((u) => u.type === type && u.n > 0).map((u) => ({ u, ...unitStatus(u) }))
+      .sort((a, b) => (a.noAmp - b.noAmp) || b.worst - a.worst || b.cs.length - a.cs.length || a.u.name.localeCompare(b.u.name, "de"));
+    const empty = M.units.filter((u) => u.type === type && u.n === 0).map((u) => esc(u.name));
+    return `<ul class="ulist">${us.map((x) => {
+      const st = x.noAmp ? `<span class="st sx">ohne Ampel</span>` : `<span class="st s${x.worst}">${ST_TXT[x.worst]}</span>`;
+      const info = x.cs.length ? `${plural(x.cs.length, "Engpass", "Engpässe")} · ${x.next.to >= todaySer() ? "nächster" : "erster"}: ${fmt(x.next.from)}–${fmtY(x.next.to)}` : x.noAmp ? "keine Ampelwerte eingetragen" : "keine Engpässe";
+      return `<li data-unit="${x.u.ui}" title="Ausführliche Auswertung für ${esc(unitTitle(x.u))} öffnen">${st}<div><div class="nm">${esc(x.u.name)} <span class="muted" style="font-weight:400;font-size:12px">${x.u.n} P.</span></div><div class="info">${info}</div></div><span class="go">${x.cs.length ? `<a class="plink" data-unitconf="${x.u.ui}">Konflikte</a> · ` : ""}Details →</span></li>`;
+    }).join("")}</ul>${empty.length ? `<p class="muted" style="font-size:12.5px;margin:8px 6px 0">Ohne zugeordnete Personen: ${empty.join(", ")}</p>` : ""}`;
+  };
+
+  $("t-home").innerHTML = `
+    ${M.localCount ? `<div class="localnote">Hinweis: In diesem Browser sind <b>${plural(M.localCount, "eigener Ampelwert", "eigene Ampelwerte")}</b> eingestellt (Reiter »Regeln &amp; Ampel«). Andere sehen sie nicht.</div>` : ""}
+    <div class="status ${cls}"><div class="icon">${icon}</div><div><div class="big">${big}</div><div class="muted">${sub}</div>
+      <div class="muted" style="font-size:12.5px;margin-top:4px">Planungszeitraum ${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} · ${plural(M.persons.length, "Person", "Personen")} · ${plural(M.wishes.length, "Wunsch", "Wünsche")} · alle Stationen und Teams, ohne Filter</div></div></div>
+    <div class="panel"><h2>Zu tun</h2>
+      ${todo.length ? `<ul class="todo">${todo.map((t) => `<li data-go="${t[2]}" data-pf="${t[3]}"><span class="n">${t[0]}</span><span>${t[1]}</span><span class="go muted" style="margin-left:auto">ansehen →</span></li>`).join("")}</ul>` : `<p class="muted">Nichts offen.</p>`}</div>
+    <div class="hgrid">
+      <div class="panel"><h2>Stationen</h2><p class="sub">Schlimmste Stufe im ganzen Planungszeitraum · Klick = ausführliche Auswertung dieser Station</p>${unitList("stat")}</div>
+      <div class="panel"><h2>Fachteams</h2><p class="sub">Schlimmste Stufe im ganzen Planungszeitraum · Klick = ausführliche Auswertung dieses Teams</p>${unitList("fach")}</div>
+    </div>
+    <p style="margin-top:14px"><button class="btn" data-go="dash">→ Zur ausführlichen Auswertung (alle)</button></p>`;
+}
+/* von der Übersicht in die ausführlichen Seiten springen: Filter passend setzen */
+function focusUnit(ui, tab) {
+  const u = M.units[ui];
+  S.fach = u.type === "fach" ? [u.name] : []; S.stat = u.type === "stat" ? [u.name] : [];
+  S.q = ""; S.only = false; S.pf = ""; S.tab = tab;
+  setupFilters(); save(); render(); window.scrollTo(0, 0);
 }
 
 /* ===================== Dashboard ===================== */
@@ -1054,24 +1181,72 @@ function renderOne(V) {
   S.person = p.name;
 }
 
-/* ===================== Regeln & Hinweise ===================== */
+/* ===================== Regeln & Ampel ===================== */
+const secD = (id, title, hint, body) => `<details class="sec" data-sec="${id}"${openSec.has(id) ? " open" : ""}><summary>${title}${hint ? ` <span class="hint">${hint}</span>` : ""}</summary><div class="body">${body}</div></details>`;
 function renderRules(V) {
-  const row = (u) => {
-    const t = u.th, s = u.src, v = (x, own) => (x == null ? "–" : x + (u.type === "stat" && !own ? ' <span style="color:var(--muted);font-size:11px">(Standard)</span>' : ""));
-    const tz = u.members.filter((m) => M.persons[m].tz).length;
-    return `<tr><td><b>${esc(u.name)}</b></td><td>${unitLabel(u)}</td><td class="num">${u.n}${tz ? ` <span class="muted">(${tz} TZ)</span>` : ""}</td><td>${v(t.g, s.g)}</td><td>${v(t.h, s.h)}</td><td>${v(t.d, s.d)}</td></tr>`;
+  const std = M.std, tzs = M.persons.filter((p) => p.tz);
+  // Herkunft der Werte: »aus Standard« bzw. je Stufe, wenn gemischt (z. B. »G aus Excel · D hier eingestellt«)
+  const SRC_TXT = { lokal: "hier eingestellt", Excel: "aus Excel", Standard: "Standardregel" };
+  const srcInfo = (u) => {
+    const ks = ["g", "h", "d"].filter((k) => u.orig[k]); if (!ks.length) return "";
+    const same = ks.every((k) => u.orig[k] === u.orig[ks[0]]);
+    const tag = (o, t) => `<span class="src ${o === "lokal" ? "lokal" : ""}">${t}</span>`;
+    return same ? tag(u.orig[ks[0]], SRC_TXT[u.orig[ks[0]]]) : ks.map((k) => tag(u.orig[k], k.toUpperCase() + " " + SRC_TXT[u.orig[k]])).join(" · ");
   };
-  const tzs = M.persons.filter((p) => p.tz);
-  $("t-rules").innerHTML = `
-    <h2 class="sec">So rechnet die Ampel</h2>
-    <p>Gezählt wird pro Arbeitstag, wie viele Mitglieder einer Station bzw. eines Fachteams einen Urlaubswunsch haben. Die Zahlen in der Tabelle bedeuten: <b>ab so vielen gleichzeitig Abwesenden</b> gilt die Farbe. Die höchste erreichte Stufe zählt. Eine Person mit mehreren Stationen zählt auf jeder ihrer Stationen.</p>
-    <p><b>Standardregel für Stationen</b> (wenn in Excel → Einstellungen nichts eingetragen ist): 1 weg = unkritisch · <span class="pill lv2">Gelb</span> ab ${STANDARD.gelbAb} weg · <span class="pill lv3">Hellrot</span>, wenn nur noch ${STANDARD.hellrotWennNochDa} da sind (nur bei Stationen ab ${STANDARD.hellrotAbGroesse} Therapeut:innen) · <span class="pill lv4">Dunkelrot</span>, wenn alle weg sind. Fachteams haben nur eine Ampel, wenn Werte eingetragen sind.</p>
-    <p><b>Teilzeit</b> (Blatt Team, Spalten L–P, »x« = Arbeitstag): Ein Urlaubswunsch zählt nur an den eigenen Arbeitstagen als »weg«. Bei der Standardregel beziehen sich »nur noch ${STANDARD.hellrotWennNochDa} da« und »alle weg« auf die Personen, die an dem Wochentag arbeiten würden (H/D in der Tabelle unten = Vollzeit-Wert). Fest eingetragene Werte gelten unverändert.
-      ${tzs.length ? `Teilzeit eingetragen: ${tzs.map((p) => `${esc(p.name)} (${daysText(p)})`).join(", ")}.` : "Zurzeit ist niemand als Teilzeit markiert."}</p>
-    <table class="list"><thead><tr><th>Name</th><th>Art</th><th class="num">Personen</th><th>Gelb ab</th><th>Hellrot ab</th><th>Dunkelrot ab</th></tr></thead><tbody>${M.units.map(row).join("")}</tbody></table>
-    <h2 class="sec">Hinweise zu den Daten (${M.warn.length})</h2>
-    ${M.warn.length ? `<ul class="warnlist">${M.warn.map((w) => `<li>${esc(w.t)}</li>`).join("")}</ul>` : `<p>Keine – die Daten sind vollständig.</p>`}
-    <h2 class="sec">Planungszeitraum</h2><p>${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} · Feiertage/freie Tage: ${[...new Set(M.hol.filter(Boolean))].length ? M.hol.map((h, i) => (h ? `${fmt(M.ser[i])} ${esc(h)}` : "")).filter(Boolean).join(" · ") : "keine eingetragen"}</p>`;
+  const inp = (u, k) => {
+    const ph = u.excel[k] != null ? u.excel[k] : u.type === "stat" ? u.th[k] ?? "" : "";
+    return `<input type="number" min="1" max="99" step="1" data-u="${esc(ukey(u))}" data-k="${k}" value="${u.local[k] ?? ""}" placeholder="${ph}" class="${u.local[k] != null ? "set" : ""}" title="leer = ${u.excel[k] != null ? "Wert aus Excel (" + u.excel[k] + ")" : u.type === "stat" ? "Standardregel" : "keine Stufe"}">`;
+  };
+  const xl = (u) => ["g", "h", "d"].map((k) => u.excel[k] ?? "–").join(" / ");
+  const ampRow = (u) => `<tr><td><b>${esc(u.name)}</b></td><td>${unitLabel(u)}</td><td class="num">${u.n}</td><td class="muted">${xl(u)}</td>
+    ${["g", "h", "d"].map((k) => `<td>${inp(u, k)}</td>`).join("")}<td>${esc(ampText(u))}<br>${srcInfo(u)}</td></tr>`;
+  const stdIn = (k, label) => `<label>${label}<input type="number" min="1" max="99" step="1" data-std="${k}" value="${ampelGet().std[k] ?? ""}" placeholder="${STANDARD[k]}" class="${ampelGet().std[k] != null ? "set" : ""}"></label>`;
+
+  const ampBody = `
+    <p>Hier lässt sich die Ampel <b>direkt in der Ansicht</b> einstellen. Die Werte werden <b>nur in diesem Browser auf diesem PC</b> gespeichert, die Excel-Datei bleibt unverändert, und andere Personen sehen sie nicht. Damit alle dieselbe Ampel haben, die Werte mit »Für Excel kopieren« ins Blatt <i>Einstellungen</i> übernehmen und danach hier »Alle Werte hier löschen«.</p>
+    <p class="muted" style="font-size:12.5px">Vorrang je Wert: <b>hier eingestellt</b> &gt; Excel → Einstellungen &gt; Standardregel. Feld leer = nächste Stufe gilt (grauer Platzhalter). Eine Stufe abschalten: eine Zahl größer als die Personenzahl eintragen. Zahlen = »ab so vielen gleichzeitig Abwesenden«.</p>
+    <h3 style="margin:14px 0 4px;font-size:14px">Standardregel für Stationen ohne eigene Werte</h3>
+    <div class="stdform amp">${stdIn("gelbAb", "Gelb ab … weg")}${stdIn("hellrotWennNochDa", "Hellrot, wenn nur noch … da")}${stdIn("hellrotAbGroesse", "Hellrot nur bei Stationen ab … Personen")}<span class="muted" style="font-size:12.5px">Dunkelrot = alle weg (fest)</span></div>
+    <h3 style="margin:14px 0 4px;font-size:14px">Je Station und Fachteam</h3>
+    <div style="overflow-x:auto"><table class="list amp"><thead><tr><th>Name</th><th>Art</th><th class="num">Personen</th><th>Excel G/H/D</th><th>Gelb ab</th><th>Hellrot ab</th><th>Dunkelrot ab</th><th>Gilt jetzt</th></tr></thead>
+      <tbody>${M.units.filter((u) => u.type === "stat").map(ampRow).join("")}${M.units.filter((u) => u.type === "fach").map(ampRow).join("")}</tbody></table></div>
+    <div class="btnrow"><button class="btn" id="ampCopyS" title="Name + Gelb/Hellrot/Dunkelrot aller Stationen aus Excel – in Excel bei Einstellungen in Zelle H7 einfügen">Stationen für Excel kopieren</button>
+      <button class="btn" id="ampCopyF" title="Name + Gelb/Hellrot/Dunkelrot aller Fachrichtungen – in Excel bei Einstellungen in Zelle A7 einfügen">Fachteams für Excel kopieren</button>
+      <button class="btn" id="ampReset"${M.localCount ? "" : " disabled"}>Alle Werte hier löschen</button></div>
+    <p class="muted" style="font-size:12.5px">Einfügen in Excel: Blatt <i>Einstellungen</i> → Blattschutz ggf. aufheben → Stationen: Zelle <b>H7</b> anklicken, Strg+V (füllt Spalten H–K) · Fachteams: Zelle <b>A7</b> anklicken, Strg+V (füllt A–D). Die Namen werden mit überschrieben, damit die Zeilen sicher zusammenpassen. Leere Felder = Standardregel.</p>`;
+
+  const howBody = `
+    <p>Gezählt wird pro Arbeitstag, wie viele Mitglieder einer Station bzw. eines Fachteams einen Urlaubswunsch haben. Die Zahlen bedeuten: <b>ab so vielen gleichzeitig Abwesenden</b> gilt die Farbe. Die höchste erreichte Stufe zählt. Eine Person mit mehreren Stationen zählt auf jeder ihrer Stationen. Kürzel in der Ansicht: <b>G</b> = Gelb ab, <b>H</b> = Hellrot ab, <b>D</b> = Dunkelrot ab.</p>
+    <p><b>Standardregel für Stationen</b> (wenn nichts eingetragen ist): 1 weg = unkritisch · <span class="pill lv2">Gelb</span> ab ${std.gelbAb} weg · <span class="pill lv3">Hellrot</span>, wenn nur noch ${std.hellrotWennNochDa} da sind (nur bei Stationen ab ${std.hellrotAbGroesse} Personen) · <span class="pill lv4">Dunkelrot</span>, wenn alle weg sind. Fachteams haben nur eine Ampel, wenn Werte eingetragen sind. Fallen zwei Stufen auf dieselbe Zahl, gilt die höhere.</p>
+    <p><b>Teilzeit</b> (Blatt Team, Spalten L–P, »x« = Arbeitstag): Ein Urlaubswunsch zählt nur an den eigenen Arbeitstagen als »weg«. Bei der Standardregel beziehen sich »nur noch ${std.hellrotWennNochDa} da« und »alle weg« auf die Personen, die an dem Wochentag arbeiten würden (angezeigte Werte = Vollzeit-Wert). Fest eingetragene Werte gelten unverändert.
+      ${tzs.length ? `Teilzeit eingetragen: ${tzs.map((p) => `${esc(p.name)} (${daysText(p)})`).join(", ")}.` : "Zurzeit ist niemand als Teilzeit markiert."}</p>`;
+
+  const warnBody = M.warn.length ? `<ul class="warnlist">${M.warn.map((w) => `<li>${esc(w.t)}</li>`).join("")}</ul>` : `<p>Keine – die Daten sind vollständig.</p>`;
+  const hols = M.hol.map((h, i) => (h ? `${fmt(M.ser[i])} ${esc(h)}` : "")).filter(Boolean);
+  const perBody = `<p>${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])} (Startdatum aus Excel → Einstellungen B3)</p><p>Feiertage/freie Tage: ${hols.length ? hols.join(" · ") : "keine eingetragen"}</p>`;
+
+  $("t-rules").innerHTML =
+    secD("amp", "Ampel einstellen", M.localCount ? `${plural(M.localCount, "eigener Wert", "eigene Werte")} in diesem Browser aktiv` : "Schwellen je Station/Team und Standardregel anpassen", ampBody) +
+    secD("how", "So rechnet die Ampel", "Erklärung, Standardregel, Teilzeit", howBody) +
+    secD("warn", `Hinweise zu den Daten (${M.warn.length})`, M.warn.length ? "z. B. fehlende Angaben in Excel" : "alles vollständig", warnBody) +
+    secD("per", "Planungszeitraum und Feiertage", `${fmtY(M.ser[0])} – ${fmtY(M.ser[M.N - 1])}`, perBody);
+
+  $("t-rules").querySelectorAll("details.sec").forEach((d) => d.addEventListener("toggle", () => { d.open ? openSec.add(d.dataset.sec) : openSec.delete(d.dataset.sec); }));
+  const val = (el) => { const v = el.value.trim(); if (v === "") return null; const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 1 ? n : null; };
+  const apply = () => { M = build(lastWb); render(); };
+  $("t-rules").querySelectorAll("input[data-u]").forEach((el) => el.addEventListener("change", () => {
+    const a = ampelGet(), k = el.dataset.u, o = Object.assign({}, a.units[k]); const v = val(el);
+    if (v == null) delete o[el.dataset.k]; else o[el.dataset.k] = v;
+    if (Object.keys(o).length) a.units[k] = o; else delete a.units[k];
+    ampelSet(a); apply();
+  }));
+  $("t-rules").querySelectorAll("input[data-std]").forEach((el) => el.addEventListener("change", () => {
+    const a = ampelGet(), v = val(el); if (v == null) delete a.std[el.dataset.std]; else a.std[el.dataset.std] = v; ampelSet(a); apply();
+  }));
+  $("ampReset").onclick = () => { if (confirm("Alle hier eingestellten Ampelwerte löschen? Danach gelten wieder Excel und Standardregel.")) { ampelSet({}); apply(); } };
+  const copyUnits = (type) => copyText(M.units.filter((u) => u.type === type && u.inExcel).map((u) => [u.name, ...["g", "h", "d"].map((k) => u.custom[k] ?? "")].join("\t")).join("\n"));
+  $("ampCopyS").onclick = () => copyUnits("stat");
+  $("ampCopyF").onclick = () => copyUnits("fach");
 }
 
 /* ===================== Detail-Panel ===================== */
@@ -1146,6 +1321,15 @@ $("fView").onclick = (e) => { const b = e.target.closest("button"); if (!b) retu
 $("fReset").onclick = () => { S.fach = []; S.stat = []; S.q = ""; S.only = false; S.m0 = null; S.m1 = null; S.pf = ""; setupFilters(); save(); render(); };
 $("tabs").onclick = (e) => { const b = e.target.closest(".tab"); if (!b) return; S.tab = b.dataset.t; save(); render(); };
 $("kpis").onclick = (e) => { const k = e.target.closest("[data-go]"); if (!k) return; S.tab = k.dataset.go; if (k.dataset.pf != null) { S.pf = k.dataset.pf === "rest" ? "" : k.dataset.pf; if (k.dataset.pf === "rest") S.sort = { k: "rest", dir: 1 }; } save(); render(); };
+$("t-home").onclick = (e) => {
+  const c = e.target.closest("[data-unitconf]"); if (c) { e.stopPropagation(); focusUnit(+c.dataset.unitconf, "conf"); return; }
+  const li = e.target.closest("li[data-unit]"); if (li) { focusUnit(+li.dataset.unit, "dash"); return; }
+  const t = e.target.closest("[data-go]"); if (!t) return;
+  S.fach = []; S.stat = []; S.q = ""; S.only = false; S.tab = t.dataset.go;
+  S.pf = t.dataset.pf === "rest" ? "" : t.dataset.pf || ""; if (t.dataset.pf === "rest") S.sort = { k: "rest", dir: 1 };
+  if (S.tab === "rules" && t.closest("ul.todo")) openSec.add("warn");
+  setupFilters(); save(); render(); window.scrollTo(0, 0);
+};
 $("t-cal").onclick = (e) => { const td = e.target.closest("td[data-k]"); if (!td) return; document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); showDetail(td.dataset.k); };
 $("t-dash").onclick = (e) => {
   const td = e.target.closest("table.heat td[data-d]");
