@@ -18,6 +18,7 @@ Sie ist eine **eigene Datei**, getrennt von der Leitungsansicht `Urlaubsansicht.
 4. Zeitraum und Raster (Wochen/Tage) bei Bedarf einstellen.
 5. Auf einen Tag oder eine Woche klicken → rechts erscheint, **wer weg ist** (Name und Zeitraum).
 6. Nach neuen Einträgen in Excel: Excel speichern, hier **»Neu laden«**.
+7. **Zurück-Taste des Browsers** (oder Alt+←): schließt zuerst das Seitenfenster »Wer ist weg«, sonst springt sie zum vorher gewählten Team. Erst beim ersten Team nach dem Laden verlässt sie die Seite.
 
 Drucken: **»Drucken (A4 quer)«**. Im Druckdialog ggf. »Hintergrundgrafiken« einschalten, damit die Farben erscheinen.
 
@@ -75,10 +76,12 @@ Geprüfte und verworfene Alternativen: Datei per Pfad nachladen (`fetch`) wird v
 ## Für Änderungen (Technik)
 - Quelltext: `ansicht/teamansicht.src.html` (Darstellung), `ansicht/kern.js` (Einlesen + Ampel, gemeinsam mit der Leitungsansicht).
 - Bauen: im Ordner `urlaubsplanung/` → `python3 ansicht/baue_ansicht.py` erzeugt `Teamansicht.html` und `Urlaubsansicht.html`.
+- Zurück-Taste: gemeinsamer Baustein in `ansicht/kern.js` (`verlaufStart` … siehe dort). Ein »Bildschirm« ist hier das gewählte Team; Zeitraum und Raster legen keinen eigenen Eintrag an.
 - `build(wb, { nurExcel: true })` sorgt dafür, dass im Browser gespeicherte Ampelwerte ignoriert werden.
 - Prüfen mit einer **Testkopie** der Excel (keine echten Namen ins Repository, `.gitignore` schließt `*.xlsx`/`*.xlsm` aus).
 
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | Zurück-Taste schließt nicht mehr die Datei, sondern schließt das Seitenfenster bzw. springt zum vorher gewählten Team (Rückmeldung Tom). |
 | 08.10.2026 | Teamansicht neu erstellt: Auswahl Fachteam/Einsatzort, Lage-Satz, Jahresübersicht, Kalender, Wunschliste, »Wer ist weg«, Druck A4 quer, automatisches Laden der zuletzt gezogenen Datei. |

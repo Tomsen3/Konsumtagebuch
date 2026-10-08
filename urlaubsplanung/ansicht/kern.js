@@ -255,3 +255,51 @@ function build(wb, opt = {}) {
   const example = persons.some((p) => /^beispiel/i.test(p.name));
   return { persons, units, fachs, stats, wishes, conflicts, warn, N, start, ser, work, hol, fachIdx, example, std, localCount };
 }
+
+/* ===================== Zurück-Taste des Browsers =====================
+   Beide Seiten wechseln ihre Bildschirme, ohne eine neue Seite zu laden. Ohne diesen Teil kennt der
+   Browser nur »Seite verlassen« – die Zurück-Taste würde die Datei schließen (Rückmeldung Tom, 08.10.2026).
+   Darum bekommt jeder Bildschirmwechsel einen Eintrag im Browserverlauf (history.pushState), das
+   Seitenfenster rechts (»Wer fehlt« / »Wer ist weg«) ebenfalls:
+     Zurück = Seitenfenster zu, sonst vorheriger Bildschirm (mit den damaligen Filtern).
+   Erst auf dem ersten Bildschirm nach dem Laden der Excel-Datei verlässt Zurück die Seite.
+   Nutzung in der Seite: einmal verlaufStart({ schluessel, zustand, wiederherstellen }),
+   am Ende von render() verlaufMerken(), Seitenfenster nur über detailOeffnen()/detailSchliessen(). */
+const Verlauf = { key: null, z: null, opt: null, ueberspringen: false };
+const detailOffen = () => $("detail").classList.contains("open");
+function verlaufStart(opt) {
+  Verlauf.opt = opt;
+  window.addEventListener("popstate", (e) => {
+    $("detail").classList.remove("open");
+    if (Verlauf.ueberspringen) {             // Fenster wurde per × geschlossen: nur dessen Eintrag entfernen
+      Verlauf.ueberspringen = false;
+      try { history.replaceState({ k: Verlauf.key, z: Verlauf.z }, ""); } catch (err) {}
+      return;
+    }
+    const st = e.state;
+    if (!st || !st.z || !M) return;
+    Verlauf.key = st.k;                      // gleicher Schlüssel → render() legt keinen neuen Eintrag an
+    opt.wiederherstellen(st.z);
+  });
+}
+/* Am Ende von render(): neuer Bildschirm (anderer Schlüssel) = neuer Eintrag, sonst Eintrag aktualisieren */
+function verlaufMerken() {
+  if (!Verlauf.opt) return;
+  const k = Verlauf.opt.schluessel(), z = Verlauf.opt.zustand(), alt = history.state, neu = { k, z };
+  if (alt && alt.detail && k === Verlauf.key && detailOffen()) neu.detail = true;
+  try {
+    if (Verlauf.key === null || k === Verlauf.key || (alt && alt.detail)) history.replaceState(neu, "");
+    else history.pushState(neu, "");
+  } catch (err) {}
+  Verlauf.key = k; Verlauf.z = z;
+}
+function detailOeffnen() {
+  if (detailOffen()) return;
+  $("detail").classList.add("open");
+  try { history.pushState(Object.assign({}, history.state, { detail: true }), ""); } catch (err) {}
+}
+function detailSchliessen() {
+  if (!detailOffen()) return;
+  $("detail").classList.remove("open");
+  if (history.state && history.state.detail) { Verlauf.ueberspringen = true; history.back(); }
+}

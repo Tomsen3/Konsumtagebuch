@@ -416,6 +416,12 @@ const S = Object.assign({ fach: [], stat: [], q: "", m0: null, m1: null, view: "
 const save = () => lsSet("urlaubsansicht.state", { fach: S.fach, stat: S.stat, view: S.view, only: S.only, tab: S.tab, gelb: S.gelb, bars: S.bars, sort: S.sort, person: S.person });
 const TABS = ["home", "dash", "cal", "conf", "pers", "one", "rules"];
 if (!TABS.includes(S.tab)) S.tab = "home";
+/* Zurück-Taste: ein »Bildschirm« = Registerkarte (bei der Personenansicht zusätzlich die Person) */
+verlaufStart({
+  schluessel: () => S.tab + (S.tab === "one" ? "|" + S.person : ""),
+  zustand: () => JSON.parse(JSON.stringify(S)),
+  wiederherstellen: (z) => { Object.assign(S, z); setupFilters(); save(); render(); }
+});
 
 function visible() {
   const q = S.q.trim().toLowerCase();
@@ -545,6 +551,7 @@ function render() {
   const cs = confVisible(V);
   $("confCount").innerHTML = cs.length ? `<span class="pill ${cs.some((c) => c.maxLv === 4) ? "lv4" : cs.some((c) => c.maxLv === 3) ? "lv3" : "lv2"}">${cs.length}</span>` : "";
   $("warnCount").innerHTML = M.warn.length ? `<span class="pill lv2">${M.warn.length}</span>` : "";
+  verlaufMerken();
 }
 function renderBanner() {
   $("banner").innerHTML = M.example ? `<div class="banner">Die Datei enthält noch <b>Beispieldaten</b> (Namen mit »Beispiel«). Vor dem Start im Excel löschen – siehe Blatt Anleitung.</div>` : "";
@@ -1085,7 +1092,7 @@ function renderRules(V) {
 }
 
 /* ===================== Detail-Panel ===================== */
-function openDetail(h) { $("detailBody").innerHTML = h; $("detail").classList.add("open"); }
+function openDetail(h) { $("detailBody").innerHTML = h; detailOeffnen(); }
 /* Tag oder Woche aus Heatmap / Top-5: wer fehlt, welche Bereiche, wer hat ohnehin frei */
 function showRange(i0, i1) {
   const V = visible();
@@ -1174,8 +1181,8 @@ $("t-dash").onclick = (e) => {
 };
 $("t-one").onclick = (e) => { const td = e.target.closest("table.heat td[data-d]"); if (td) { const i = +td.dataset.d; showRange(i, i); } };
 document.addEventListener("click", (e) => { const a = e.target.closest("[data-person]"); if (a) { e.preventDefault(); goPerson(+a.dataset.person); } });
-$("detailX").onclick = () => $("detail").classList.remove("open");
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
+$("detailX").onclick = detailSchliessen;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") detailSchliessen(); });
 
 // Zuletzt geöffnete Datei (nur Edge/Chrome, nur wenn einmal per Ziehen-und-Ablegen geöffnet):
 // Erlaubt der Browser das Lesen noch (gleiche Sitzung oder »bei jedem Besuch zulassen«), wird sie ohne Klick geladen.

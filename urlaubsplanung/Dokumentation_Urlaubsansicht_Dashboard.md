@@ -19,6 +19,7 @@ Stand: 08.10.2026 · Verantwortlich: Tom · gehört zu `Urlaubswuensche_2027.xls
 3. Es öffnet sich immer zuerst die **Übersicht** (Ampel-Status, »Zu tun«, Liste der Einsatzorte und Teams). Für Einzelheiten auf einen Einsatzort/ein Team oder auf »ansehen →« klicken – das führt in die ausführliche **Auswertung**.
 4. In der Auswertung mit den **Filtern** (Fachrichtung, Einsatzort, Name, Zeitraum, »nur Personen mit Wünschen«) eingrenzen – alle Ansichten und Kennzahlen folgen dem Filter.
 5. Nach Änderungen in Excel: **speichern**, dann hier **»Neu laden«**.
+6. **Zurück-Taste des Browsers** (oder Alt+←): schließt zuerst das Seitenfenster »Wer fehlt«, sonst geht sie zur vorherigen Registerkarte bzw. Person, mit den Filtern von damals. Erst auf dem ersten Bildschirm nach dem Laden verlässt sie die Seite.
 
 Drucken: Knopf **»Drucken (A4 quer)«** druckt die gerade offene Registerkarte. Im Druckdialog ggf. »Hintergrundgrafiken« einschalten, damit die Ampelfarben erscheinen.
 
@@ -89,6 +90,7 @@ Drei Wege, von »gilt für alle« bis »nur zum Ausprobieren«:
 - **Filter und Ampel-Logik** der bisherigen Ansicht wurden unverändert übernommen (Wunsch Tom, 06.10.2026).
 - **ATOSS komplett entfernt** (Wunsch Tom, 08.10.2026): Ob ein Wunsch in ATOSS übertragen ist, wird in der Ansicht nicht gebraucht. Die Ansicht liest Spalte J »In ATOSS übertragen am« im Blatt *Wünsche* nicht mehr; die Spalte in Excel bleibt unverändert und kann weiter genutzt werden.
 - **»Einsatzort« statt »Station«** (Wunsch Tom, 08.10.2026): Nicht alle Bereiche sind Stationen (z. B. TK Sucht, Ambulanz). Excel (»Einsatzort 1–5«), Teamansicht und Leitungsansicht nutzen jetzt denselben Begriff. Im Programmcode heißen Einsatzorte weiterhin `stat` (nur intern, nicht sichtbar). Das Blatt *Einstellungen* heißt in Spalte H noch »Station« – die Ansicht liest nach Spaltenbuchstaben, der Name dort ist egal.
+- **Zurück-Taste führt zum vorherigen Bildschirm** (Rückmeldung Tom, 08.10.2026): Vorher schloss sie die ganze Datei, weil die Seite ihre Registerkarten ohne Seitenwechsel umschaltet und der Browser davon nichts wusste. Jetzt bekommt jeder Bildschirmwechsel einen Eintrag im Browserverlauf. Als »Bildschirm« zählt die Registerkarte (in der Personenansicht zusätzlich die Person). Filteränderungen innerhalb einer Karte legen keinen eigenen Eintrag an, sonst bräuchte man viele Klicks, um zurückzukommen.
 - **Gemeinsamer Kern mit der Teamansicht** (08.10.2026): Excel einlesen und Ampel berechnen steht in `ansicht/kern.js` und wird in beide Seiten eingebaut. So rechnen Leitung und Team garantiert gleich.
 - Filter, Sortierung und gewählte Person merkt sich der Browser lokal (`localStorage`), nicht in der Excel-Datei. Nach dem Laden einer Datei startet die Ansicht immer mit der Übersicht.
 - **Übersicht vor der Auswertung** (Wunsch Tom, 08.10.2026): Wer nur wissen will »passt alles?«, soll nicht zuerst Heatmap und Filter sehen. Die Auswertung bleibt unverändert dahinter.
@@ -115,7 +117,7 @@ Ordner `urlaubsplanung/`:
 | `Teamansicht.html` | fertige Datei für die Kolleg:innen (wird erzeugt) – siehe `Dokumentation_Teamansicht.md` |
 | `ansicht/urlaubsansicht.src.html` | Quelltext der Leitungsansicht (Darstellung) – **hier ändern** |
 | `ansicht/teamansicht.src.html` | Quelltext der Teamansicht (Darstellung) |
-| `ansicht/kern.js` | **gemeinsam für beide Seiten:** Excel-Layout (`LAYOUT`), Standardregel (`STANDARD`), Hilfsfunktionen, Einlesen + Ampel (`build`). Änderungen wirken auf beide Seiten. |
+| `ansicht/kern.js` | **gemeinsam für beide Seiten:** Excel-Layout (`LAYOUT`), Standardregel (`STANDARD`), Hilfsfunktionen, Einlesen + Ampel (`build`), Zurück-Taste (`verlaufStart`, `verlaufMerken`, `detailOeffnen`/`detailSchliessen`). Änderungen wirken auf beide Seiten. |
 | `ansicht/xlsx.full.min.js` | Bibliothek SheetJS 0.18.5 (Apache-2.0) zum Lesen von Excel |
 | `ansicht/baue_ansicht.py` | baut beide Seiten zusammen (setzt `kern.js`, Bibliothek und Logo ein) |
 | `ansicht/logo.svg` oder `ansicht/logo.png` (optional) | Logo der Klinik (PP.rt) für den Seitenkopf. Liegt die Datei dort, bettet das Build-Skript sie automatisch ein (als Teil der HTML-Datei, kein Internet nötig). SVG bevorzugt (bleibt scharf). Höhe im Kopf: 42 px auf weißem Feld. Nutzung des Logos vorher mit der Öffentlichkeitsarbeit der Klinik abstimmen. |
@@ -133,6 +135,7 @@ Häufige Anpassungen:
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | **Zurück-Taste** schließt nicht mehr die Datei, sondern geht zum vorherigen Bildschirm bzw. schließt das Seitenfenster »Wer fehlt« (gemeinsamer Baustein in `ansicht/kern.js`, gilt auch für die Teamansicht). |
 | 08.10.2026 | **»Station« heißt jetzt »Einsatzort«** in allen Texten der Leitungsansicht (Filter, Übersicht, Monatsbalken, Kalender, Konflikte, Personen, Regeln & Ampel, Knopf »Einsatzorte für Excel kopieren«) – gleiche Begriffe wie Excel und Teamansicht. Einsatzorte erscheinen nur mit ihrem Namen (»Ambulanz« statt »Station Ambulanz«). Rechnung und Ampel unverändert. |
 | 08.10.2026 | **ATOSS komplett entfernt** (Kennzahl, Zu-tun-Punkt, Spalte und Filter in Personen, Personenansicht, »Wer fehlt«). Einlese- und Ampel-Logik in `ansicht/kern.js` ausgelagert (gemeinsam mit der neuen **Teamansicht**). Zuletzt geöffnete Datei wird beim Start automatisch geladen, wenn der Browser es erlaubt, sonst grüner Knopf. Hinweise sprechen von »Einsatzort« statt »Station«. |
 | 08.10.2026 | Startseite neu nach Mockup B (Klartext) mit funktionierender Ampel links; Stationsliste eingeklappt darunter. |

@@ -456,6 +456,54 @@ function build(wb, opt = {}) {
   return { persons, units, fachs, stats, wishes, conflicts, warn, N, start, ser, work, hol, fachIdx, example, std, localCount };
 }
 
+/* ===================== Zurück-Taste des Browsers =====================
+   Beide Seiten wechseln ihre Bildschirme, ohne eine neue Seite zu laden. Ohne diesen Teil kennt der
+   Browser nur »Seite verlassen« – die Zurück-Taste würde die Datei schließen (Rückmeldung Tom, 08.10.2026).
+   Darum bekommt jeder Bildschirmwechsel einen Eintrag im Browserverlauf (history.pushState), das
+   Seitenfenster rechts (»Wer fehlt« / »Wer ist weg«) ebenfalls:
+     Zurück = Seitenfenster zu, sonst vorheriger Bildschirm (mit den damaligen Filtern).
+   Erst auf dem ersten Bildschirm nach dem Laden der Excel-Datei verlässt Zurück die Seite.
+   Nutzung in der Seite: einmal verlaufStart({ schluessel, zustand, wiederherstellen }),
+   am Ende von render() verlaufMerken(), Seitenfenster nur über detailOeffnen()/detailSchliessen(). */
+const Verlauf = { key: null, z: null, opt: null, ueberspringen: false };
+const detailOffen = () => $("detail").classList.contains("open");
+function verlaufStart(opt) {
+  Verlauf.opt = opt;
+  window.addEventListener("popstate", (e) => {
+    $("detail").classList.remove("open");
+    if (Verlauf.ueberspringen) {             // Fenster wurde per × geschlossen: nur dessen Eintrag entfernen
+      Verlauf.ueberspringen = false;
+      try { history.replaceState({ k: Verlauf.key, z: Verlauf.z }, ""); } catch (err) {}
+      return;
+    }
+    const st = e.state;
+    if (!st || !st.z || !M) return;
+    Verlauf.key = st.k;                      // gleicher Schlüssel → render() legt keinen neuen Eintrag an
+    opt.wiederherstellen(st.z);
+  });
+}
+/* Am Ende von render(): neuer Bildschirm (anderer Schlüssel) = neuer Eintrag, sonst Eintrag aktualisieren */
+function verlaufMerken() {
+  if (!Verlauf.opt) return;
+  const k = Verlauf.opt.schluessel(), z = Verlauf.opt.zustand(), alt = history.state, neu = { k, z };
+  if (alt && alt.detail && k === Verlauf.key && detailOffen()) neu.detail = true;
+  try {
+    if (Verlauf.key === null || k === Verlauf.key || (alt && alt.detail)) history.replaceState(neu, "");
+    else history.pushState(neu, "");
+  } catch (err) {}
+  Verlauf.key = k; Verlauf.z = z;
+}
+function detailOeffnen() {
+  if (detailOffen()) return;
+  $("detail").classList.add("open");
+  try { history.pushState(Object.assign({}, history.state, { detail: true }), ""); } catch (err) {}
+}
+function detailSchliessen() {
+  if (!detailOffen()) return;
+  $("detail").classList.remove("open");
+  if (history.state && history.state.detail) { Verlauf.ueberspringen = true; history.back(); }
+}
+
 
 /* ===================== Zustand =====================
    sel = gewähltes Team: "" = alle · "fach:<Name>" = Fachteam · "stat:<Name>" = Einsatzort (intern heißen Einsatzorte »stat«). */
@@ -463,6 +511,12 @@ let M = null, fileHandle = null;
 const KEY = "teamansicht.state";   // eigener Schlüssel, getrennt von der Leitungsansicht
 const S = Object.assign({ sel: "", view: "w", m0: null, m1: null }, lsGet(KEY, {}));
 const save = () => lsSet(KEY, { sel: S.sel, view: S.view });
+/* Zurück-Taste: ein »Bildschirm« = gewähltes Team (Fachteam/Einsatzort/alle) */
+verlaufStart({
+  schluessel: () => S.sel,
+  zustand: () => JSON.parse(JSON.stringify(S)),
+  wiederherstellen: (z) => { Object.assign(S, z); setupFilters(); save(); render(); }
+});
 
 /* Gewähltes Team → Personen, Bereich (für die Ampel) und Tageswerte */
 function auswahl() {
@@ -546,6 +600,7 @@ function render() {
   syncChips();
   $("printinfo").textContent = `Team: ${A.name} · ${MON_L[S.m0 % 12]} ${Math.floor(S.m0 / 12)} – ${MON_L[S.m1 % 12]} ${Math.floor(S.m1 / 12)} · gedruckt ${new Date().toLocaleDateString("de-DE")}`;
   renderLage(A); renderHeat(A); renderCal(A); renderList(A);
+  verlaufMerken();
 }
 
 /* Ein Satz zur Lage: wie viele Wünsche, wie viele Tage knapp/eng */
@@ -671,7 +726,7 @@ function showRange(i0, i1) {
   h += who.length ? `<ul>${who.map((pi) => { const p = M.persons[pi]; const ws = p.wishes.filter((w) => w.von <= M.ser[i1] && w.bis >= M.ser[i0]); return `<li><b>${esc(proseName(p.name))}</b><br><span class="muted">${ws.map((w) => `${fmt(w.von)}–${fmtY(w.bis)}`).join(", ")}</span></li>`; }).join("")}</ul>` : "<p>niemand</p>";
   openDetail(h);
 }
-function openDetail(h) { $("detailBody").innerHTML = h; $("detail").classList.add("open"); }
+function openDetail(h) { $("detailBody").innerHTML = h; detailOeffnen(); }
 
 /* ===================== Ereignisse ===================== */
 $("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = () => (fileHandle ? reload() : pickFile()); $("btnPrint").onclick = () => window.print();
@@ -693,8 +748,8 @@ $("fM1").onchange = (e) => { S.m1 = +e.target.value; if (S.m0 > S.m1) { S.m0 = S
 const markSel = (td) => { document.querySelectorAll("td.sel").forEach((x) => x.classList.remove("sel")); td.classList.add("sel"); };
 $("p-heat").onclick = (e) => { const td = e.target.closest("td[data-d]"); if (!td) return; markSel(td); showRange(+td.dataset.d, +td.dataset.d); };
 $("p-cal").onclick = (e) => { const td = e.target.closest("td[data-r]"); if (!td) return; markSel(td); const [a, b] = td.dataset.r.split(":").map(Number); showRange(a, b); };
-$("detailX").onclick = () => $("detail").classList.remove("open");
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("detail").classList.remove("open"); });
+$("detailX").onclick = detailSchliessen;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") detailSchliessen(); });
 
 // Zuletzt geöffnete Datei (nur Edge/Chrome, nur wenn einmal per Ziehen-und-Ablegen geöffnet):
 // Erlaubt der Browser das Lesen noch (gleiche Sitzung oder »bei jedem Besuch zulassen«), wird sie ohne Klick geladen.
