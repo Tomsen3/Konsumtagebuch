@@ -328,6 +328,8 @@ aside.detail li{margin:3px 0}
     <ol>
       <li>Liegt die Datei in Teams/SharePoint: über den synchronisierten OneDrive-Ordner im Explorer auswählen oder vorher herunterladen.</li>
       <li>Nach neuen Einträgen in Excel: speichern, dann hier auf »Neu laden«.</li>
+      <li>Passiert beim Klick nichts: die Excel-Datei aus dem Explorer einfach in dieses Fenster ziehen.</li>
+      <li>Diese Seite per Doppelklick im Browser (Edge/Chrome) öffnen – nicht in einer Vorschau (Teams, Outlook, Claude-App), dort sind Dateidialoge gesperrt.</li>
     </ol>
   </section>
 
@@ -674,21 +676,20 @@ const IDB = {
   async put(v) { try { const db = await this.open(); db.transaction("h", "readwrite").objectStore("h").put(v, "file"); } catch (e) {} },
   async get() { try { const db = await this.open(); return await new Promise((res) => { const r = db.transaction("h").objectStore("h").get("file"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch (e) { return null; } }
 };
-async function pickFile() {
-  if (window.showOpenFilePicker) {
-    try {
-      const [h] = await window.showOpenFilePicker({ types: [{ description: "Excel-Datei", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"], "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"] } }] });
-      fileHandle = h; IDB.put(h); await loadFile(await h.getFile()); return;
-    } catch (e) { if (e && e.name === "AbortError") return; }
-  }
-  $("fileInput").click();
-}
+/* Datei auswählen: immer der einfache Dateidialog (<input type="file">). Er funktioniert in jedem Browser.
+   Der moderne Dialog (showOpenFilePicker) wurde bewusst entfernt: Ist er per Richtlinie gesperrt, blockiert der
+   Browser den Ersatzdialog stillschweigend – »Klick, und nichts passiert« (Fehler gemeldet am 08.10.2026). */
+function pickFile() { $("fileInput").click(); }
 async function reload() {
+  // Datei per Ziehen-und-Ablegen geöffnet (Edge/Chrome)? Dann ohne Dialog neu einlesen.
   if (fileHandle) {
     try {
       if (fileHandle.queryPermission && (await fileHandle.queryPermission({ mode: "read" })) !== "granted") await fileHandle.requestPermission({ mode: "read" });
       await loadFile(await fileHandle.getFile()); return;
-    } catch (e) { /* weiter mit Auswahl */ }
+    } catch (e) {
+      alert("Die Datei konnte nicht erneut gelesen werden.\n\nBitte auf »Andere Datei« klicken und die Excel-Datei neu auswählen.");
+      return;
+    }
   }
   pickFile();
 }
@@ -1305,7 +1306,7 @@ function showDetail(k) {
 function goPerson(pi) { S.person = M.persons[pi].name; S.tab = "one"; $("detail").classList.remove("open"); save(); render(); window.scrollTo(0, 0); }
 
 /* ===================== Ereignisse ===================== */
-$("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = reload; $("btnPrint").onclick = () => window.print();
+$("btnLoad").onclick = pickFile; $("btnLoad2").onclick = pickFile; $("btnReload").onclick = () => (fileHandle ? reload() : pickFile()); $("btnPrint").onclick = () => window.print();
 $("fileInput").onchange = (e) => { const f = e.target.files[0]; if (f) { fileHandle = null; loadFile(f); } e.target.value = ""; };
 const drop = $("drop");
 ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));

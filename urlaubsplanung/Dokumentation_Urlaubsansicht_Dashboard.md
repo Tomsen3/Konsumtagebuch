@@ -95,7 +95,8 @@ Drei Wege, von »gilt für alle« bis »nur zum Ausprobieren«:
 - Bereits **genehmigter/abgelehnter** Urlaub wird nicht unterschieden – es sind Wünsche.
 - Halbe Tage gibt es nicht; ein Tag im Wunsch ist ein ganzer Tag.
 - Teilzeit-Anspruch muss in *Team* Spalte G bereits anteilig stehen (wird nicht umgerechnet).
-- »Zuletzt geöffnet – wieder laden« funktioniert nur in Edge/Chrome; in Firefox die Datei jedes Mal auswählen.
+- »Neu laden« ohne Dialog geht nur, wenn die Datei per Ziehen-und-Ablegen geöffnet wurde (Edge/Chrome). Nach Auswahl über den Knopf öffnet »Neu laden« den Dateidialog erneut – einfach dieselbe Datei wählen.
+- Die Seite muss per Doppelklick im Browser geöffnet werden. In Vorschau-Fenstern (Teams, Outlook, Claude-App) sind Dateidialoge gesperrt.
 - Druck: Browser-Einstellung »Hintergrundgrafiken« muss an sein, sonst fehlen die Farben.
 
 ## Für Änderungen (Technik)
@@ -122,6 +123,7 @@ Häufige Anpassungen (alle oben im `<script>` des Quelltexts):
 ## Änderungsprotokoll
 | Datum | Änderung |
 |---|---|
+| 08.10.2026 | **Fehler behoben:** Auf manchen PCs öffnete der Knopf »Excel-Datei auswählen« keinen Dialog (moderner Browser-Dialog per Richtlinie gesperrt, Ersatzdialog wurde dann vom Browser blockiert). Jetzt immer der einfache Dateidialog; zusätzlich Hinweis auf Ziehen-und-Ablegen auf der Startseite. |
 | 08.10.2026 | Titel jetzt »Urlaubsplanung Kreativtherapie«; Platz für das Klinik-Logo im Kopf (`ansicht/logo.svg|png` wird beim Bauen eingebettet). Logo selbst noch offen: www.pp-rt.de war aus der Bauumgebung nicht erreichbar. |
 | 08.10.2026 | Neue Startseite **Übersicht** (Status, Zu tun, Stationen/Teams, Klick → Auswertung); bisheriges Dashboard heißt jetzt **Auswertung**; Reiter **Regeln & Ampel** mit eingeklappten Abschnitten und Ampel-Einstellung (lokal + »Für Excel kopieren«); Excel-Spalte R »Station 5« wird mitgelesen. |
 | 06.10.2026 | Umbau zum Dashboard: Kennzahlen-Leiste neu, Jahres-Heatmap mit »wer fehlt«, Top-5-Wochen, Monatsbalken, sortierbare Personentabelle, Personenansicht, Teilzeit in Ampel und Arbeitstagen, Druck A4 quer. Quelltext + Build-Skript ins Repository. |
